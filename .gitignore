@@ -1,0 +1,2 @@
+# Don't store the Firebase private key in Git
+privateFirebaseKey.json
