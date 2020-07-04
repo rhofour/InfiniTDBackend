@@ -2,6 +2,7 @@ import sqlite3
 
 class Db:
     DEFAULT_DB_PATH = "data.db"
+    STARTING_GOLD = 100.0
 
     def __init__(self, db_path=None, debug=False):
         if db_path is None:
@@ -47,3 +48,29 @@ class Db:
         res = self.conn.execute("SELECT name, accumulatedGold, goldPerMinute FROM users ORDER BY accumulatedGold DESC;")
         res = [ Db.__extractUserFromRow(r) for r in res ]
         return res
+
+    def nameTaken(self, name):
+        res = self.conn.execute("SELECT name FROM users WHERE name = ?;", (name, )).fetchone()
+        if res is None:
+            return False
+        return True
+
+    def register(self, uid=None, name=None):
+        """Attempt to register a new user returning whether or not it was successful."""
+        if not uid:
+            raise ValueError("Register requires a UID.")
+        if not name:
+            raise ValueError("Register requires a name.")
+        try:
+            res = self.conn.execute("INSERT INTO users (uid, name, accumulatedGold, goldPerMinute) VALUES (:uid, :name, :gold, 0.0);",
+                    {"uid": uid, "name": name, "gold": self.STARTING_GOLD})
+            self.conn.commit()
+        except sqlite3.IntegrityError as err:
+            # This is likely because the name was already taken. 
+            print("IntegrityError when registering a new user: ", err)
+            return False
+        except sqlite3.DatabaseError as err:
+            print("DatabaseError when registering a new user: ", err)
+            return False
+        return True
+

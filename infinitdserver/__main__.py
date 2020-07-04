@@ -13,7 +13,7 @@ class BaseHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, authorization, content-type")
-        self.set_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.set_header("Access-Control-Allow-Methods", "GET, OPTIONS, POST")
 
     def options(self, *args):
         print("Got OPTIONS request.")
@@ -62,6 +62,22 @@ class ThisUserHandler(BaseHandler):
         else:
             self.write({})
 
+class NameTakenHandler(BaseHandler):
+    # TODO(rofer): Switch to using response headers to send this.
+    # 204 for name found, 404 for not found
+    def get(self, name):
+        print("Got request for isNameTaken/" + name)
+        self.write({"isTaken": self.db.nameTaken(name)})
+
+class RegisterHandler(BaseHandler):
+    def post(self, name):
+        print("Got request for register/" + name)
+        decoded_token = self.verifyAuthentication()
+        if (self.db.register(uid=decoded_token["uid"], name=name)):
+            self.set_status(201); # CREATED
+        else:
+            self.set_status(412); # Precondition Failed (assume name is already used)
+
 def make_app():
     cred = credentials.Certificate("./privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
@@ -69,7 +85,9 @@ def make_app():
     return tornado.web.Application([
         (r"/users", UsersHandler, dict(db=db)),
         (r"/user/(.*)", UserHandler, dict(db=db)),
+        (r"/isNameTaken/(.*)", NameTakenHandler, dict(db=db)),
         (r"/thisUser", ThisUserHandler, dict(db=db)),
+        (r"/register/(.*)", RegisterHandler, dict(db=db)),
     ])
 
 if __name__ == "__main__":
