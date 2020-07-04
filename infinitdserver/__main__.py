@@ -57,9 +57,10 @@ class ThisUserHandler(BaseHandler):
         decoded_token = self.verifyAuthentication()
         userData = self.db.getUserByUid(decoded_token["uid"])
         if userData:
-            print("Sending ", str(userData))
+            print("Sending back ", str(userData))
             self.write(userData)
         else:
+            print("No user data found.")
             self.write({})
 
 class NameTakenHandler(BaseHandler):
