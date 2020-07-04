@@ -17,7 +17,7 @@ class Db:
         users_sql = (
                 "CREATE TABLE IF NOT EXISTS users("
                 "uid TEXT PRIMARY KEY, "
-                "displayName TEXT UNIQUE, "
+                "name TEXT UNIQUE, "
                 "accumulatedGold REAL, "
                 "goldPerMinute REAL"
                 ");")
@@ -26,24 +26,24 @@ class Db:
 
     @staticmethod
     def __extractUserFromRow(row):
-        return { "displayName": row["displayName"],
-                "accumulatedGold": row["accumulatedGold"],
-                "goldPerMinute": row["goldPerMinute"],
+        return { "name": row[0],
+                "accumulatedGold": row[1],
+                "goldPerMinute": row[2],
                 }
 
     def getUserByUid(self, uid):
-        res = self.conn.execute("SELECT displayName, accumulatedGold, goldPerMinute FROM users WHERE uid = ?;", (uid, )).fetchone()
+        res = self.conn.execute("SELECT name, accumulatedGold, goldPerMinute FROM users WHERE uid = ?;", (uid, )).fetchone()
         if res:
             return Db.__extractUserFromRow(res)
         return None
 
     def getUserByName(self, name):
-        res = self.conn.execute("SELECT displayName, accumulatedGold, goldPerMinute FROM users WHERE displayName = ?;", (name, )).fetchone()
+        res = self.conn.execute("SELECT name, accumulatedGold, goldPerMinute FROM users WHERE name = ?;", (name, )).fetchone()
         if res:
             return Db.__extractUserFromRow(res)
         return None
 
     def getUsers(self):
-        res = self.conn.execute("SELECT displayName, accumulatedGold, goldPerMinute FROM users ORDER BY accumulatedGold DESC;")
+        res = self.conn.execute("SELECT name, accumulatedGold, goldPerMinute FROM users ORDER BY accumulatedGold DESC;")
         res = [ Db.__extractUserFromRow(r) for r in res ]
         return res

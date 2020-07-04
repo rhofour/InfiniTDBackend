@@ -43,19 +43,21 @@ class UsersHandler(BaseHandler):
 class UserHandler(BaseHandler):
     def get(self, username):
         print("Got request for /user/" + username)
+        userData = self.db.getUserByName(username)
         user = {"name": username, "accumulatedGold": 42.0, "goldPerMinute": 0.0}
-        self.write(user)
-
-class UidHandler(BaseHandler):
-    def get(self, uid):
-        print("Got request for UID: %s" % uid)
-        decoded_token = self.verifyAuthentication()
-        if uid != decoded_token["uid"]:
-            print("GET UID (%s) doesn't match token UID (%s)" % (uid, decoded_token["uid"]))
-            self.reply401()
-
-        userData = self.db.getUserByUid(uid)
         if userData:
+            print("Sending ", str(userData))
+            self.write(userData)
+        else:
+            self.write({})
+
+class ThisUserHandler(BaseHandler):
+    def get(self):
+        print("Got request for thisUser")
+        decoded_token = self.verifyAuthentication()
+        userData = self.db.getUserByUid(decoded_token["uid"])
+        if userData:
+            print("Sending ", str(userData))
             self.write(userData)
         else:
             self.write({})
@@ -67,7 +69,7 @@ def make_app():
     return tornado.web.Application([
         (r"/users", UsersHandler, dict(db=db)),
         (r"/user/(.*)", UserHandler, dict(db=db)),
-        (r"/uid/(.*)", UidHandler, dict(db=db)),
+        (r"/thisUser", ThisUserHandler, dict(db=db)),
     ])
 
 if __name__ == "__main__":
