@@ -49,7 +49,7 @@ class UserHandler(BaseHandler):
             print("Sending ", str(userData))
             self.write(userData)
         else:
-            self.write({})
+            self.set_status(404)
 
 class ThisUserHandler(BaseHandler):
     def get(self):
