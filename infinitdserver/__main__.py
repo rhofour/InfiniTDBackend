@@ -1,3 +1,4 @@
+import os
 import tornado.ioloop
 import tornado.web
 import firebase_admin
@@ -83,15 +84,19 @@ def make_app():
     cred = credentials.Certificate("./privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
     db = Db(debug=True)
+    settings = {
+        "static_path": os.path.join(os.path.dirname(__file__), "../static"),
+    }
     return tornado.web.Application([
         (r"/users", UsersHandler, dict(db=db)),
         (r"/user/(.*)", UserHandler, dict(db=db)),
         (r"/isNameTaken/(.*)", NameTakenHandler, dict(db=db)),
         (r"/thisUser", ThisUserHandler, dict(db=db)),
         (r"/register/(.*)", RegisterHandler, dict(db=db)),
-    ])
+    ], **settings)
 
 if __name__ == "__main__":
     app = make_app()
     app.listen(8794)
+    print("Listening on port 8794.")
     tornado.ioloop.IOLoop.current().start()
