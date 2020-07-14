@@ -6,7 +6,7 @@ class Db:
     # Mark users inactive after 5 minutes
     ACTIVE_THRESHOLD = 5 * 60
     SELECT_USER_STATEMENT = (
-            "SELECT name, accumulatedGold, goldPerMinute, "
+            "SELECT name, gold, accumulatedGold, goldPerMinute, "
             "lastTouched > strftime('%%s', 'now') - %d FROM users"
             ) % ACTIVE_THRESHOLD
 
@@ -25,6 +25,7 @@ class Db:
                 "CREATE TABLE IF NOT EXISTS users("
                 "uid TEXT PRIMARY KEY, "
                 "name TEXT UNIQUE, "
+                "gold REAL, "
                 "accumulatedGold REAL, "
                 "goldPerMinute REAL,"
                 "lastTouched INT DEFAULT 0 CHECK (lastTouched >= 0)"
@@ -34,9 +35,10 @@ class Db:
     @staticmethod
     def __extractUserFromRow(row):
         return {"name": row[0],
-                "accumulatedGold": row[1],
-                "goldPerMinute": row[2],
-                "active": row[3] == 1,
+                "gold": row[1],
+                "accumulatedGold": row[2],
+                "goldPerMinute": row[3],
+                "active": row[4] == 1,
                 }
 
     def updateTimestamp(self, uid):
@@ -73,7 +75,8 @@ class Db:
         if not name:
             raise ValueError("Register requires a name.")
         try:
-            res = self.conn.execute("INSERT INTO users (uid, name, accumulatedGold, goldPerMinute) VALUES (:uid, :name, :gold, 0.0);",
+            res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute)"
+                    " VALUES (:uid, :name, :gold, :gold, 0.0);",
                     {"uid": uid, "name": name, "gold": self.STARTING_GOLD})
             self.conn.commit()
         except sqlite3.IntegrityError as err:
