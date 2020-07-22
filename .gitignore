@@ -2,3 +2,4 @@
 privateFirebaseKey.json
 # Don't store the database
 data.db
+*.egg-info

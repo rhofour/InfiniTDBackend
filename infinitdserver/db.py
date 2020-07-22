@@ -19,7 +19,7 @@ class Db:
 
     def __del__(self):
         self.conn.close()
-    
+
     def __create_tables(self):
         self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS users("
