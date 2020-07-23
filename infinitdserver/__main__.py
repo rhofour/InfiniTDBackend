@@ -6,6 +6,7 @@ import firebase_admin.auth
 from firebase_admin import credentials
 
 from db import Db
+import game_config
 
 class BaseHandler(tornado.web.RequestHandler):
     def initialize(self, db):
@@ -80,6 +81,12 @@ class RegisterHandler(BaseHandler):
         else:
             self.set_status(412); # Precondition Failed (assume name is already used)
 
+class GameConfigHandler(BaseHandler):
+    def get(self):
+        print("Got request for gameConfig")
+        gameConfig = game_config.getMockConfig()
+        self.write(gameConfig.toDict())
+
 def make_app():
     cred = credentials.Certificate("./privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
@@ -93,6 +100,7 @@ def make_app():
         (r"/isNameTaken/(.*)", NameTakenHandler, dict(db=db)),
         (r"/thisUser", ThisUserHandler, dict(db=db)),
         (r"/register/(.*)", RegisterHandler, dict(db=db)),
+        (r"/gameConfig", GameConfigHandler, dict(db=db)),
     ], **settings)
 
 if __name__ == "__main__":
