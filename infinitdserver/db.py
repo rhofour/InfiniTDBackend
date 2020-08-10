@@ -1,4 +1,7 @@
 import sqlite3
+import json
+
+from battleground_state import BattlegroundState
 
 class Db:
     DEFAULT_DB_PATH = "data.db"
@@ -27,7 +30,8 @@ class Db:
                 "name TEXT UNIQUE, "
                 "gold REAL, "
                 "accumulatedGold REAL, "
-                "goldPerMinute REAL,"
+                "goldPerMinute REAL, "
+                "battleground TEXT, "
                 "lastTouched INT DEFAULT 0 CHECK (lastTouched >= 0)"
                 ");")
         self.conn.commit()
@@ -75,9 +79,10 @@ class Db:
         if not name:
             raise ValueError("Register requires a name.")
         try:
-            res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute)"
-                    " VALUES (:uid, :name, :gold, :gold, 0.0);",
-                    {"uid": uid, "name": name, "gold": self.STARTING_GOLD})
+            emptyBattleground = BattlegroundState(towers=[])
+            res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, battleground)"
+                    " VALUES (:uid, :name, :gold, :gold, 0.0, :battleground);",
+                    {"uid": uid, "name": name, "gold": self.STARTING_GOLD, "battleground": emptyBattleground.to_json()})
             self.conn.commit()
         except sqlite3.IntegrityError as err:
             # This is likely because the name was already taken. 

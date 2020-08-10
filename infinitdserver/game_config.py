@@ -1,9 +1,9 @@
 from dataclasses import dataclass, asdict
 from typing import NewType, Tuple, Dict, Any
 
-Row = NewType('Row', int)
-Col = NewType('Col', int)
-Url = NewType('Url', str)
+from common import Row, Col, Url
+
+ConfigId = NewType('ConfigId', int)
 
 @dataclass(frozen=True)
 class CellPos:
@@ -25,7 +25,7 @@ class PlayfieldConfig:
 
 @dataclass(frozen=True)
 class IdentifiedImage:
-    id: int
+    id: ConfigId
     url: Url
 
 @dataclass(frozen=True)
