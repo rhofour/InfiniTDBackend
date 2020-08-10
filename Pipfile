@@ -9,6 +9,7 @@ verify_ssl = true
 tornado = "*"
 firebase-admin = "*"
 pytest = "*"
+dataclasses-json = "*"
 
 [requires]
 python_version = "3.8"
