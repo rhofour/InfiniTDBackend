@@ -64,7 +64,6 @@ class GameConfig:
 
     def toDict(self) -> Dict[str, Any]:
         out = asdict(self)
-        out['hash'] = self.__hash__()
         return out
 
 def getMockConfig() -> GameConfig:
