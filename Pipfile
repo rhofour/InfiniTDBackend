@@ -10,6 +10,7 @@ tornado = "*"
 firebase-admin = "*"
 pytest = "*"
 dataclasses-json = "*"
+asyncio-multisubscriber-queue = "*"
 
 [requires]
 python_version = "3.8"
