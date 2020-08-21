@@ -1,8 +1,9 @@
 from dataclasses import dataclass, asdict
 from typing import NewType, Tuple, Dict, Any
 
-from common import Row, Col, Url
-
+Row = NewType('Row', int)
+Col = NewType('Col', int)
+Url = NewType('Url', str)
 ConfigId = NewType('ConfigId', int)
 
 @dataclass(frozen=True)
@@ -70,23 +71,23 @@ def getMockConfig() -> GameConfig:
     serverAddress = 'http://localhost:8794'
 
     tiles = (
-        TileConfig(id = 0, url = serverAddress + '/static/CrappyGrass.png'),
-        TileConfig(id = 1, url = serverAddress + '/static/CrappyDirt.png'),
+        TileConfig(id = ConfigId(0), url = Url(serverAddress + '/static/CrappyGrass.png')),
+        TileConfig(id = ConfigId(1), url = Url(serverAddress + '/static/CrappyDirt.png')),
     )
 
     playfield = PlayfieldConfig(
         numCols = 10,
         numRows = 14,
-        monsterEnter = CellPos(row = 0, col = 0),
-        monsterExit = CellPos(row = 9, col = 0),
+        monsterEnter = CellPos(row = Row(0), col = Col(0)),
+        monsterExit = CellPos(row = Row(9), col = Col(0)),
     )
 
     monsters = ()
 
     towers = (
         TowerConfig(
-            id = 0,
-            url = serverAddress + '/static/CrappyTowerSmall.png',
+            id = ConfigId(0),
+            url = Url(serverAddress + '/static/CrappyTowerSmall.png'),
             name = 'Boring Tower',
             cost = 1.0,
             firingRate = 2.0,
@@ -94,8 +95,8 @@ def getMockConfig() -> GameConfig:
             damage = 5.0,
         ),
         TowerConfig(
-            id = 1,
-            url = serverAddress + '/static/CrappyTower.png',
+            id = ConfigId(1),
+            url = Url(serverAddress + '/static/CrappyTower.png'),
             name = 'Better Tower',
             cost = 5.0,
             firingRate = 2.5,

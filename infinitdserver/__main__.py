@@ -4,6 +4,7 @@ from random import randrange
 import json
 
 import tornado.web
+from tornado.web import Finish
 from tornado.iostream import StreamClosedError
 import firebase_admin
 import firebase_admin.auth
@@ -42,6 +43,8 @@ class BaseHandler(tornado.web.RequestHandler):
         raise Finish()
 
 class UsersHandler(BaseHandler):
+    db: Db
+
     def get(self):
         print("Got request for /users")
         users = self.db.getUsers()
@@ -49,6 +52,8 @@ class UsersHandler(BaseHandler):
         self.write(data)
 
 class UserHandler(BaseHandler):
+    db: Db
+
     def get(self, username):
         print("Got request for /user/" + username)
         userData = self.db.getUserByName(username)
@@ -60,6 +65,8 @@ class UserHandler(BaseHandler):
             self.set_status(404)
 
 class ThisUserHandler(BaseHandler):
+    db: Db
+
     def get(self):
         print("Got request for thisUser")
         decoded_token = self.verifyAuthentication()
@@ -72,6 +79,8 @@ class ThisUserHandler(BaseHandler):
             self.write({})
 
 class NameTakenHandler(BaseHandler):
+    db: Db
+
     # TODO(rofer): Switch to using response headers to send this.
     # 204 for name found, 404 for not found
     def get(self, name):
@@ -79,6 +88,8 @@ class NameTakenHandler(BaseHandler):
         self.write({"isTaken": self.db.nameTaken(name)})
 
 class RegisterHandler(BaseHandler):
+    db: Db
+
     def post(self, name):
         print("Got request for register/" + name)
         decoded_token = self.verifyAuthentication()
@@ -93,7 +104,26 @@ class GameConfigHandler(BaseHandler):
         gameConfig = game_config.getMockConfig()
         self.write(gameConfig.toDict())
 
+class BattlegroundStreamer:
+    def __init__(self, db):
+        self.db = db
+        self.queuesByUsername = {}
+
+    def queue_context(self, name: str):
+        if name not in self.queuesByUsername:
+            self.queuesByUsername[name] = MultisubscriberQueue()
+        return self.queuesByUsername[name].queue_context()
+
+    async def sendUpdate(self, name, newBgState):
+        # TODO: replace new state with just a delta
+        if name not in self.queuesByUsername:
+            return
+        await self.queuesByUsername[name].put(newBgState)
+
 class BattlegroundStateHandler(tornado.web.RequestHandler):
+    db: Db
+    streamer: BattlegroundStreamer
+
     def initialize(self, db, streamer):
         self.db = db
         self.streamer = streamer
@@ -121,22 +151,6 @@ class BattlegroundStateHandler(tornado.web.RequestHandler):
                     await self.publish(newBgState)
             except StreamClosedError:
                 print("Stream closed.");
-
-class BattlegroundStreamer:
-    def __init__(self, db):
-        self.db = db
-        self.queuesByUsername = {}
-
-    def queue_context(self, name: str):
-        if name not in self.queuesByUsername:
-            self.queuesByUsername[name] = MultisubscriberQueue()
-        return self.queuesByUsername[name].queue_context()
-
-    async def sendUpdate(self, name, newBgState):
-        # TODO: replace new state with just a delta
-        if name not in self.queuesByUsername:
-            return
-        await self.queuesByUsername[name].put(newBgState)
 
 async def sendRandomStates(streamer, user):
     while True:
