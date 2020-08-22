@@ -12,13 +12,10 @@ from firebase_admin import credentials
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 
 from infinitdserver.db import Db
-import infinitdserver.game_config as game_config
+from infinitdserver.game_config import GameConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
 
 class BaseHandler(tornado.web.RequestHandler):
-    def initialize(self, db):
-        self.db = db
-
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, authorization, content-type")
@@ -26,6 +23,17 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def options(self, *args):
         print("Got OPTIONS request.")
+
+    def reply401(self):
+        self.set_status(401)
+        self.set_header("WWW-Authenticate", 'Bearer')
+        raise Finish()
+
+class BaseDbHandler(BaseHandler):
+    db: Db
+
+    def initialize(self, db):
+        self.db = db
 
     def verifyAuthentication(self):
         if self.request.headers['authorization'][:7] == "Bearer ":
@@ -36,24 +44,14 @@ class BaseHandler(tornado.web.RequestHandler):
                 print(e)
         self.reply401()
 
-
-    def reply401(self):
-        self.set_status(401)
-        self.set_header("WWW-Authenticate", 'Bearer')
-        raise Finish()
-
-class UsersHandler(BaseHandler):
-    db: Db
-
+class UsersHandler(BaseDbHandler):
     def get(self):
         print("Got request for /users")
         users = self.db.getUsers()
         data = {'users': users}
         self.write(data)
 
-class UserHandler(BaseHandler):
-    db: Db
-
+class UserHandler(BaseDbHandler):
     def get(self, username):
         print("Got request for /user/" + username)
         userData = self.db.getUserByName(username)
@@ -64,9 +62,7 @@ class UserHandler(BaseHandler):
         else:
             self.set_status(404)
 
-class ThisUserHandler(BaseHandler):
-    db: Db
-
+class ThisUserHandler(BaseDbHandler):
     def get(self):
         print("Got request for thisUser")
         decoded_token = self.verifyAuthentication()
@@ -78,18 +74,14 @@ class ThisUserHandler(BaseHandler):
             print("No user data found.")
             self.write({})
 
-class NameTakenHandler(BaseHandler):
-    db: Db
-
+class NameTakenHandler(BaseDbHandler):
     # TODO(rofer): Switch to using response headers to send this.
     # 204 for name found, 404 for not found
     def get(self, name):
         print("Got request for isNameTaken/" + name)
         self.write({"isTaken": self.db.nameTaken(name)})
 
-class RegisterHandler(BaseHandler):
-    db: Db
-
+class RegisterHandler(BaseDbHandler):
     def post(self, name):
         print("Got request for register/" + name)
         decoded_token = self.verifyAuthentication()
@@ -99,10 +91,13 @@ class RegisterHandler(BaseHandler):
             self.set_status(412); # Precondition Failed (assume name is already used)
 
 class GameConfigHandler(BaseHandler):
+    gameConfig: GameConfig
+
+    def initialize(self, gameConfig):
+        self.gameConfig = gameConfig
+
     def get(self):
-        print("Got request for gameConfig")
-        gameConfig = game_config.getMockConfig()
-        self.write(gameConfig.to_dict())
+        self.write(self.gameConfig.to_dict())
 
 class BattlegroundStreamer:
     def __init__(self, db):
@@ -163,7 +158,7 @@ def random_state():
     towers[randrange(14)][randrange(10)] = BgTowerState(id=0)
     return BattlegroundState(towers=BgTowersState(towers))
 
-def make_app(db, bgStreamer):
+def make_app(db, bgStreamer, gameConfig):
     cred = credentials.Certificate("./privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
     settings = {
@@ -175,14 +170,16 @@ def make_app(db, bgStreamer):
         (r"/isNameTaken/(.*)", NameTakenHandler, dict(db=db)),
         (r"/thisUser", ThisUserHandler, dict(db=db)),
         (r"/register/(.*)", RegisterHandler, dict(db=db)),
-        (r"/gameConfig", GameConfigHandler, dict(db=db)),
+        (r"/gameConfig", GameConfigHandler, dict(gameConfig=gameConfig)),
         (r"/battleground/(.*)", BattlegroundStateHandler, dict(db=db, streamer=bgStreamer)),
     ], **settings)
 
 async def main():
     db = Db(debug=True)
     bgStreamer = BattlegroundStreamer(db)
-    app = make_app(db, bgStreamer)
+    with open('game_config.json') as gameConfigFile:
+        game_config = GameConfig.from_json(gameConfigFile.read())
+    app = make_app(db, bgStreamer, game_config)
     app.listen(8794)
     print("Listening on port 8794.")
     loop = asyncio.get_running_loop()
