@@ -102,7 +102,7 @@ class GameConfigHandler(BaseHandler):
     def get(self):
         print("Got request for gameConfig")
         gameConfig = game_config.getMockConfig()
-        self.write(gameConfig.toDict())
+        self.write(gameConfig.to_dict())
 
 class BattlegroundStreamer:
     def __init__(self, db):
@@ -115,7 +115,6 @@ class BattlegroundStreamer:
         return self.queuesByUsername[name].queue_context()
 
     async def sendUpdate(self, name, newBgState):
-        # TODO: replace new state with just a delta
         if name not in self.queuesByUsername:
             return
         await self.queuesByUsername[name].put(newBgState)
@@ -137,7 +136,7 @@ class BattlegroundStateHandler(tornado.web.RequestHandler):
         self.set_header("cache-control", "no-cache")
 
     async def publish(self, data):
-        self.write(f"data: {json.dumps(data.toDict())}\n\n")
+        self.write(f"data: {data.to_json()}\n\n")
         await self.flush()
 
     async def get(self, username):

@@ -1,28 +1,26 @@
 from dataclasses import dataclass, asdict
 from typing import NewType, Tuple, Dict, Any
 
+from dataclasses_json import dataclass_json
+
 Row = NewType('Row', int)
 Col = NewType('Col', int)
 Url = NewType('Url', str)
 ConfigId = NewType('ConfigId', int)
 
+@dataclass_json
 @dataclass(frozen=True)
 class CellPos:
     row: Row
     col: Col
 
-    def toDict(self) -> Dict[str, Any]:
-        return asdict(self)
-
+@dataclass_json
 @dataclass(frozen=True)
 class PlayfieldConfig:
     numRows: int
     numCols: int
     monsterEnter: CellPos
     monsterExit: CellPos
-
-    def toDict(self) -> Dict[str, Any]:
-        return asdict(self)
 
 @dataclass(frozen=True)
 class IdentifiedImage:
@@ -31,10 +29,9 @@ class IdentifiedImage:
 
 @dataclass(frozen=True)
 class TileConfig(IdentifiedImage):
+    pass
 
-    def toDict(self) -> Dict[str, Any]:
-        return asdict(self)
-
+@dataclass_json
 @dataclass(frozen=True)
 class TowerConfig(IdentifiedImage):
     name: str
@@ -43,9 +40,7 @@ class TowerConfig(IdentifiedImage):
     range: float
     damage: float
 
-    def toDict(self) -> Dict[str, Any]:
-        return asdict(self)
-
+@dataclass_json
 @dataclass(frozen=True)
 class MonsterConfig(IdentifiedImage):
     name: str
@@ -53,19 +48,13 @@ class MonsterConfig(IdentifiedImage):
     speed: float
     bounty: float
 
-    def toDict(self) -> Dict[str, Any]:
-        return asdict(self)
-
+@dataclass_json
 @dataclass(frozen=True)
 class GameConfig:
     playfield: PlayfieldConfig
     tiles: Tuple[TileConfig, ...]
     towers: Tuple[TowerConfig, ...]
     monsters: Tuple[MonsterConfig, ...]
-
-    def toDict(self) -> Dict[str, Any]:
-        out = asdict(self)
-        return out
 
 def getMockConfig() -> GameConfig:
     serverAddress = 'http://localhost:8794'
@@ -106,6 +95,6 @@ def getMockConfig() -> GameConfig:
     )
 
     gameConfig = GameConfig(playfield=playfield, tiles=tiles, towers=towers, monsters=monsters)
-    print('Game config dict:', repr(gameConfig.toDict()))
+    print('Game config dict:', repr(gameConfig.to_dict()))
 
     return gameConfig

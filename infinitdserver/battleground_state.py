@@ -19,6 +19,3 @@ class BgTowersState:
 @dataclass
 class BattlegroundState:
     towers: BgTowersState
-
-    def toDict(self) -> Dict[str, Any]:
-        return asdict(self)
