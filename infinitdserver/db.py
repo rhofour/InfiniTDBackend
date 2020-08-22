@@ -7,12 +7,7 @@ from infinitdserver.battleground_state import BattlegroundState, BgTowersState
 class Db:
     DEFAULT_DB_PATH = "data.db"
     STARTING_GOLD = 100.0
-    # Mark users inactive after 5 minutes
-    ACTIVE_THRESHOLD = 5 * 60
-    SELECT_USER_STATEMENT = (
-            "SELECT name, gold, accumulatedGold, goldPerMinute, "
-            "lastTouched > strftime('%%s', 'now') - %d FROM users"
-            ) % ACTIVE_THRESHOLD
+    SELECT_USER_STATEMENT = "SELECT name, gold, accumulatedGold, goldPerMinute FROM users"
 
     def __init__(self, db_path=None, debug=False):
         if db_path is None:
@@ -32,8 +27,7 @@ class Db:
                 "gold REAL, "
                 "accumulatedGold REAL, "
                 "goldPerMinute REAL, "
-                "battleground TEXT, "
-                "lastTouched INT DEFAULT 0 CHECK (lastTouched >= 0)"
+                "battleground TEXT"
                 ");")
         self.conn.commit()
 
@@ -43,12 +37,7 @@ class Db:
                 "gold": row[1],
                 "accumulatedGold": row[2],
                 "goldPerMinute": row[3],
-                "active": row[4] == 1,
                 }
-
-    def updateTimestamp(self, uid):
-        self.conn.execute("UPDATE users SET lastTouched = strftime('%s','now') WHERE uid = ?;", (uid,))
-        self.conn.commit()
 
     def getUserByUid(self, uid):
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
@@ -100,6 +89,5 @@ class Db:
         except sqlite3.DatabaseError as err:
             print("DatabaseError when registering a new user: ", err)
             return False
-        self.updateTimestamp(uid)
         return True
 
