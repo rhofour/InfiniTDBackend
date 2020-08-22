@@ -28,7 +28,14 @@ class TestDb(unittest.TestCase):
 
         user = self.db.getUserByName("bob")
 
-        self.assertEqual(user["name"], "bob")
+        self.assertEqual(user.name, "bob")
+
+    def test_newUserNotInBattle(self):
+        self.assertTrue(self.db.register(uid="foo", name="bob"))
+
+        user = self.db.getUserByName("bob")
+
+        self.assertEqual(user.inBattle, False)
 
     def test_getBattleground(self):
         self.assertTrue(self.db.register(uid="foo", name="bob"))

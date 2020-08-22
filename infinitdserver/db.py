@@ -3,11 +3,15 @@ import json
 from typing import Optional
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState
+from infinitdserver.user import User
 
 class Db:
     DEFAULT_DB_PATH = "data.db"
-    STARTING_GOLD = 100.0
-    SELECT_USER_STATEMENT = "SELECT name, gold, accumulatedGold, goldPerMinute FROM users"
+    STARTING_GOLD = 100
+    STARTING_GOLD_PER_MINUTE = 1
+    SELECT_USER_STATEMENT = (
+            "SELECT name, gold, accumulatedGold, goldPerMinute, inBattle FROM users")
+
 
     def __init__(self, db_path=None, debug=False):
         if db_path is None:
@@ -27,31 +31,35 @@ class Db:
                 "gold REAL, "
                 "accumulatedGold REAL, "
                 "goldPerMinute REAL, "
+                "inBattle BOOLEAN DEFAULT 0 CHECK (inBattle == 0 || inBattle == 1), "
                 "battleground TEXT"
                 ");")
         self.conn.commit()
 
     @staticmethod
-    def __extractUserFromRow(row):
-        return {"name": row[0],
-                "gold": row[1],
-                "accumulatedGold": row[2],
-                "goldPerMinute": row[3],
-                }
+    def __extractUserFromRow(row) -> User:
+        print(str(row))
+        print(type(row))
+        return User(
+                name = row[0],
+                gold = row[1],
+                accumulatedGold = row[2],
+                goldPerMinute = row[3],
+                inBattle = row[4] == 1)
 
-    def getUserByUid(self, uid):
+    def getUserByUid(self, uid) -> Optional[User]:
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
         if res:
             return Db.__extractUserFromRow(res)
         return None
 
-    def getUserByName(self, name):
+    def getUserByName(self, name) -> Optional[User]:
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE name = ?;", (name, )).fetchone()
         if res:
             return Db.__extractUserFromRow(res)
         return None
 
-    def getUsers(self):
+    def getUsers(self) -> Optional[User]:
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " ORDER BY accumulatedGold DESC;")
         res = [ Db.__extractUserFromRow(r) for r in res ]
         return res
@@ -79,8 +87,9 @@ class Db:
         try:
             emptyBattleground = BattlegroundState(towers=BgTowersState(towers=[]))
             res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, battleground)"
-                    " VALUES (:uid, :name, :gold, :gold, 0.0, :battleground);",
-                    {"uid": uid, "name": name, "gold": self.STARTING_GOLD, "battleground": emptyBattleground.to_json()})
+                    " VALUES (:uid, :name, :gold, :gold, :goldPerMinute, :battleground);",
+                    {"uid": uid, "name": name, "gold": self.STARTING_GOLD, "goldPerMinute": self.STARTING_GOLD_PER_MINUTE,
+                        "battleground": emptyBattleground.to_json()})
             self.conn.commit()
         except sqlite3.IntegrityError as err:
             # This is likely because the name was already taken. 

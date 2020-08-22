@@ -47,18 +47,17 @@ class BaseDbHandler(BaseHandler):
 class UsersHandler(BaseDbHandler):
     def get(self):
         print("Got request for /users")
-        users = self.db.getUsers()
+        users = [user.to_dict() for user in self.db.getUsers()]
         data = {'users': users}
         self.write(data)
 
 class UserHandler(BaseDbHandler):
     def get(self, username):
         print("Got request for /user/" + username)
-        userData = self.db.getUserByName(username)
-        user = {"name": username, "accumulatedGold": 42.0, "goldPerMinute": 0.0}
-        if userData:
-            print("Sending ", str(userData))
-            self.write(userData)
+        user = self.db.getUserByName(username)
+        if user:
+            print("Sending ", str(user.to_dict()))
+            self.write(user.to_dict())
         else:
             self.set_status(404)
 
@@ -66,10 +65,10 @@ class ThisUserHandler(BaseDbHandler):
     def get(self):
         print("Got request for thisUser")
         decoded_token = self.verifyAuthentication()
-        userData = self.db.getUserByUid(decoded_token["uid"])
-        if userData:
-            print("Sending back ", str(userData))
-            self.write(userData)
+        user = self.db.getUserByUid(decoded_token["uid"])
+        if user:
+            print("Sending back ", str(user.to_dict()))
+            self.write(user.to_dict())
         else:
             print("No user data found.")
             self.write({})
