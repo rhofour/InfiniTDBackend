@@ -11,9 +11,9 @@ import firebase_admin.auth
 from firebase_admin import credentials
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 
-from db import Db
-import game_config
-from battleground_state import BattlegroundState, BgTowersState, BgTowerState
+from infinitdserver.db import Db
+import infinitdserver.game_config
+from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
 
 class BaseHandler(tornado.web.RequestHandler):
     def initialize(self, db):

@@ -1,7 +1,8 @@
 import sqlite3
 import json
+from typing import Optional
 
-from battleground_state import BattlegroundState
+from infinitdserver.battleground_state import BattlegroundState, BgTowersState
 
 class Db:
     DEFAULT_DB_PATH = "data.db"
@@ -66,6 +67,14 @@ class Db:
         res = [ Db.__extractUserFromRow(r) for r in res ]
         return res
 
+    def getBattleground(self, name) -> Optional[BattlegroundState]:
+        res = self.conn.execute("SELECT battleground FROM users WHERE name = ?;", (name, )).fetchone()
+        if res is None:
+            return None
+        print(res[0])
+        print(type(res[0]))
+        return BattlegroundState.from_json(res[0])
+
     def nameTaken(self, name):
         res = self.conn.execute("SELECT name FROM users WHERE name = ?;", (name, )).fetchone()
         if res is None:
@@ -79,7 +88,7 @@ class Db:
         if not name:
             raise ValueError("Register requires a name.")
         try:
-            emptyBattleground = BattlegroundState(towers=[])
+            emptyBattleground = BattlegroundState(towers=BgTowersState(towers=[]))
             res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, battleground)"
                     " VALUES (:uid, :name, :gold, :gold, 0.0, :battleground);",
                     {"uid": uid, "name": name, "gold": self.STARTING_GOLD, "battleground": emptyBattleground.to_json()})
