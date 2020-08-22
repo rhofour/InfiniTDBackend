@@ -3,3 +3,6 @@ privateFirebaseKey.json
 # Don't store the database
 data.db
 *.egg-info
+# Pytype stuff
+.pytype
+infintdserver/.pytype
