@@ -10,11 +10,11 @@ from tornado.iostream import StreamClosedError
 import firebase_admin
 import firebase_admin.auth
 from firebase_admin import credentials
-from asyncio_multisubscriber_queue import MultisubscriberQueue
 
 from infinitdserver.db import Db
 from infinitdserver.game_config import GameConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
+from infinitdserver.sse import SseStreamHandler, SseQueues
 
 class BaseHandler(tornado.web.RequestHandler):
     def set_default_headers(self):
@@ -109,51 +109,16 @@ class GameConfigHandler(BaseHandler):
     def get(self):
         self.write(self.gameConfig.to_dict())
 
-class BattlegroundStreamer:
-    def __init__(self, db):
-        self.db = db
-        self.queuesByUsername = {}
-
-    def queue_context(self, name: str):
-        if name not in self.queuesByUsername:
-            self.queuesByUsername[name] = MultisubscriberQueue()
-        return self.queuesByUsername[name].queue_context()
-
-    async def sendUpdate(self, name, newBgState):
-        if name not in self.queuesByUsername:
-            return
-        await self.queuesByUsername[name].put(newBgState)
-
-class BattlegroundStateHandler(tornado.web.RequestHandler):
+class BattlegroundStateHandler(SseStreamHandler):
     db: Db
-    streamer: BattlegroundStreamer
+    queues: SseQueues
 
-    def initialize(self, db, streamer):
+    def initialize(self, db, queues):
         self.db = db
-        self.streamer = streamer
+        self.queues = queues
 
-    def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header("Access-Control-Allow-Headers", "content-type")
-        self.set_header("Access-Control-Allow-Methods", "GET")
-        self.set_header("content-type", "text/event-stream")
-        self.set_header("cache-control", "no-cache")
-
-    async def publish(self, data):
-        self.write(f"data: {data.to_json()}\n\n")
-        await self.flush()
-
-    async def get(self, username):
-        # Send initial battleground state from database
-        with self.streamer.queue_context(username) as q:
-            try:
-                initial_state = random_state()
-                await self.publish(initial_state)
-                while True:
-                    newBgState = await q.get()
-                    await self.publish(newBgState)
-            except StreamClosedError:
-                print("Stream closed.");
+    async def initialState(self, param):
+        return random_state()
 
 async def sendRandomStates(streamer, user):
     while True:
@@ -183,7 +148,7 @@ async def updateGoldEveryMinute(db):
         else:
             print("updateGoldEveryMinute is running {-waitTime} behind.")
 
-def make_app(db, bgStreamer, gameConfig):
+def make_app(db, bgQueues, gameConfig):
     cred = credentials.Certificate("./privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
     settings = {
@@ -196,19 +161,19 @@ def make_app(db, bgStreamer, gameConfig):
         (r"/thisUser", ThisUserHandler, dict(db=db)),
         (r"/register/(.*)", RegisterHandler, dict(db=db)),
         (r"/gameConfig", GameConfigHandler, dict(gameConfig=gameConfig)),
-        (r"/battleground/(.*)", BattlegroundStateHandler, dict(db=db, streamer=bgStreamer)),
+        (r"/battleground/(.*)", BattlegroundStateHandler, dict(db=db, queues=bgQueues)),
     ], **settings)
 
 async def main():
     db = Db(debug=True)
-    bgStreamer = BattlegroundStreamer(db)
+    bgQueues = SseQueues()
     with open('game_config.json') as gameConfigFile:
         game_config = GameConfig.from_json(gameConfigFile.read())
-    app = make_app(db, bgStreamer, game_config)
+    app = make_app(db, bgQueues, game_config)
     app.listen(8794)
     print("Listening on port 8794.")
     loop = asyncio.get_running_loop()
-    task = loop.create_task(sendRandomStates(bgStreamer, "rofer"))
+    task = loop.create_task(sendRandomStates(bgQueues, "rofer"))
     gold_task = loop.create_task(updateGoldEveryMinute(db))
     await asyncio.wait([task, gold_task])
 
