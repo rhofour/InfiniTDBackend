@@ -2,6 +2,7 @@ import asyncio
 import os
 from random import randrange
 import json
+from datetime import datetime, timedelta
 
 import tornado.web
 from tornado.web import Finish
@@ -157,6 +158,22 @@ def random_state():
     towers[randrange(14)][randrange(10)] = BgTowerState(id=0)
     return BattlegroundState(towers=BgTowersState(towers))
 
+async def updateGoldEveryMinute(db):
+    oneMinute = timedelta(minutes=1)
+    while True:
+        print("Accumulating gold.")
+        startTime = datetime.now()
+        db.accumulateGold()
+        endTime = datetime.now()
+
+        # Figure out how long we need to wait
+        waitTime = oneMinute - (endTime - startTime)
+        print(f"Waiting {waitTime}")
+        if waitTime.seconds > 0:
+            await asyncio.sleep(waitTime.seconds)
+        else:
+            print("updateGoldEveryMinute is running {-waitTime} behind.")
+
 def make_app(db, bgStreamer, gameConfig):
     cred = credentials.Certificate("./privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
@@ -183,7 +200,8 @@ async def main():
     print("Listening on port 8794.")
     loop = asyncio.get_running_loop()
     task = loop.create_task(sendRandomStates(bgStreamer, "rofer"))
-    await asyncio.wait([task])
+    gold_task = loop.create_task(updateGoldEveryMinute(db))
+    await asyncio.wait([task, gold_task])
 
 if __name__ == "__main__":
     asyncio.run(main())

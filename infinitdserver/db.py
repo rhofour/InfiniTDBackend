@@ -100,3 +100,9 @@ class Db:
             return False
         return True
 
+    def accumulateGold(self):
+        """Updates gold and accumulatedGold for every user based on goldPerMinute."""
+        self.conn.execute("UPDATE USERS SET accumulatedGold = accumulatedGold + goldPerMinute, gold = gold + goldPerMinute;");
+        self.conn.commit()
+
+
