@@ -46,6 +46,8 @@ class BaseDbHandler(BaseHandler):
         self.reply401()
 
 class UsersHandler(BaseDbHandler):
+    db: Db # See https://github.com/google/pytype/issues/652
+
     def get(self):
         print("Got request for /users")
         users = [user.to_dict() for user in self.db.getUsers()]
@@ -53,6 +55,8 @@ class UsersHandler(BaseDbHandler):
         self.write(data)
 
 class UserHandler(BaseDbHandler):
+    db: Db # See https://github.com/google/pytype/issues/652
+
     def get(self, username):
         print("Got request for /user/" + username)
         user = self.db.getUserByName(username)
@@ -63,6 +67,8 @@ class UserHandler(BaseDbHandler):
             self.set_status(404)
 
 class ThisUserHandler(BaseDbHandler):
+    db: Db # See https://github.com/google/pytype/issues/652
+
     def get(self):
         print("Got request for thisUser")
         decoded_token = self.verifyAuthentication()
@@ -75,6 +81,8 @@ class ThisUserHandler(BaseDbHandler):
             self.write({})
 
 class NameTakenHandler(BaseDbHandler):
+    db: Db # See https://github.com/google/pytype/issues/652
+
     # TODO(rofer): Switch to using response headers to send this.
     # 204 for name found, 404 for not found
     def get(self, name):
@@ -82,6 +90,8 @@ class NameTakenHandler(BaseDbHandler):
         self.write({"isTaken": self.db.nameTaken(name)})
 
 class RegisterHandler(BaseDbHandler):
+    db: Db # See https://github.com/google/pytype/issues/652
+
     def post(self, name):
         print("Got request for register/" + name)
         decoded_token = self.verifyAuthentication()
@@ -121,7 +131,6 @@ class BattlegroundStateHandler(tornado.web.RequestHandler):
     def initialize(self, db, streamer):
         self.db = db
         self.streamer = streamer
-        self.streamerId = None
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
