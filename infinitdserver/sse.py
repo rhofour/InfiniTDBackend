@@ -22,6 +22,9 @@ class SseQueues:
             return
         await self.queuesByParam[param].put(newState)
 
+    def __contains__(self, item):
+        return item in self.queuesByParam
+
 class SseStreamHandler(tornado.web.RequestHandler, metaclass=abc.ABCMeta):
     queues: SseQueues
 

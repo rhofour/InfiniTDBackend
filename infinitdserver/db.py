@@ -5,6 +5,7 @@ from typing import Optional
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState
 from infinitdserver.user import User
 from infinitdserver.game_config import GameConfig
+from infinitdserver.sse import SseQueues
 
 class Db:
     DEFAULT_DB_PATH = "data.db"
@@ -14,13 +15,14 @@ class Db:
             "SELECT name, gold, accumulatedGold, goldPerMinute, inBattle FROM users")
 
 
-    def __init__(self, gameConfig: GameConfig, db_path=None, debug=False):
+    def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, db_path=None, debug=False):
         if db_path is None:
             db_path = self.DEFAULT_DB_PATH
         self.conn = sqlite3.connect(db_path)
         sqlite3.enable_callback_tracebacks(debug)
         self.__create_tables()
         self.gameConfig = gameConfig
+        self.userQueues: SseQueues = userQueues
 
     def __del__(self):
         self.conn.close()
@@ -40,8 +42,6 @@ class Db:
 
     @staticmethod
     def __extractUserFromRow(row) -> User:
-        print(str(row))
-        print(type(row))
         return User(
                 name = row[0],
                 gold = row[1],
@@ -70,8 +70,6 @@ class Db:
         res = self.conn.execute("SELECT battleground FROM users WHERE name = ?;", (name, )).fetchone()
         if res is None:
             return None
-        print(res[0])
-        print(type(res[0]))
         return BattlegroundState.from_json(res[0])
 
     def nameTaken(self, name):
@@ -102,8 +100,10 @@ class Db:
             return False
         return True
 
-    def accumulateGold(self):
+    async def accumulateGold(self):
         """Updates gold and accumulatedGold for every user based on goldPerMinute."""
+        res = self.conn.execute("SELECT name FROM users WHERE inBattle == 0;")
+        namesUpdated = [row[0] for row in res]
         self.conn.execute("""
         UPDATE USERS SET
             accumulatedGold = accumulatedGold + goldPerMinute,
@@ -111,8 +111,13 @@ class Db:
         WHERE inBattle == 0;""");
         self.conn.commit()
 
+        for name in namesUpdated:
+            if name in self.userQueues:
+                user = self.getUserByName(name)
+                await self.userQueues.sendUpdate(name, user)
+
     def setInBattle(self, name: str, inBattle: bool):
         self.conn.execute(
-                "UPDATE USERS SET inBattle = :inBattle WHERE name == :name",
+                "UPDATE users SET inBattle = :inBattle WHERE name == :name",
                 {"inBattle": inBattle, "name": name})
         self.conn.commit()

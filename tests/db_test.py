@@ -5,6 +5,7 @@ import os
 from infinitdserver.db import Db
 from infinitdserver.battleground_state import BattlegroundState
 from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig
+from infinitdserver.sse import SseQueues
 
 class TestDb(unittest.TestCase):
     def setUp(self):
@@ -20,7 +21,8 @@ class TestDb(unittest.TestCase):
                 tiles = (),
                 towers = (),
                 monsters = ())
-        self.db = Db(gameConfig = gameConfig, db_path=self.db_path)
+        userQueues = SseQueues()
+        self.db = Db(gameConfig = gameConfig, userQueues = userQueues, db_path=self.db_path)
 
     def test_registerNewUser(self):
         self.assertTrue(self.db.register(uid="foo", name="bob"))

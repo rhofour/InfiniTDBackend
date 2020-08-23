@@ -135,7 +135,7 @@ async def updateGoldEveryMinute(db):
     while True:
         print("Accumulating gold.")
         startTime = datetime.now()
-        db.accumulateGold()
+        await db.accumulateGold()
         endTime = datetime.now()
 
         # Figure out how long we need to wait
@@ -165,8 +165,8 @@ def make_app(db, userQueues, bgQueues, gameConfig):
 async def main():
     with open('game_config.json') as gameConfigFile:
         gameConfig = GameConfig.from_json(gameConfigFile.read())
-    db = Db(gameConfig = gameConfig, debug=True)
     userQueues = SseQueues()
+    db = Db(gameConfig = gameConfig, userQueues = userQueues, debug=True)
     bgQueues = SseQueues()
     app = make_app(db, userQueues, bgQueues, gameConfig)
     app.listen(8794)
