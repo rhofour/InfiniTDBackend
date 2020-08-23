@@ -133,7 +133,6 @@ class UserStreamHandler(SseStreamHandler):
 async def updateGoldEveryMinute(db):
     oneMinute = timedelta(minutes=1)
     while True:
-        print("Accumulating gold.")
         startTime = datetime.now()
         await db.accumulateGold()
         endTime = datetime.now()
