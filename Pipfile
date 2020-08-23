@@ -12,6 +12,7 @@ pytest = "*"
 dataclasses-json = "*"
 asyncio-multisubscriber-queue = "*"
 pytype = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.8"
