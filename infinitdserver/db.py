@@ -116,8 +116,12 @@ class Db:
                 user = self.getUserByName(name)
                 await self.userQueues.sendUpdate(name, user)
 
-    def setInBattle(self, name: str, inBattle: bool):
+    async def setInBattle(self, name: str, inBattle: bool):
         self.conn.execute(
                 "UPDATE users SET inBattle = :inBattle WHERE name == :name",
                 {"inBattle": inBattle, "name": name})
         self.conn.commit()
+
+        if name in self.userQueues:
+            user = self.getUserByName(name)
+            await self.userQueues.sendUpdate(name, user)

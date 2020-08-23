@@ -2,12 +2,14 @@ import unittest
 import tempfile
 import os
 
+from aiounittest import AsyncTestCase
+
 from infinitdserver.db import Db
 from infinitdserver.battleground_state import BattlegroundState
 from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig
 from infinitdserver.sse import SseQueues
 
-class TestDb(unittest.TestCase):
+class TestDb(AsyncTestCase):
     def setUp(self):
         tmp_file, tmp_path = tempfile.mkstemp()
         self.db_path = tmp_path
@@ -60,24 +62,24 @@ class TestDb(unittest.TestCase):
         print(type(bg))
         self.assertIs(type(bg), BattlegroundState)
 
-    def test_setInBattle(self):
+    async def test_setInBattle(self):
         self.assertTrue(self.db.register(uid="foo", name="bob"))
         self.assertTrue(self.db.register(uid="bar", name="sue"))
 
-        self.db.setInBattle("sue", True)
-        self.db.setInBattle("bob", False)
+        await self.db.setInBattle("sue", True)
+        await self.db.setInBattle("bob", False)
 
         self.assertTrue(self.db.getUserByName("sue").inBattle)
         self.assertFalse(self.db.getUserByName("bob").inBattle)
 
-    def test_accumulateGold(self):
+    async def test_accumulateGold(self):
         self.assertTrue(self.db.register(uid="foo", name="bob"))
         self.assertTrue(self.db.register(uid="bar", name="sue"))
         # Sue shouldn't accumulate anything since she's in a battle.
-        self.db.setInBattle("sue", True)
-        self.db.setInBattle("bob", False)
+        await self.db.setInBattle("sue", True)
+        await self.db.setInBattle("bob", False)
 
-        self.db.accumulateGold()
+        await self.db.accumulateGold()
 
         self.assertEqual(self.db.getUserByName("bob").gold, 101)
         self.assertEqual(self.db.getUserByName("sue").gold, 100)
