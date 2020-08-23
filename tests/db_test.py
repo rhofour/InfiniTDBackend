@@ -58,6 +58,28 @@ class TestDb(unittest.TestCase):
         print(type(bg))
         self.assertIs(type(bg), BattlegroundState)
 
+    def test_setInBattle(self):
+        self.assertTrue(self.db.register(uid="foo", name="bob"))
+        self.assertTrue(self.db.register(uid="bar", name="sue"))
+
+        self.db.setInBattle("sue", True)
+        self.db.setInBattle("bob", False)
+
+        self.assertTrue(self.db.getUserByName("sue").inBattle)
+        self.assertFalse(self.db.getUserByName("bob").inBattle)
+
+    def test_accumulateGold(self):
+        self.assertTrue(self.db.register(uid="foo", name="bob"))
+        self.assertTrue(self.db.register(uid="bar", name="sue"))
+        # Sue shouldn't accumulate anything since she's in a battle.
+        self.db.setInBattle("sue", True)
+        self.db.setInBattle("bob", False)
+
+        self.db.accumulateGold()
+
+        self.assertEqual(self.db.getUserByName("bob").gold, 101)
+        self.assertEqual(self.db.getUserByName("sue").gold, 100)
+
     def tearDown(self):
         os.remove(self.db_path)
 

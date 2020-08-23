@@ -104,7 +104,15 @@ class Db:
 
     def accumulateGold(self):
         """Updates gold and accumulatedGold for every user based on goldPerMinute."""
-        self.conn.execute("UPDATE USERS SET accumulatedGold = accumulatedGold + goldPerMinute, gold = gold + goldPerMinute;");
+        self.conn.execute("""
+        UPDATE USERS SET
+            accumulatedGold = accumulatedGold + goldPerMinute,
+            gold = gold + goldPerMinute
+        WHERE inBattle == 0;""");
         self.conn.commit()
 
-
+    def setInBattle(self, name: str, inBattle: bool):
+        self.conn.execute(
+                "UPDATE USERS SET inBattle = :inBattle WHERE name == :name",
+                {"inBattle": inBattle, "name": name})
+        self.conn.commit()
