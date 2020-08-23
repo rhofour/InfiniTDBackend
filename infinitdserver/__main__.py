@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 
 import tornado.web
 from tornado.web import Finish
-from tornado.iostream import StreamClosedError
 import firebase_admin
 import firebase_admin.auth
 from firebase_admin import credentials
@@ -117,14 +116,8 @@ class BattlegroundStateHandler(SseStreamHandler):
         self.db = db
         self.queues = queues
 
-    async def initialState(self, param):
-        return random_state()
-
-async def sendRandomStates(streamer, user):
-    while True:
-        print("Sending a random update")
-        await streamer.sendUpdate(user, random_state())
-        await asyncio.sleep(10)
+    async def initialState(self, name):
+        return self.db.getBattleground(name)
 
 def random_state():
     towers = [[None for c in range(10)] for r in range(14)]
@@ -142,7 +135,6 @@ async def updateGoldEveryMinute(db):
 
         # Figure out how long we need to wait
         waitTime = oneMinute - (endTime - startTime)
-        print(f"Waiting {waitTime}")
         if waitTime.seconds > 0:
             await asyncio.sleep(waitTime.seconds)
         else:
@@ -165,17 +157,16 @@ def make_app(db, bgQueues, gameConfig):
     ], **settings)
 
 async def main():
-    db = Db(debug=True)
-    bgQueues = SseQueues()
     with open('game_config.json') as gameConfigFile:
-        game_config = GameConfig.from_json(gameConfigFile.read())
-    app = make_app(db, bgQueues, game_config)
+        gameConfig = GameConfig.from_json(gameConfigFile.read())
+    db = Db(gameConfig = gameConfig, debug=True)
+    bgQueues = SseQueues()
+    app = make_app(db, bgQueues, gameConfig)
     app.listen(8794)
     print("Listening on port 8794.")
     loop = asyncio.get_running_loop()
-    task = loop.create_task(sendRandomStates(bgQueues, "rofer"))
     gold_task = loop.create_task(updateGoldEveryMinute(db))
-    await asyncio.wait([task, gold_task])
+    await asyncio.wait([gold_task])
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -2,6 +2,7 @@ import abc
 from typing import Dict
 
 import tornado.web
+from tornado.iostream import StreamClosedError
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from dataclasses_json import DataClassJsonMixin
 
@@ -9,7 +10,7 @@ class SseQueues:
     queuesByParam: Dict[str, MultisubscriberQueue]
 
     def __init__(self):
-        self.queueByParam = {}
+        self.queuesByParam = {}
 
     def queue_context(self, param: str):
         if param not in self.queuesByParam:
@@ -39,6 +40,9 @@ class SseStreamHandler(tornado.web.RequestHandler, metaclass=abc.ABCMeta):
         with self.queues.queue_context(param) as q:
             try:
                 initialState = await self.initialState(param)
+                if initialState is None:
+                    self.set_status(404)
+                    return
                 await self.publish(initialState)
                 while True:
                     newState = await q.get()

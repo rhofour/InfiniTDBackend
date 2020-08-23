@@ -4,6 +4,7 @@ from typing import Optional
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState
 from infinitdserver.user import User
+from infinitdserver.game_config import GameConfig
 
 class Db:
     DEFAULT_DB_PATH = "data.db"
@@ -13,12 +14,13 @@ class Db:
             "SELECT name, gold, accumulatedGold, goldPerMinute, inBattle FROM users")
 
 
-    def __init__(self, db_path=None, debug=False):
+    def __init__(self, gameConfig: GameConfig, db_path=None, debug=False):
         if db_path is None:
             db_path = self.DEFAULT_DB_PATH
         self.conn = sqlite3.connect(db_path)
         sqlite3.enable_callback_tracebacks(debug)
         self.__create_tables()
+        self.gameConfig = gameConfig
 
     def __del__(self):
         self.conn.close()
@@ -85,7 +87,7 @@ class Db:
         if not name:
             raise ValueError("Register requires a name.")
         try:
-            emptyBattleground = BattlegroundState(towers=BgTowersState(towers=[]))
+            emptyBattleground = BattlegroundState.empty(self.gameConfig)
             res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, battleground)"
                     " VALUES (:uid, :name, :gold, :gold, :goldPerMinute, :battleground);",
                     {"uid": uid, "name": name, "gold": self.STARTING_GOLD, "goldPerMinute": self.STARTING_GOLD_PER_MINUTE,
