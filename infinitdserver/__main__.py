@@ -119,11 +119,16 @@ class BattlegroundStateHandler(SseStreamHandler):
     async def initialState(self, name):
         return self.db.getBattleground(name)
 
-def random_state():
-    towers = [[None for c in range(10)] for r in range(14)]
-    towers[randrange(14)][randrange(10)] = BgTowerState(id=1)
-    towers[randrange(14)][randrange(10)] = BgTowerState(id=0)
-    return BattlegroundState(towers=BgTowersState(towers))
+class UserStreamHandler(SseStreamHandler):
+    db: Db
+    queues: SseQueues
+
+    def initialize(self, db, queues):
+        self.db = db
+        self.queues = queues
+
+    async def initialState(self, name):
+        return self.db.getUserByName(name)
 
 async def updateGoldEveryMinute(db):
     oneMinute = timedelta(minutes=1)
@@ -140,7 +145,7 @@ async def updateGoldEveryMinute(db):
         else:
             print("updateGoldEveryMinute is running {-waitTime} behind.")
 
-def make_app(db, bgQueues, gameConfig):
+def make_app(db, userQueues, bgQueues, gameConfig):
     cred = credentials.Certificate("./privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
     settings = {
@@ -149,6 +154,7 @@ def make_app(db, bgQueues, gameConfig):
     return tornado.web.Application([
         (r"/users", UsersHandler, dict(db=db)),
         (r"/user/(.*)", UserHandler, dict(db=db)),
+        (r"/userStream/(.*)", UserStreamHandler, dict(db=db, queues=userQueues)),
         (r"/isNameTaken/(.*)", NameTakenHandler, dict(db=db)),
         (r"/thisUser", ThisUserHandler, dict(db=db)),
         (r"/register/(.*)", RegisterHandler, dict(db=db)),
@@ -160,8 +166,9 @@ async def main():
     with open('game_config.json') as gameConfigFile:
         gameConfig = GameConfig.from_json(gameConfigFile.read())
     db = Db(gameConfig = gameConfig, debug=True)
+    userQueues = SseQueues()
     bgQueues = SseQueues()
-    app = make_app(db, bgQueues, gameConfig)
+    app = make_app(db, userQueues, bgQueues, gameConfig)
     app.listen(8794)
     print("Listening on port 8794.")
     loop = asyncio.get_running_loop()
