@@ -158,7 +158,7 @@ def make_app(db, userQueues, bgQueues, gameConfig):
         (r"/thisUser", ThisUserHandler, dict(db=db)),
         (r"/register/(.*)", RegisterHandler, dict(db=db)),
         (r"/gameConfig", GameConfigHandler, dict(gameConfig=gameConfig)),
-        (r"/battleground/(.*)", BattlegroundStateHandler, dict(db=db, queues=bgQueues)),
+        (r"/battlegroundStream/(.*)", BattlegroundStateHandler, dict(db=db, queues=bgQueues)),
     ], **settings)
 
 async def main():
