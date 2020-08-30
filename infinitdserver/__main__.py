@@ -5,130 +5,23 @@ import json
 from datetime import datetime, timedelta
 
 import tornado.web
-from tornado.web import Finish
 import firebase_admin
-import firebase_admin.auth
 from firebase_admin import credentials
 
 from infinitdserver.db import Db
 from infinitdserver.game_config import GameConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
-from infinitdserver.sse import SseStreamHandler, SseQueues
-
-class BaseHandler(tornado.web.RequestHandler):
-    def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header("Access-Control-Allow-Headers", "x-requested-with, authorization, content-type")
-        self.set_header("Access-Control-Allow-Methods", "GET, OPTIONS, POST")
-
-    def options(self, *args):
-        print("Got OPTIONS request.")
-
-    def reply401(self):
-        self.set_status(401)
-        self.set_header("WWW-Authenticate", 'Bearer')
-        raise Finish()
-
-class BaseDbHandler(BaseHandler):
-    db: Db
-
-    def initialize(self, db):
-        self.db = db
-
-    def verifyAuthentication(self):
-        if self.request.headers['authorization'][:7] == "Bearer ":
-            token = self.request.headers['authorization'][7:]
-            try:
-                return firebase_admin.auth.verify_id_token(token)
-            except Exception as e:
-                print(e)
-        self.reply401()
-
-class UsersHandler(BaseDbHandler):
-    db: Db # See https://github.com/google/pytype/issues/652
-
-    def get(self):
-        print("Got request for /users")
-        users = [user.to_dict() for user in self.db.getUsers()]
-        data = {'users': users}
-        self.write(data)
-
-class UserHandler(BaseDbHandler):
-    db: Db # See https://github.com/google/pytype/issues/652
-
-    def get(self, username):
-        print("Got request for /user/" + username)
-        user = self.db.getUserByName(username)
-        if user:
-            print("Sending ", str(user.to_dict()))
-            self.write(user.to_dict())
-        else:
-            self.set_status(404)
-
-class ThisUserHandler(BaseDbHandler):
-    db: Db # See https://github.com/google/pytype/issues/652
-
-    def get(self):
-        print("Got request for thisUser")
-        decoded_token = self.verifyAuthentication()
-        user = self.db.getUserByUid(decoded_token["uid"])
-        if user:
-            print("Sending back ", str(user.to_dict()))
-            self.write(user.to_dict())
-        else:
-            print("No user data found.")
-            self.write({})
-
-class NameTakenHandler(BaseDbHandler):
-    db: Db # See https://github.com/google/pytype/issues/652
-
-    # TODO(rofer): Switch to using response headers to send this.
-    # 204 for name found, 404 for not found
-    def get(self, name):
-        print("Got request for isNameTaken/" + name)
-        self.write({"isTaken": self.db.nameTaken(name)})
-
-class RegisterHandler(BaseDbHandler):
-    db: Db # See https://github.com/google/pytype/issues/652
-
-    def post(self, name):
-        print("Got request for register/" + name)
-        decoded_token = self.verifyAuthentication()
-        if (self.db.register(uid=decoded_token["uid"], name=name)):
-            self.set_status(201); # CREATED
-        else:
-            self.set_status(412); # Precondition Failed (assume name is already used)
-
-class GameConfigHandler(BaseHandler):
-    gameConfig: GameConfig
-
-    def initialize(self, gameConfig):
-        self.gameConfig = gameConfig
-
-    def get(self):
-        self.write(self.gameConfig.to_dict())
-
-class BattlegroundStateHandler(SseStreamHandler):
-    db: Db
-    queues: SseQueues
-
-    def initialize(self, db, queues):
-        self.db = db
-        self.queues = queues
-
-    async def initialState(self, name):
-        return self.db.getBattleground(name)
-
-class UserStreamHandler(SseStreamHandler):
-    db: Db
-    queues: SseQueues
-
-    def initialize(self, db, queues):
-        self.db = db
-        self.queues = queues
-
-    async def initialState(self, name):
-        return self.db.getUserByName(name)
+from infinitdserver.sse import SseQueues
+from infinitdserver.handler.base import BaseHandler, BaseDbHandler
+from infinitdserver.handler.user import UserHandler
+from infinitdserver.handler.users import UsersHandler
+from infinitdserver.handler.this_user import ThisUserHandler
+from infinitdserver.handler.name_taken import NameTakenHandler
+from infinitdserver.handler.register import RegisterHandler
+from infinitdserver.handler.game_config import GameConfigHandler
+from infinitdserver.handler.battleground_state import BattlegroundStateHandler
+from infinitdserver.handler.user_stream import UserStreamHandler
+from infinitdserver.handler.build import BuildHandler
 
 async def updateGoldEveryMinute(db):
     oneMinute = timedelta(minutes=1)
@@ -159,6 +52,7 @@ def make_app(db, userQueues, bgQueues, gameConfig):
         (r"/register/(.*)", RegisterHandler, dict(db=db)),
         (r"/gameConfig", GameConfigHandler, dict(gameConfig=gameConfig)),
         (r"/battlegroundStream/(.*)", BattlegroundStateHandler, dict(db=db, queues=bgQueues)),
+        (r"/build/(.*)/([0-9]*)/([0-9]*)/([0-9]*)", BuildHandler, dict(db=db, gameConfig=gameConfig)),
     ], **settings)
 
 async def main():
