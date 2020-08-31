@@ -1,3 +1,4 @@
+import asyncio
 import sqlite3
 import json
 from typing import Optional
@@ -19,7 +20,7 @@ class Db:
             "SELECT name, gold, accumulatedGold, goldPerMinute, inBattle FROM users")
 
 
-    def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, db_path=None, debug=False):
+    def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues, db_path=None, debug=False):
         if db_path is None:
             db_path = self.DEFAULT_DB_PATH
         self.conn = sqlite3.connect(db_path)
@@ -27,6 +28,7 @@ class Db:
         self.__create_tables()
         self.gameConfig = gameConfig
         self.userQueues: SseQueues = userQueues
+        self.bgQueues: SseQueues = bgQueues
 
     def __del__(self):
         self.conn.close()
@@ -116,13 +118,17 @@ class Db:
         WHERE inBattle == 0;""");
         self.conn.commit()
 
-        for name in namesUpdated:
-            await self.__updateUser(name)
+        await asyncio.wait([self.__updateUser(name) for name in namesUpdated])
 
     async def __updateUser(self, name):
         if name in self.userQueues:
             user = self.getUserByName(name)
             await self.userQueues.sendUpdate(name, user)
+
+    async def __updateBattleground(self, name):
+        if name in self.bgQueues:
+            battleground = self.getBattleground(name)
+            await self.bgQueues.sendUpdate(name, battleground)
 
     async def setInBattle(self, name: str, inBattle: bool):
         self.conn.execute(
@@ -168,4 +174,4 @@ class Db:
                 })
         self.conn.commit()
 
-        await self.__updateUser(name)
+        await asyncio.wait([self.__updateUser(name), self.__updateBattleground(name)])

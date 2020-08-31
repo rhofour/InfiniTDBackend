@@ -46,7 +46,9 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
                 startingGold = 100,
                 minGoldPerMinute = 1.0)
         userQueues = SseQueues()
-        self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, db_path=self.db_path)
+        bgQueues = SseQueues()
+        self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
+                db_path=self.db_path)
         self.db.register(uid="test_uid", name="bob")
         return tornado.web.Application([
             (r"/build/(.*)/([0-9]*)/([0-9]*)", BuildHandler,

@@ -59,8 +59,8 @@ async def main():
     with open('game_config.json') as gameConfigFile:
         gameConfig = GameConfig.from_json(gameConfigFile.read())
     userQueues = SseQueues()
-    db = Db(gameConfig = gameConfig, userQueues = userQueues, debug=True)
     bgQueues = SseQueues()
+    db = Db(gameConfig = gameConfig, userQueues = userQueues, bgQueues = bgQueues, debug=True)
     app = make_app(db, userQueues, bgQueues, gameConfig)
     app.listen(8794)
     print("Listening on port 8794.")

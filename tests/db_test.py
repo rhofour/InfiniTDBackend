@@ -44,7 +44,9 @@ class TestDb(AsyncTestCase):
                 startingGold = 100,
                 minGoldPerMinute = 1.0)
         userQueues = SseQueues()
-        self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, db_path=self.db_path)
+        bgQueues = SseQueues()
+        self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
+                db_path=self.db_path)
 
     def tearDown(self):
         os.remove(self.db_path)

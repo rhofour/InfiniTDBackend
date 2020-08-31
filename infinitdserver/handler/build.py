@@ -20,6 +20,7 @@ class BuildHandler(BaseDbHandler):
         try:
             data = tornado.escape.json_decode(self.request.body)
         except json.decoder.JSONDecodeError:
+            print(f"BuildHandler: Error decoding: {self.request.body}")
             self.set_status(400)
             return
         print(f"Got request for build/{name}/{row}/{col} with data {data}")
