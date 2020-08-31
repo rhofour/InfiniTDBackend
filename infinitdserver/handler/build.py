@@ -23,7 +23,11 @@ class BuildHandler(BaseDbHandler):
             self.set_status(400)
             return
         print(f"Got request for build/{name}/{row}/{col} with data {data}")
-        towerId = data["towerId"]
+        try:
+            towerId = data["towerId"]
+        except KeyError:
+            self.set_status(400)
+            return
         decoded_token = self.verifyAuthentication()
 
         # Check that the name matches the authorized user
