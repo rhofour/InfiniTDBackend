@@ -5,6 +5,7 @@ import os
 
 import tornado.testing
 
+from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.db import Db
 from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig, TowerConfig
 from infinitdserver.handler.build import BuildHandler
@@ -13,9 +14,9 @@ from infinitdserver.sse import SseQueues
 class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         tmp_file, tmp_path = tempfile.mkstemp()
-        db_path = tmp_path
+        self.db_path = tmp_path
         playfieldConfig = PlayfieldConfig(
-                numRows = 3,
+                numRows = 4,
                 numCols = 3,
                 monsterEnter = CellPos(Row(0), Col(0)),
                 monsterExit = CellPos(Row(2), Col(2)))
@@ -45,16 +46,44 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
                 startingGold = 100,
                 minGoldPerMinute = 1.0)
         userQueues = SseQueues()
-        self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, db_path=db_path)
+        self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, db_path=self.db_path)
         self.db.register(uid="test_uid", name="bob")
         return tornado.web.Application([
             (r"/build/(.*)/([0-9]*)/([0-9]*)", BuildHandler,
                 dict(db=self.db, gameConfig=self.gameConfig)),
             ])
 
+    def tearDown(self):
+        super().tearDown()
+        os.remove(self.db_path)
+
     def test_successfulBuild(self):
         with unittest.mock.patch('infinitdserver.handler.base.BaseDbHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/build/bob/1/1", method="POST", body='{"towerId": 0}')
+            resp = self.fetch("/build/bob/0/1", method="POST", body='{"towerId": 0}')
+        battleground = self.db.getBattleground("bob")
+        user = self.db.getUserByName("bob")
 
         self.assertEqual(resp.code, 201)
+        expectedBg = BattlegroundState.empty(self.gameConfig)
+        expectedBg.towers.towers[0][1] = BgTowerState(0)
+        self.assertEqual(battleground, expectedBg)
+        self.assertEqual(user.gold, 99)
+
+    def test_wrongUser(self):
+        with unittest.mock.patch('infinitdserver.handler.base.BaseDbHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch("/build/phil/1/1", method="POST", body='{"towerId": 0}')
+
+        self.assertEqual(resp.code, 403)
+
+    def test_outOfBounds(self):
+        with unittest.mock.patch('infinitdserver.handler.base.BaseDbHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch("/build/bob/4/2", method="POST", body='{"towerId": 0}')
+            resp2 = self.fetch("/build/bob/3/3", method="POST", body='{"towerId": 0}')
+        battleground = self.db.getBattleground("bob")
+
+        self.assertEqual(resp.code, 404)
+        self.assertEqual(resp2.code, 404)
+        self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))

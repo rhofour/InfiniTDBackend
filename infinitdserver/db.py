@@ -2,10 +2,16 @@ import sqlite3
 import json
 from typing import Optional
 
-from infinitdserver.battleground_state import BattlegroundState, BgTowersState
+from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.user import User
 from infinitdserver.game_config import GameConfig
 from infinitdserver.sse import SseQueues
+
+class UserInBattleException(Exception):
+    pass
+
+class UserHasInsufficientGoldException(Exception):
+    pass
 
 class Db:
     DEFAULT_DB_PATH = "data.db"
@@ -111,9 +117,12 @@ class Db:
         self.conn.commit()
 
         for name in namesUpdated:
-            if name in self.userQueues:
-                user = self.getUserByName(name)
-                await self.userQueues.sendUpdate(name, user)
+            await self.__updateUser(name)
+
+    async def __updateUser(self, name):
+        if name in self.userQueues:
+            user = self.getUserByName(name)
+            await self.userQueues.sendUpdate(name, user)
 
     async def setInBattle(self, name: str, inBattle: bool):
         self.conn.execute(
@@ -124,3 +133,39 @@ class Db:
         if name in self.userQueues:
             user = self.getUserByName(name)
             await self.userQueues.sendUpdate(name, user)
+
+    async def buildTower(self, name: str, row: int, col: int, towerId: int):
+        try:
+            towerConfig = self.gameConfig.towers[towerId]
+        except IndexError:
+            raise ValueError(f"Invalid tower ID {towerId}")
+
+        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        user = self.getUserByName(name)
+
+        if user.inBattle:
+            self.conn.commit()
+            raise UserInBattleException()
+
+        if user.gold < towerConfig.cost:
+            self.conn.commit()
+            raise UserHasInsufficientGoldException(
+                    f"Tower ID {towerId} costs {towerConfig.cost}, but {name} only has {user.gold} gold.")
+
+        battleground = self.getBattleground(name)
+        existingTower = battleground.towers.towers[row][col]
+        if existingTower:
+            self.conn.commit()
+            raise ValueError(f"Tower {existingTower} already exists at row {row}, col {col}.")
+
+        battleground.towers.towers[row][col] = BgTowerState(towerId)
+        self.conn.execute(
+                "UPDATE USERS SET gold = :gold, battleground = :battleground WHERE name = :name",
+                {
+                    "gold": user.gold - towerConfig.cost,
+                    "battleground": battleground.to_json(),
+                    "name": name,
+                })
+        self.conn.commit()
+
+        await self.__updateUser(name)

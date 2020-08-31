@@ -12,7 +12,7 @@ class BuildHandler(BaseDbHandler):
         super(BuildHandler, self).initialize(db)
         self.gameConfig = gameConfig
 
-    def post(self, name: str, rowStr: str, colStr: str):
+    async def post(self, name: str, rowStr: str, colStr: str):
         row = int(rowStr)
         col = int(colStr)
         data = tornado.escape.json_decode(self.request.body)
@@ -28,9 +28,21 @@ class BuildHandler(BaseDbHandler):
             return
 
         # Check that the row and column are within the playfield
+        if row < 0 or row >= self.gameConfig.playfield.numRows:
+            print(f"Got invalid build request for row {row} of {self.gameConfig.playfield.numRows}.")
+            self.set_status(404); # Not found
+            return
+        if col < 0 or col >= self.gameConfig.playfield.numCols:
+            print(f"Got invalid build request for col {col} of {self.gameConfig.playfield.numCols}.")
+            self.set_status(404); # Not found
+            return
 
-        # Check that there's no existing tower there
-
-        # Check that the player has sufficient gold
+        try:
+            await self.db.buildTower(name=name, row=row, col=col, towerId=towerId)
+        except (ValueError, UserInBattleException, UserHasInsufficientGoldException)  as e:
+            print("BuildHandler error: " + e)
+            self.set_status(409); # Conflict
+            self.write(str(e))
+            return
 
         self.set_status(201); # CREATED
