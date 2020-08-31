@@ -70,6 +70,11 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(battleground, expectedBg)
         self.assertEqual(user.gold, 99)
 
+    def test_noBody(self):
+        resp = self.fetch("/build/bob/0/1", method="POST", allow_nonstandard_methods=True)
+
+        self.assertEqual(resp.code, 400)
+
     def test_wrongUser(self):
         with unittest.mock.patch('infinitdserver.handler.base.BaseDbHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}

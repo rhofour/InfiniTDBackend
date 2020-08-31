@@ -1,3 +1,5 @@
+import json
+
 import tornado
 
 from infinitdserver.db import Db
@@ -15,7 +17,11 @@ class BuildHandler(BaseDbHandler):
     async def post(self, name: str, rowStr: str, colStr: str):
         row = int(rowStr)
         col = int(colStr)
-        data = tornado.escape.json_decode(self.request.body)
+        try:
+            data = tornado.escape.json_decode(self.request.body)
+        except json.decoder.JSONDecodeError:
+            self.set_status(400)
+            return
         print(f"Got request for build/{name}/{row}/{col} with data {data}")
         towerId = data["towerId"]
         decoded_token = self.verifyAuthentication()
@@ -24,7 +30,7 @@ class BuildHandler(BaseDbHandler):
         user = self.db.getUserByUid(decoded_token["uid"])
         if user.name != name:
             print(f"Got build request for {name} from {user.name}.")
-            self.set_status(403); # Forbidden
+            self.set_status(403) # Forbidden
             return
 
         # Check that the row and column are within the playfield
