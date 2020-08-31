@@ -1,3 +1,5 @@
+import tornado
+
 from infinitdserver.db import Db
 from infinitdserver.game_config import GameConfig
 from infinitdserver.handler.base import BaseDbHandler
@@ -10,10 +12,12 @@ class BuildHandler(BaseDbHandler):
         super(BuildHandler, self).initialize(db)
         self.gameConfig = gameConfig
 
-    def post(self, name, rowStr, colStr, towerId):
+    def post(self, name: str, rowStr: str, colStr: str):
         row = int(rowStr)
         col = int(colStr)
-        print(f"Got request for build/{name}/{row}/{col}/{towerId}")
+        data = tornado.escape.json_decode(self.request.body)
+        print(f"Got request for build/{name}/{row}/{col} with data {data}")
+        towerId = data["towerId"]
         decoded_token = self.verifyAuthentication()
 
         # Check that the name matches the authorized user

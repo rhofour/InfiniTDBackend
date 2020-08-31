@@ -55,3 +55,5 @@ class GameConfig:
     tiles: Tuple[TileConfig, ...]
     towers: Tuple[TowerConfig, ...]
     monsters: Tuple[MonsterConfig, ...]
+    startingGold: int
+    minGoldPerMinute: float

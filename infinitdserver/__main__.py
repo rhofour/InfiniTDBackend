@@ -52,7 +52,7 @@ def make_app(db, userQueues, bgQueues, gameConfig):
         (r"/register/(.*)", RegisterHandler, dict(db=db)),
         (r"/gameConfig", GameConfigHandler, dict(gameConfig=gameConfig)),
         (r"/battlegroundStream/(.*)", BattlegroundStateHandler, dict(db=db, queues=bgQueues)),
-        (r"/build/(.*)/([0-9]*)/([0-9]*)/([0-9]*)", BuildHandler, dict(db=db, gameConfig=gameConfig)),
+        (r"/build/(.*)/([0-9]*)/([0-9]*)", BuildHandler, dict(db=db, gameConfig=gameConfig)),
     ], **settings)
 
 async def main():

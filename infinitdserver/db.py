@@ -9,8 +9,6 @@ from infinitdserver.sse import SseQueues
 
 class Db:
     DEFAULT_DB_PATH = "data.db"
-    STARTING_GOLD = 100
-    STARTING_GOLD_PER_MINUTE = 1
     SELECT_USER_STATEMENT = (
             "SELECT name, gold, accumulatedGold, goldPerMinute, inBattle FROM users")
 
@@ -88,7 +86,8 @@ class Db:
             emptyBattleground = BattlegroundState.empty(self.gameConfig)
             res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, battleground)"
                     " VALUES (:uid, :name, :gold, :gold, :goldPerMinute, :battleground);",
-                    {"uid": uid, "name": name, "gold": self.STARTING_GOLD, "goldPerMinute": self.STARTING_GOLD_PER_MINUTE,
+                    {"uid": uid, "name": name, "gold": self.gameConfig.startingGold,
+                        "goldPerMinute": self.gameConfig.minGoldPerMinute,
                         "battleground": emptyBattleground.to_json()})
             self.conn.commit()
         except sqlite3.IntegrityError as err:

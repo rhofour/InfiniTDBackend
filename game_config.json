@@ -41,5 +41,7 @@
       "damage": 15.0
     }
   ],
-  "monsters": []
+  "monsters": [],
+  "startingGold": 100,
+  "minGoldPerMinute": 1.0
 }

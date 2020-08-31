@@ -22,7 +22,9 @@ class TestDb(AsyncTestCase):
                 playfield = playfieldConfig,
                 tiles = (),
                 towers = (),
-                monsters = ())
+                monsters = (),
+                startingGold = 100,
+                minGoldPerMinute = 1.0)
         userQueues = SseQueues()
         self.db = Db(gameConfig = gameConfig, userQueues = userQueues, db_path=self.db_path)
 
