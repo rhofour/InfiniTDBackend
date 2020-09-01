@@ -25,6 +25,8 @@ class Db:
             db_path = self.DEFAULT_DB_PATH
         self.conn = sqlite3.connect(db_path)
         sqlite3.enable_callback_tracebacks(debug)
+        # Enable Write-Ahead Logging: https://www.sqlite.org/wal.html
+        self.conn.execute("PRAGMA journal_mode=WAL;")
         self.__create_tables()
         self.gameConfig = gameConfig
         self.userQueues: SseQueues = userQueues

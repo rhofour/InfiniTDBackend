@@ -35,7 +35,7 @@
       "id": 1,
       "url": "http://localhost:8794/static/CrappyTower.png",
       "name": "Better Tower",
-      "cost": 5.0,
+      "cost": 5000.0,
       "firingRate": 2.5,
       "range": 500.0,
       "damage": 15.0
