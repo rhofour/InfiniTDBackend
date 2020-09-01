@@ -37,6 +37,14 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
                     firingRate = 1.0,
                     range = 10.0,
                     damage = 5.0),
+                TowerConfig(
+                    id = 2,
+                    url = "",
+                    name = "Other Tower",
+                    cost = 2,
+                    firingRate = 1.0,
+                    range = 10.0,
+                    damage = 5.0),
                 ]
         self.gameConfig = GameConfig(
                 playfield = playfieldConfig,
@@ -99,3 +107,26 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(resp.code, 404)
         self.assertEqual(resp2.code, 404)
         self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
+
+    def test_insufficientGold(self):
+        with unittest.mock.patch('infinitdserver.handler.base.BaseDbHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch("/build/bob/1/2", method="POST", body='{"towerId": 1}')
+        battleground = self.db.getBattleground("bob")
+
+        self.assertEqual(resp.code, 409)
+        self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
+
+    def test_alreadyExists(self):
+        with unittest.mock.patch('infinitdserver.handler.base.BaseDbHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            # This should succeed
+            resp = self.fetch("/build/bob/2/1", method="POST", body='{"towerId": 0}')
+            # This should fail because there already is a tower there
+            resp2 = self.fetch("/build/bob/2/1", method="POST", body='{"towerId": 2}')
+        battleground = self.db.getBattleground("bob")
+
+        self.assertEqual(resp2.code, 409)
+        expectedBg = BattlegroundState.empty(self.gameConfig)
+        expectedBg.towers.towers[2][1] = BgTowerState(0)
+        self.assertEqual(battleground, expectedBg)
