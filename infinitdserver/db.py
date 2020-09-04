@@ -1,4 +1,5 @@
 import asyncio
+import math
 import sqlite3
 import json
 from typing import Optional
@@ -142,6 +143,18 @@ class Db:
             user = self.getUserByName(name)
             await self.userQueues.sendUpdate(name, user)
 
+    async def setBattleground(self, name: str, battleground: BattlegroundState):
+        """Directly sets the Battleground for a given user. For test purposes."""
+        self.conn.execute(
+                "UPDATE USERS SET battleground = :battleground WHERE name = :name",
+                {
+                    "battleground": battleground.to_json(),
+                    "name": name,
+                })
+        self.conn.commit()
+
+        await self.__updateBattleground(name)
+
     async def buildTower(self, name: str, row: int, col: int, towerId: int):
         try:
             towerConfig = self.gameConfig.towers[towerId]
@@ -150,6 +163,8 @@ class Db:
 
         self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
         user = self.getUserByName(name)
+        if user is None:
+            raise ValueError(f"{name} is not a registered user.");
 
         if user.inBattle:
             self.conn.commit()
@@ -172,6 +187,41 @@ class Db:
                 "UPDATE USERS SET gold = :gold, battleground = :battleground WHERE name = :name",
                 {
                     "gold": user.gold - towerConfig.cost,
+                    "battleground": battleground.to_json(),
+                    "name": name,
+                })
+        self.conn.commit()
+
+        await asyncio.wait([self.__updateUser(name), self.__updateBattleground(name)])
+
+    async def sellTower(self, name: str, row: int, col: int):
+        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        user = self.getUserByName(name)
+        if user is None:
+            raise ValueError(f"{name} is not a registered user.");
+
+        if user.inBattle:
+            self.conn.commit()
+            raise UserInBattleException()
+
+        battleground = self.getBattleground(name)
+        existingTower: BgTowerState = battleground.towers.towers[row][col]
+        if existingTower is None:
+            self.conn.commit()
+            raise ValueError(f"No tower exists at row {row}, col {col}.")
+        try:
+            towerConfig = self.gameConfig.towers[existingTower.id]
+        except IndexError:
+            # This should never happen as long as the game config matches the database.
+            raise ValueError(f"Invalid tower ID {towerId}")
+
+        battleground.towers.towers[row][col] = None
+        sellAmount = math.floor(towerConfig.cost * self.gameConfig.misc.sellMultiplier)
+        self.conn.execute(
+                "UPDATE USERS SET gold = :gold, accumulatedGold = :accumulatedGold, battleground = :battleground WHERE name = :name",
+                {
+                    "gold": user.gold + sellAmount,
+                    "accumulatedGold": user.accumulatedGold + sellAmount,
                     "battleground": battleground.to_json(),
                     "name": name,
                 })

@@ -1,6 +1,7 @@
 import json
 
 import tornado
+import tornado.escape
 
 from infinitdserver.db import Db, UserInBattleException, UserHasInsufficientGoldException
 from infinitdserver.game_config import GameConfig

@@ -23,7 +23,7 @@ class TestDb(AsyncTestCase):
                     id = 0,
                     url = "",
                     name = "Cheap Tower",
-                    cost = 1,
+                    cost = 2,
                     firingRate = 1.0,
                     range = 10.0,
                     damage = 5.0),
@@ -132,6 +132,39 @@ class TestDb(AsyncTestCase):
         expectedBg = BattlegroundState.empty(self.gameConfig)
         expectedBg.towers.towers[0][1] = BgTowerState(0)
         self.assertEqual(battleground, expectedBg)
+
+    async def test_sellTowerWhileInBattle(self):
+        self.assertTrue(self.db.register(uid="foo", name="bob"))
+        initialBattleground = BattlegroundState.empty(self.gameConfig)
+        initialBattleground.towers.towers[1][0] = BgTowerState(0)
+        await self.db.setBattleground("bob", initialBattleground)
+        await self.db.setInBattle("bob", True)
+
+        with self.assertRaises(UserInBattleException):
+            await self.db.sellTower(name="bob", row=1, col=0)
+
+        battleground = self.db.getBattleground("bob")
+        self.assertEqual(battleground, initialBattleground)
+
+    async def test_sellTowerWhileNoneExists(self):
+        self.assertTrue(self.db.register(uid="foo", name="bob"))
+
+        with self.assertRaises(ValueError):
+            await self.db.sellTower(name="bob", row=1, col=0)
+
+    async def test_sellTowerSuccessfully(self):
+        self.assertTrue(self.db.register(uid="foo", name="bob"))
+        initialBattleground = BattlegroundState.empty(self.gameConfig)
+        initialBattleground.towers.towers[1][0] = BgTowerState(1)
+        await self.db.setBattleground("bob", initialBattleground)
+
+        await self.db.sellTower(name="bob", row=1, col=0)
+
+        user = self.db.getUserByName("bob")
+        self.assertEqual(user.gold, 150)
+        self.assertEqual(user.accumulatedGold, 150)
+        battleground = self.db.getBattleground("bob")
+        self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
 
 if __name__ == "__main__":
     unittest.main()
