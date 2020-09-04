@@ -50,10 +50,16 @@ class MonsterConfig(IdentifiedImage):
 
 @dataclass_json
 @dataclass(frozen=True)
+class MiscConfig:
+    sellMultiplier: float
+    startingGold: int
+    minGoldPerMinute: float
+
+@dataclass_json
+@dataclass(frozen=True)
 class GameConfig:
     playfield: PlayfieldConfig
     tiles: Tuple[TileConfig, ...]
     towers: Tuple[TowerConfig, ...]
     monsters: Tuple[MonsterConfig, ...]
-    startingGold: int
-    minGoldPerMinute: float
+    misc: MiscConfig

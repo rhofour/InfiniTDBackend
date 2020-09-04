@@ -42,6 +42,9 @@
     }
   ],
   "monsters": [],
-  "startingGold": 100,
-  "minGoldPerMinute": 1.0
+  "misc": {
+    "sellMultiplier": 0.8,
+    "startingGold": 100,
+    "minGoldPerMinute": 1.0
+  }
 }

@@ -6,7 +6,7 @@ from aiounittest import AsyncTestCase
 
 from infinitdserver.db import Db, UserInBattleException, UserHasInsufficientGoldException
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig
+from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig, MiscConfig
 from infinitdserver.sse import SseQueues
 
 class TestDb(AsyncTestCase):
@@ -41,8 +41,11 @@ class TestDb(AsyncTestCase):
                 tiles = (),
                 towers = towers,
                 monsters = (),
-                startingGold = 100,
-                minGoldPerMinute = 1.0)
+                misc = MiscConfig(
+                    sellMultiplier = 0.5,
+                    startingGold = 100,
+                    minGoldPerMinute = 1.0
+                ))
         userQueues = SseQueues()
         bgQueues = SseQueues()
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,

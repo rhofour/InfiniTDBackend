@@ -7,7 +7,7 @@ import tornado.testing
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.db import Db
-from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig, TowerConfig
+from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig, TowerConfig, MiscConfig
 from infinitdserver.handler.build import BuildHandler
 from infinitdserver.sse import SseQueues
 
@@ -51,8 +51,11 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
                 tiles = (),
                 towers = towers,
                 monsters = (),
-                startingGold = 100,
-                minGoldPerMinute = 1.0)
+                misc = MiscConfig(
+                    sellMultiplier = 0.5,
+                    startingGold = 100,
+                    minGoldPerMinute = 1.0
+                ))
         userQueues = SseQueues()
         bgQueues = SseQueues()
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,

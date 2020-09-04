@@ -96,8 +96,8 @@ class Db:
             emptyBattleground = BattlegroundState.empty(self.gameConfig)
             res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, battleground)"
                     " VALUES (:uid, :name, :gold, :gold, :goldPerMinute, :battleground);",
-                    {"uid": uid, "name": name, "gold": self.gameConfig.startingGold,
-                        "goldPerMinute": self.gameConfig.minGoldPerMinute,
+                    {"uid": uid, "name": name, "gold": self.gameConfig.misc.startingGold,
+                        "goldPerMinute": self.gameConfig.misc.minGoldPerMinute,
                         "battleground": emptyBattleground.to_json()})
             self.conn.commit()
         except sqlite3.IntegrityError as err:
@@ -158,13 +158,14 @@ class Db:
         if user.gold < towerConfig.cost:
             self.conn.commit()
             raise UserHasInsufficientGoldException(
-                    f"Tower ID {towerId} costs {towerConfig.cost}, but {name} only has {user.gold} gold.")
+                    f"{towerConfig.name} costs {towerConfig.cost}, but {name} only has {user.gold} gold.")
 
         battleground = self.getBattleground(name)
         existingTower = battleground.towers.towers[row][col]
         if existingTower:
             self.conn.commit()
-            raise ValueError(f"Tower {existingTower} already exists at row {row}, col {col}.")
+            existingTowerName = self.gameConfig.towers[existingTower.id].name
+            raise ValueError(f"{existingTowerName} already exists at row {row}, col {col}.")
 
         battleground.towers.towers[row][col] = BgTowerState(towerId)
         self.conn.execute(
