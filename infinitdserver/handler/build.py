@@ -41,19 +41,19 @@ class BuildHandler(BaseDbHandler):
         # Check that the row and column are within the playfield
         if row < 0 or row >= self.gameConfig.playfield.numRows:
             print(f"Got invalid build request for row {row} of {self.gameConfig.playfield.numRows}.")
-            self.set_status(404); # Not found
+            self.set_status(404) # Not found
             return
         if col < 0 or col >= self.gameConfig.playfield.numCols:
             print(f"Got invalid build request for col {col} of {self.gameConfig.playfield.numCols}.")
-            self.set_status(404); # Not found
+            self.set_status(404) # Not found
             return
 
         try:
             await self.db.buildTower(name=name, row=row, col=col, towerId=towerId)
         except (ValueError, UserInBattleException, UserHasInsufficientGoldException)  as e:
             print("BuildHandler error: " + str(e))
-            self.set_status(409); # Conflict
+            self.set_status(409) # Conflict
             self.write(str(e))
             return
 
-        self.set_status(201); # CREATED
+        self.set_status(201) # CREATED
