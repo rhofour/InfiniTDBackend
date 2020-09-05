@@ -1,5 +1,4 @@
 import asyncio
-import unittest
 import unittest.mock
 import tempfile
 import os
