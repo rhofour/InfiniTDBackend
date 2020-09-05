@@ -8,6 +8,22 @@ def emptyBattleground(rows: int, cols: int):
     return BattlegroundState(towers = BgTowersState([[None for c in range(cols)] for r in range(rows)]))
 
 class TestPaths(unittest.TestCase):
+    def test_startBlocked(self):
+        battleground = emptyBattleground(2, 2)
+        battleground.towers.towers[0][0] = BgTowerState(0)
+
+        paths = findShortestPaths(battleground, CellPos(0, 0), CellPos(1, 1))
+
+        self.assertCountEqual(paths, [])
+
+    def test_endBlocked(self):
+        battleground = emptyBattleground(2, 2)
+        battleground.towers.towers[1][1] = BgTowerState(0)
+
+        paths = findShortestPaths(battleground, CellPos(0, 0), CellPos(1, 1))
+
+        self.assertCountEqual(paths, [])
+
     def test_noPath(self):
         battleground = emptyBattleground(2, 2)
         battleground.towers.towers[0][1] = BgTowerState(0)

@@ -37,6 +37,9 @@ def findShortestPaths(battleground: BattlegroundState, start: CellPos, end: Cell
             if tower is not None:
                 occupiedOrSeen.add(CellPos(row, col))
 
+    if start in occupiedOrSeen:
+        return []
+
     paths = [[start]]
     i = 0
     finalPaths = []

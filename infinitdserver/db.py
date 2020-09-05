@@ -8,6 +8,7 @@ from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.user import User
 from infinitdserver.game_config import GameConfig
 from infinitdserver.sse import SseQueues
+from infinitdserver.paths import findShortestPaths
 
 class UserInBattleException(Exception):
     pass
@@ -183,6 +184,16 @@ class Db:
             raise ValueError(f"{existingTowerName} already exists at row {row}, col {col}.")
 
         battleground.towers.towers[row][col] = BgTowerState(towerId)
+
+        # Check if there is still a path from start to exit.
+        paths = findShortestPaths(
+                battleground,
+                self.gameConfig.playfield.monsterEnter,
+                self.gameConfig.playfield.monsterEnter)
+        if not paths:
+            self.conn.commit()
+            raise ValueError(f"Building at {row}, {col} would block the path.")
+
         self.conn.execute(
                 "UPDATE USERS SET gold = :gold, battleground = :battleground WHERE name = :name",
                 {

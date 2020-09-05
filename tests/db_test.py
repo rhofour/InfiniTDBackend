@@ -133,6 +133,14 @@ class TestDb(AsyncTestCase):
         expectedBg.towers.towers[0][1] = BgTowerState(0)
         self.assertEqual(battleground, expectedBg)
 
+    async def test_buildTowerThatBlocksPath(self):
+        self.assertTrue(self.db.register(uid="foo", name="bob"))
+        with self.assertRaises(ValueError):
+            await self.db.buildTower(name="bob", row=0, col=0, towerId=0)
+        battleground = self.db.getBattleground("bob")
+
+        self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
+
     async def test_sellTowerWhileInBattle(self):
         self.assertTrue(self.db.register(uid="foo", name="bob"))
         initialBattleground = BattlegroundState.empty(self.gameConfig)
