@@ -189,7 +189,7 @@ class Db:
         paths = findShortestPaths(
                 battleground,
                 self.gameConfig.playfield.monsterEnter,
-                self.gameConfig.playfield.monsterEnter)
+                self.gameConfig.playfield.monsterExit)
         if not paths:
             self.conn.commit()
             raise ValueError(f"Building at {row}, {col} would block the path.")

@@ -44,9 +44,6 @@ def findShortestPaths(battleground: BattlegroundState, start: CellPos, end: Cell
     i = 0
     finalPaths = []
     while paths:
-        i += 1
-        print(f"Step {i}: {paths}")
-        print(f" occupiedOrSeen: {occupiedOrSeen}")
         newPaths = []
         newlySeen = set()
         for partialPath in paths:
@@ -54,10 +51,8 @@ def findShortestPaths(battleground: BattlegroundState, start: CellPos, end: Cell
             newlySeen.add(pathEnd)
             if pathEnd == end:
                 finalPaths.append(partialPath)
-                print(" Found path end")
                 continue
             newNeighbors = [neighbor for neighbor in neighbors(pathEnd) if neighbor not in occupiedOrSeen]
-            print(f" {pathEnd} connects to {newNeighbors}")
             for neighbor in newNeighbors:
                 newPaths.append(partialPath + [neighbor])
 
