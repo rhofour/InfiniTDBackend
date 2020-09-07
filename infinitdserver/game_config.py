@@ -21,6 +21,10 @@ class PlayfieldConfig:
     numCols: int
     monsterEnter: CellPos
     monsterExit: CellPos
+    backgroundId: int
+    pathId: int
+    pathStartId: int
+    pathEndId: int
 
 @dataclass(frozen=True)
 class IdentifiedImage:

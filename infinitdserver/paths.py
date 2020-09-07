@@ -11,9 +11,6 @@ def findShortestPaths(battleground: BattlegroundState, start: CellPos, end: Cell
 
     rows = len(battleground.towers.towers)
     cols = len(battleground.towers.towers[0])
-    print(f"Going from {start} to {end}")
-    print(f"{rows} rows and {cols} cols")
-    print(battleground)
 
     def neighbors(cell: CellPos) -> List[CellPos]:
         out = []
@@ -41,7 +38,6 @@ def findShortestPaths(battleground: BattlegroundState, start: CellPos, end: Cell
         return []
 
     paths = [[start]]
-    i = 0
     finalPaths = []
     while paths:
         newPaths = []

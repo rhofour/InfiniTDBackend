@@ -17,7 +17,12 @@ class TestDb(AsyncTestCase):
                 numRows = 3,
                 numCols = 3,
                 monsterEnter = CellPos(Row(0), Col(0)),
-                monsterExit = CellPos(Row(2), Col(2)))
+                monsterExit = CellPos(Row(2), Col(2)),
+                backgroundId = 0,
+                pathId = 0,
+                pathStartId = 0,
+                pathEndId = 0,
+                )
         towers = [
                 TowerConfig(
                     id = 0,
