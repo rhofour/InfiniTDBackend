@@ -8,49 +8,13 @@ from infinitdserver.db import Db, UserInBattleException, UserHasInsufficientGold
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig, MiscConfig
 from infinitdserver.sse import SseQueues
+import test_data
 
 class TestDb(AsyncTestCase):
     def setUp(self):
         tmp_file, tmp_path = tempfile.mkstemp()
         self.db_path = tmp_path
-        playfieldConfig = PlayfieldConfig(
-                numRows = 3,
-                numCols = 3,
-                monsterEnter = CellPos(Row(0), Col(0)),
-                monsterExit = CellPos(Row(2), Col(2)),
-                backgroundId = 0,
-                pathId = 0,
-                pathStartId = 0,
-                pathEndId = 0,
-                )
-        towers = [
-                TowerConfig(
-                    id = 0,
-                    url = "",
-                    name = "Cheap Tower",
-                    cost = 2,
-                    firingRate = 1.0,
-                    range = 10.0,
-                    damage = 5.0),
-                TowerConfig(
-                    id = 1,
-                    url = "",
-                    name = "Expensive Tower",
-                    cost = 101,
-                    firingRate = 1.0,
-                    range = 10.0,
-                    damage = 5.0),
-                ]
-        self.gameConfig = GameConfig(
-                playfield = playfieldConfig,
-                tiles = (),
-                towers = towers,
-                monsters = (),
-                misc = MiscConfig(
-                    sellMultiplier = 0.5,
-                    startingGold = 100,
-                    minGoldPerMinute = 1.0
-                ))
+        self.gameConfig = test_data.gameConfig
         userQueues = SseQueues()
         bgQueues = SseQueues()
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
