@@ -53,10 +53,36 @@
       "damage": 15.0
     }
   ],
-  "monsters": [],
+  "monsters": [
+    {
+      "id": 0,
+      "url": "http://localhost:8794/static/GraySlime.png",
+      "name": "Lame Slime",
+      "health": 10.0,
+      "speed": 2.0,
+      "bounty": 1.0
+    },
+    {
+      "id": 1,
+      "url": "http://localhost:8794/static/GreenSlime.png",
+      "name": "Green Slime",
+      "health": 50.0,
+      "speed": 2.0,
+      "bounty": 6.0
+    },
+    {
+      "id": 2,
+      "url": "http://localhost:8794/static/YellowSlime.png",
+      "name": "Yellow Slime",
+      "health": 15.0,
+      "speed": 5.0,
+      "bounty": 5.0
+    }
+  ],
   "misc": {
     "sellMultiplier": 0.8,
     "startingGold": 100,
-    "minGoldPerMinute": 1.0
+    "minGoldPerMinute": 1.0,
+    "fullWaveMultiplier": 2.0
   }
 }

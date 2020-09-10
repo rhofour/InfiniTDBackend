@@ -58,6 +58,7 @@ class MiscConfig:
     sellMultiplier: float
     startingGold: int
     minGoldPerMinute: float
+    fullWaveMultiplier: float
 
 @dataclass_json
 @dataclass(frozen=True)

@@ -44,5 +44,6 @@ gameConfig = GameConfig(
     misc = MiscConfig(
         sellMultiplier = 0.5,
         startingGold = 100,
-        minGoldPerMinute = 1.0
+        minGoldPerMinute = 1.0,
+        fullWaveMultiplier = 3.0,
     ))
