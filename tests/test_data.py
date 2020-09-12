@@ -1,4 +1,4 @@
-from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig, MiscConfig
+from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig, MiscConfig, MonsterConfig
 
 playfieldConfig = PlayfieldConfig(
     numRows = 4,
@@ -10,6 +10,7 @@ playfieldConfig = PlayfieldConfig(
     pathStartId = 0,
     pathEndId = 0,
     )
+
 towers = [
     TowerConfig(
         id = 0,
@@ -36,11 +37,29 @@ towers = [
         range = 10.0,
         damage = 5.0),
     ]
+
+monsters = [
+        MonsterConfig(
+            id = 0,
+            url = "",
+            name = "Test Enemy 0",
+            health = 5.0,
+            speed = 2.0,
+            bounty = 10.0),
+        MonsterConfig(
+            id = 1,
+            url = "",
+            name = "Test Enemy 1",
+            health = 8.0,
+            speed = 3.5,
+            bounty = 20.0),
+    ]
+
 gameConfig = GameConfig(
     playfield = playfieldConfig,
     tiles = (),
     towers = towers,
-    monsters = (),
+    monsters = monsters,
     misc = MiscConfig(
         sellMultiplier = 0.5,
         startingGold = 100,

@@ -243,3 +243,30 @@ class Db:
         self.conn.commit()
 
         await asyncio.wait([self.__updateUser(name), self.__updateBattleground(name)])
+
+    async def addToWave(self, name: str, monsterId: int):
+        try:
+            monsterConfig = self.gameConfig.monsters[monsterId]
+        except IndexError:
+            raise ValueError(f"Invalid monster ID {monsterId}")
+
+        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        user = self.getUserByName(name)
+        if user is None:
+            raise ValueError(f"{name} is not a registered user.");
+
+        if user.inBattle:
+            self.conn.commit()
+            raise UserInBattleException()
+
+        existingWave = user.wave
+        existingWave.append(monsterId)
+        self.conn.execute(
+                "UPDATE USERS SET wave = :wave WHERE name = :name",
+                {
+                    "wave": json.dumps(existingWave),
+                    "name": name,
+                })
+        self.conn.commit()
+
+        await self.__updateUser(name)

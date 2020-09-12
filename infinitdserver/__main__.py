@@ -23,6 +23,7 @@ from infinitdserver.handler.battleground_state import BattlegroundStateHandler
 from infinitdserver.handler.user_stream import UserStreamHandler
 from infinitdserver.handler.build import BuildHandler
 from infinitdserver.handler.sell import SellHandler
+from infinitdserver.handler.wave import WaveHandler
 
 async def updateGoldEveryMinute(db):
     oneMinute = timedelta(minutes=1)
@@ -55,6 +56,7 @@ def make_app(db, userQueues, bgQueues, gameConfig):
         (r"/battlegroundStream/(.*)", BattlegroundStateHandler, dict(db=db, queues=bgQueues)),
         (r"/build/(.*)/([0-9]*)/([0-9]*)", BuildHandler, dict(db=db, gameConfig=gameConfig)),
         (r"/sell/(.*)/([0-9]*)/([0-9]*)", SellHandler, dict(db=db, gameConfig=gameConfig)),
+        (r"/wave/(.*)", WaveHandler, dict(db=db, gameConfig=gameConfig)),
     ], **settings)
 
 async def main():
