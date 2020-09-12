@@ -213,6 +213,7 @@ class Db:
         self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
         user = self.getUserByName(name)
         if user is None:
+            self.conn.commit()
             raise ValueError(f"{name} is not a registered user.");
 
         if user.inBattle:
@@ -253,6 +254,7 @@ class Db:
         self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
         user = self.getUserByName(name)
         if user is None:
+            self.conn.commit()
             raise ValueError(f"{name} is not a registered user.");
 
         if user.inBattle:
