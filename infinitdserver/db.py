@@ -19,7 +19,7 @@ class UserHasInsufficientGoldException(Exception):
 class Db:
     DEFAULT_DB_PATH = "data.db"
     SELECT_USER_STATEMENT = (
-            "SELECT name, gold, accumulatedGold, goldPerMinute, inBattle FROM users")
+            "SELECT name, gold, accumulatedGold, goldPerMinute, inBattle, wave FROM users")
 
 
     def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues, db_path=None, debug=False):
@@ -46,7 +46,8 @@ class Db:
                 "accumulatedGold REAL, "
                 "goldPerMinute REAL, "
                 "inBattle BOOLEAN DEFAULT 0 CHECK (inBattle == 0 || inBattle == 1), "
-                "battleground TEXT"
+                "battleground TEXT, "
+                "wave TEXT DEFAULT '[]'"
                 ");")
         self.conn.commit()
 
@@ -57,7 +58,8 @@ class Db:
                 gold = row[1],
                 accumulatedGold = row[2],
                 goldPerMinute = row[3],
-                inBattle = row[4] == 1)
+                inBattle = row[4] == 1,
+                wave = json.loads(row[5]))
 
     def getUserByUid(self, uid) -> Optional[User]:
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
@@ -100,7 +102,8 @@ class Db:
                     " VALUES (:uid, :name, :gold, :gold, :goldPerMinute, :battleground);",
                     {"uid": uid, "name": name, "gold": self.gameConfig.misc.startingGold,
                         "goldPerMinute": self.gameConfig.misc.minGoldPerMinute,
-                        "battleground": emptyBattleground.to_json()})
+                        "battleground": emptyBattleground.to_json(),
+                    })
             self.conn.commit()
         except sqlite3.IntegrityError as err:
             # This is likely because the name was already taken. 
@@ -122,7 +125,8 @@ class Db:
         WHERE inBattle == 0;""");
         self.conn.commit()
 
-        await asyncio.wait([self.__updateUser(name) for name in namesUpdated])
+        if namesUpdated:
+            await asyncio.wait([self.__updateUser(name) for name in namesUpdated])
 
     async def __updateUser(self, name):
         if name in self.userQueues:
