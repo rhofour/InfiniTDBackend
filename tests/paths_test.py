@@ -2,12 +2,12 @@ import unittest
 
 from infinitdserver.game_config import CellPos
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
-from infinitdserver.paths import findShortestPaths
+from infinitdserver.paths import findShortestPaths, compressPath
 
 def emptyBattleground(rows: int, cols: int):
     return BattlegroundState(towers = BgTowersState([[None for c in range(cols)] for r in range(rows)]))
 
-class TestPaths(unittest.TestCase):
+class TestFindShortestPaths(unittest.TestCase):
     def test_startBlocked(self):
         battleground = emptyBattleground(2, 2)
         battleground.towers.towers[0][0] = BgTowerState(0)
@@ -67,3 +67,31 @@ class TestPaths(unittest.TestCase):
         paths = findShortestPaths(battleground, CellPos(0, 0), CellPos(2, 2))
 
         self.assertEqual(len(paths), 6)
+
+class TestCompressPath(unittest.TestCase):
+    def test_twoNodePaths(self):
+        path1 = [(0,0), (0,1)]
+        path2 = [(0,0), (1,0)]
+
+        newPath1 = compressPath(path1)
+        newPath2 = compressPath(path2)
+
+        self.assertListEqual(newPath1, path1)
+        self.assertListEqual(newPath2, path2)
+
+    def test_singleChainPath(self):
+        path1 = [(0,0), (0,1), (0,2)]
+        path2 = [(0,0), (1,0), (2,0), (3,0)]
+
+        newPath1 = compressPath(path1)
+        newPath2 = compressPath(path2)
+
+        self.assertListEqual(newPath1, [(0,0), (0,2)])
+        self.assertListEqual(newPath2, [(0,0), (3,0)])
+
+    def test_twoCorners(self):
+        path = [(0,0), (0,1), (0,2), (1, 2), (1, 3)]
+
+        newPath = compressPath(path)
+
+        self.assertListEqual(newPath, [(0,0), (0,2), (1,2), (1,3)])

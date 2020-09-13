@@ -3,6 +3,22 @@ from typing import List, Tuple, Set
 from infinitdserver.game_config import CellPos
 from infinitdserver.battleground_state import BattlegroundState
 
+def compressPath(path: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+    if len(path) < 2:
+        raise ValueError("A valid path must have at least two nodes.")
+    newPath = [path[0]]
+    movingHorizontally = path[1][0] == path[0][0]
+    for node in path[2:]:
+        if movingHorizontally and node[0] != newPath[-1][0]:
+            movingHorizontally = False
+            newPath.append((newPath[-1][0], node[1]))
+        elif not movingHorizontally and node[1] != newPath[-1][1]:
+            movingHorizontally = True
+            newPath.append((node[0], newPath[-1][1]))
+    newPath.append(path[-1])
+    print(newPath)
+    return newPath
+
 def findShortestPaths(battleground: BattlegroundState, start: CellPos, end: CellPos) -> List[List[Tuple[int, int]]]:
     """Finds all of the shortest paths from start to end.
 
