@@ -43,18 +43,30 @@ class WaveHandler(BaseDbHandler):
         try:
             await self.db.addToWave(name=name, monsterId=monsterId)
         except (ValueError, UserInBattleException)  as e:
-            print("BuildHandler error: " + str(e))
+            print("Wave POST error: " + str(e))
             self.set_status(409) # Conflict
             self.write(str(e))
             return
-        self.set_status(201) # CREATED
+
+        self.set_status(201) # OK
 
     async def delete(self, name: str):
         print(f"Got DELETE request for wave/{name}")
 
         # Check that the name matches the authorized user
+        decoded_token = self.verifyAuthentication()
         user = self.db.getUserByUid(decoded_token["uid"])
         if user.name != name:
             print(f"Got wave DELETE request for {name} from {user.name}.")
             self.set_status(403) # Forbidden
             return
+
+        try:
+            await self.db.clearWave(name=name)
+        except (ValueError, UserInBattleException)  as e:
+            print("Wave DELETE error: " + str(e))
+            self.set_status(404) # Not found
+            self.write(str(e))
+            return
+
+        self.set_status(200) # OK

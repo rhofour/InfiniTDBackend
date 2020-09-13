@@ -272,3 +272,24 @@ class Db:
         self.conn.commit()
 
         await self.__updateUser(name)
+
+    async def clearWave(self, name: str):
+        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        user = self.getUserByName(name)
+        if user is None:
+            self.conn.commit()
+            raise ValueError(f"{name} is not a registered user.");
+
+        if user.inBattle:
+            self.conn.commit()
+            raise UserInBattleException()
+
+        self.conn.execute(
+                "UPDATE USERS SET wave = :wave WHERE name = :name",
+                {
+                    "wave": "[]",
+                    "name": name,
+                })
+        self.conn.commit()
+
+        await self.__updateUser(name)
