@@ -70,8 +70,8 @@ class TestFindShortestPaths(unittest.TestCase):
 
 class TestCompressPath(unittest.TestCase):
     def test_twoNodePaths(self):
-        path1 = [(0,0), (0,1)]
-        path2 = [(0,0), (1,0)]
+        path1 = [CellPos(0, 0), CellPos(0, 1)]
+        path2 = [CellPos(0, 0), CellPos(1, 0)]
 
         newPath1 = compressPath(path1)
         newPath2 = compressPath(path2)
@@ -80,18 +80,18 @@ class TestCompressPath(unittest.TestCase):
         self.assertListEqual(newPath2, path2)
 
     def test_singleChainPath(self):
-        path1 = [(0,0), (0,1), (0,2)]
-        path2 = [(0,0), (1,0), (2,0), (3,0)]
+        path1 = [CellPos(0, 0), CellPos(0, 1), CellPos(0, 2)]
+        path2 = [CellPos(0, 0), CellPos(1, 0), CellPos(2, 0), CellPos(3, 0)]
 
         newPath1 = compressPath(path1)
         newPath2 = compressPath(path2)
 
-        self.assertListEqual(newPath1, [(0,0), (0,2)])
-        self.assertListEqual(newPath2, [(0,0), (3,0)])
+        self.assertListEqual(newPath1, [CellPos(0, 0), CellPos(0, 2)])
+        self.assertListEqual(newPath2, [CellPos(0, 0), CellPos(3, 0)])
 
     def test_twoCorners(self):
-        path = [(0,0), (0,1), (0,2), (1, 2), (1, 3)]
+        path = [CellPos(0, 0), CellPos(0, 1), CellPos(0, 2), CellPos(1, 2), CellPos(1, 3)]
 
         newPath = compressPath(path)
 
-        self.assertListEqual(newPath, [(0,0), (0,2), (1,2), (1,3)])
+        self.assertListEqual(newPath, [CellPos(0, 0), CellPos(0, 2), CellPos(1, 2), CellPos(1, 3)])

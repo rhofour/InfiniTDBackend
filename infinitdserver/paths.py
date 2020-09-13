@@ -1,25 +1,24 @@
-from typing import List, Tuple, Set
+from typing import List, Set
 
-from infinitdserver.game_config import CellPos
+from infinitdserver.game_config import CellPos, Row, Col
 from infinitdserver.battleground_state import BattlegroundState
 
-def compressPath(path: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+def compressPath(path: List[CellPos]) -> List[CellPos]:
     if len(path) < 2:
         raise ValueError("A valid path must have at least two nodes.")
     newPath = [path[0]]
-    movingHorizontally = path[1][0] == path[0][0]
+    movingHorizontally = path[1].row == path[0].row
     for node in path[2:]:
-        if movingHorizontally and node[0] != newPath[-1][0]:
+        if movingHorizontally and node.row != newPath[-1].row:
             movingHorizontally = False
-            newPath.append((newPath[-1][0], node[1]))
-        elif not movingHorizontally and node[1] != newPath[-1][1]:
+            newPath.append(CellPos(Row(newPath[-1].row), node.col))
+        elif not movingHorizontally and node.col != newPath[-1].col:
             movingHorizontally = True
-            newPath.append((node[0], newPath[-1][1]))
+            newPath.append(CellPos(node.row, Col(newPath[-1].col)))
     newPath.append(path[-1])
-    print(newPath)
     return newPath
 
-def findShortestPaths(battleground: BattlegroundState, start: CellPos, end: CellPos) -> List[List[Tuple[int, int]]]:
+def findShortestPaths(battleground: BattlegroundState, start: CellPos, end: CellPos) -> List[List[CellPos]]:
     """Finds all of the shortest paths from start to end.
 
     This method infers the size of the battleground from it.
