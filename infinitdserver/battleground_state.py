@@ -19,9 +19,7 @@ class BgTowersState:
     towers: List[List[Optional[BgTowerState]]]
 
     @staticmethod
-    def empty(gameConfig: GameConfig) -> BgTowersState:
-        rows = gameConfig.playfield.numRows
-        cols = gameConfig.playfield.numCols
+    def empty(rows: int, cols: int) -> BgTowersState:
         towers = [[None for col in range(cols)] for row in range(rows)]
         return BgTowersState(towers = towers)
 
@@ -32,5 +30,5 @@ class BattlegroundState:
 
     @staticmethod
     def empty(gameConfig: GameConfig) -> BattlegroundState:
-        towers = BgTowersState.empty(gameConfig)
+        towers = BgTowersState.empty(gameConfig.playfield.numRows, gameConfig.playfield.numCols)
         return BattlegroundState(towers = towers)
