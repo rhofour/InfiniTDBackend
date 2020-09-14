@@ -92,12 +92,46 @@ class BattleComputer:
             raise ValueError("Cannot compute battle with no path.")
 
         spawnPoint = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
+        spawnOpen = True
         while unspawnedMonsters or spawnedMonsters:
-            spawnOpen = True
+            # If possible, spawn the next monster
+            if spawnOpen and unspawnedMonsters:
+                monsterConfigId = unspawnedMonsters.pop()
+                try:
+                    monsterConfig = self.gameConfig.monsters[monsterConfigId]
+                except KeyError:
+                    raise ValueError(f"Unknown monster ID: {monsterConfigId}")
+                pathId = random.randrange(0, len(paths))
+                path = paths[pathId]
+                newMonster = MonsterState(
+                        id = nextMonsterId,
+                        config = monsterConfig,
+                        pos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter),
+                        health = monsterConfig.health,
+                        pathId = pathId)
+                nextMonsterId += 1
+                print(f"New monster {newMonster.id} at {newMonster.pos} at {gameTime}")
+                spawnedMonsters.append(newMonster)
+                startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
+                destPos: FpCellPos = FpCellPos.fromCellPos(path[1])
+                dist = max(abs(startPos.row - destPos.row), abs(startPos.col - destPos.col))
+                newMonsterEvent = BattleEvent(
+                    type = EventType.MONSTER,
+                    id = newMonster.id,
+                    configId = newMonster.config.id,
+                    startPos = startPos,
+                    destPos = destPos,
+                    startTime = gameTime,
+                    endTime = gameTime + (dist / monsterConfig.speed),
+                    deleteAtEnd = len(path) == 2,
+                )
+                events.append(newMonsterEvent)
 
             # Update existing monster positions
+            spawnOpen = True
             finishedMonsters = []
             for monster in spawnedMonsters:
+                print(f"Monster {monster.id} at {monster.pos} at {gameTime}")
                 path = paths[monster.pathId]
                 dest = path[monster.targetInPath]
                 distPerTick = monster.config.speed * self.gameTickSecs
@@ -149,7 +183,7 @@ class BattleComputer:
                         startPos = FpCellPos.fromCellPos(dest),
                         destPos = FpCellPos.fromCellPos(newDest),
                         startTime = gameTime + initialDist / monster.config.speed,
-                        endTime = gameTime + timeToNewDest,
+                        endTime = gameTime + self.gameTickSecs + timeToNewDest,
                         deleteAtEnd = monster.targetInPath == len(path) - 1,
                     )
                     events.append(newEvent)
@@ -159,37 +193,6 @@ class BattleComputer:
 
             for monster in finishedMonsters:
                 spawnedMonsters.remove(monster)
-
-            if spawnOpen and unspawnedMonsters:
-                monsterConfigId = unspawnedMonsters.pop()
-                try:
-                    monsterConfig = self.gameConfig.monsters[monsterConfigId]
-                except KeyError:
-                    raise ValueError(f"Unknown monster ID: {monsterConfigId}")
-                pathId = random.randrange(0, len(paths))
-                path = paths[pathId]
-                newMonster = MonsterState(
-                        id = nextMonsterId,
-                        config = monsterConfig,
-                        pos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter),
-                        health = monsterConfig.health,
-                        pathId = pathId)
-                nextMonsterId += 1
-                spawnedMonsters.append(newMonster)
-                startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
-                destPos: FpCellPos = FpCellPos.fromCellPos(path[1])
-                dist = max(abs(startPos.row - destPos.row), abs(startPos.col - destPos.col))
-                newMonsterEvent = BattleEvent(
-                    type = EventType.MONSTER,
-                    id = newMonster.id,
-                    configId = newMonster.config.id,
-                    startPos = startPos,
-                    destPos = destPos,
-                    startTime = gameTime,
-                    endTime = gameTime + (dist / monsterConfig.speed),
-                    deleteAtEnd = len(path) == 2,
-                )
-                events.append(newMonsterEvent)
 
             gameTime += self.gameTickSecs
 
