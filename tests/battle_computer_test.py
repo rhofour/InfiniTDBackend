@@ -108,3 +108,54 @@ class TestBattleComputer(unittest.TestCase):
         lowResResults = lowResBattleComputer.computeBattle(battleground, [ConfigId(0)])
 
         self.assertListEqual(results, lowResResults)
+
+    def test_twoMonstersOneCorner(self):
+        # Note which path each monster takes depends on the seed.
+        battleComputer = BattleComputer(gameConfig = test_data.gameConfig2row2col, seed=4)
+        battleground = BattlegroundState.empty(test_data.gameConfig2row2col)
+        expectedEvents: List[BattleEvent] = [
+            BattleEvent(
+                type = EventType.MONSTER,
+                id = 0,
+                configId = 0,
+                startPos = FpCellPos(FpRow(1), FpCol(1)),
+                destPos = FpCellPos(FpRow(0), FpCol(1)),
+                startTime = 0.0,
+                endTime = 0.5,
+                deleteAtEnd = False,
+            ),
+            BattleEvent(
+                type = EventType.MONSTER,
+                id = 0,
+                configId = 0,
+                startPos = FpCellPos(FpRow(0), FpCol(1)),
+                destPos = FpCellPos(FpRow(0), FpCol(0)),
+                startTime = 0.5,
+                endTime = 1.0,
+                deleteAtEnd = True,
+            ),
+            BattleEvent(
+                type = EventType.MONSTER,
+                id = 1,
+                configId = 0,
+                startPos = FpCellPos(FpRow(1), FpCol(1)),
+                destPos = FpCellPos(FpRow(1), FpCol(0)),
+                startTime = 0.5,
+                endTime = 1.0,
+                deleteAtEnd = False,
+            ),
+            BattleEvent(
+                type = EventType.MONSTER,
+                id = 1,
+                configId = 0,
+                startPos = FpCellPos(FpRow(1), FpCol(0)),
+                destPos = FpCellPos(FpRow(0), FpCol(0)),
+                startTime = 1.0,
+                endTime = 1.5,
+                deleteAtEnd = True,
+            ),
+        ]
+
+        results = battleComputer.computeBattle(battleground, [ConfigId(0), ConfigId(0)])
+
+        self.assertListEqual(results, expectedEvents)

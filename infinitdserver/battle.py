@@ -110,7 +110,6 @@ class BattleComputer:
                         health = monsterConfig.health,
                         pathId = pathId)
                 nextMonsterId += 1
-                print(f"New monster {newMonster.id} at {newMonster.pos} at {gameTime}")
                 spawnedMonsters.append(newMonster)
                 startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
                 destPos: FpCellPos = FpCellPos.fromCellPos(path[1])
@@ -131,7 +130,6 @@ class BattleComputer:
             spawnOpen = True
             finishedMonsters = []
             for monster in spawnedMonsters:
-                print(f"Monster {monster.id} at {monster.pos} at {gameTime}")
                 path = paths[monster.pathId]
                 dest = path[monster.targetInPath]
                 distPerTick = monster.config.speed * self.gameTickSecs
