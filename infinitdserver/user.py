@@ -9,6 +9,7 @@ from infinitdserver.game_config import ConfigId
 @dataclass(frozen=True)
 class User:
     name: str
+    uid: str
     gold: int
     accumulatedGold: int
     goldPerMinute: int

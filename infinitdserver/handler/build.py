@@ -30,9 +30,9 @@ class BuildHandler(BaseDbHandler):
         except KeyError:
             self.set_status(400)
             return
-        decoded_token = self.verifyAuthentication()
 
         # Check that the name matches the authorized user
+        decoded_token = self.verifyAuthentication()
         user = self.db.getUserByUid(decoded_token["uid"])
         if user.name != name:
             print(f"Got build request for {name} from {user.name}.")

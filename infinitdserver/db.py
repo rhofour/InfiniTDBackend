@@ -19,7 +19,7 @@ class UserHasInsufficientGoldException(Exception):
 class Db:
     DEFAULT_DB_PATH = "data.db"
     SELECT_USER_STATEMENT = (
-            "SELECT name, gold, accumulatedGold, goldPerMinute, inBattle, wave FROM users")
+            "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave FROM users")
 
 
     def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues, db_path=None, debug=False):
@@ -49,17 +49,24 @@ class Db:
                 "battleground TEXT, "
                 "wave TEXT DEFAULT '[]'"
                 ");")
+        self.conn.execute(
+                "CREATE TABLE IF NOT EXISTS battles("
+                "attacking_uid TEXT KEY, "
+                "defending_uid TEXT KEY, "
+                "battle_events TEXT"
+                ");")
         self.conn.commit()
 
     @staticmethod
     def __extractUserFromRow(row) -> User:
         return User(
                 name = row[0],
-                gold = row[1],
-                accumulatedGold = row[2],
-                goldPerMinute = row[3],
-                inBattle = row[4] == 1,
-                wave = json.loads(row[5]))
+                uid = row[1],
+                gold = row[2],
+                accumulatedGold = row[3],
+                goldPerMinute = row[4],
+                inBattle = row[5] == 1,
+                wave = json.loads(row[6]))
 
     def getUserByUid(self, uid) -> Optional[User]:
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
@@ -199,12 +206,16 @@ class Db:
             raise ValueError(f"Building at {row}, {col} would block the path.")
 
         self.conn.execute(
-                "UPDATE USERS SET gold = :gold, battleground = :battleground WHERE name = :name",
+                "UPDATE USERS SET gold = :gold, battleground = :battleground WHERE uid = :uid",
                 {
                     "gold": user.gold - towerConfig.cost,
                     "battleground": battleground.to_json(),
-                    "name": name,
+                    "uid": user.uid,
                 })
+
+        # Clear any battles where this user was defending now that they have a
+        # new battleground.
+        self.conn.execute("DELETE from battles WHERE defending_uid = :uid", { "uid": user.uid })
         self.conn.commit()
 
         await asyncio.wait([self.__updateUser(name), self.__updateBattleground(name)])
@@ -234,13 +245,14 @@ class Db:
         battleground.towers.towers[row][col] = None
         sellAmount = math.floor(towerConfig.cost * self.gameConfig.misc.sellMultiplier)
         self.conn.execute(
-                "UPDATE USERS SET gold = :gold, accumulatedGold = :accumulatedGold, battleground = :battleground WHERE name = :name",
+                "UPDATE USERS SET gold = :gold, accumulatedGold = :accumulatedGold, battleground = :battleground WHERE uid = :uid",
                 {
                     "gold": user.gold + sellAmount,
                     "accumulatedGold": user.accumulatedGold + sellAmount,
                     "battleground": battleground.to_json(),
-                    "name": name,
+                    "uid": user.uid,
                 })
+        self.conn.execute("DELETE from battles WHERE defending_uid = :uid", { "uid": user.uid })
         self.conn.commit()
 
         await asyncio.wait([self.__updateUser(name), self.__updateBattleground(name)])
@@ -264,11 +276,14 @@ class Db:
         existingWave = user.wave
         existingWave.append(monsterId)
         self.conn.execute(
-                "UPDATE USERS SET wave = :wave WHERE name = :name",
+                "UPDATE USERS SET wave = :wave WHERE uid = :uid",
                 {
                     "wave": json.dumps(existingWave),
-                    "name": name,
+                    "uid": user.uid,
                 })
+        # Clear any battles where this user was attacking now that they have a
+        # different wave.
+        self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
         self.conn.commit()
 
         await self.__updateUser(name)
@@ -285,11 +300,14 @@ class Db:
             raise UserInBattleException()
 
         self.conn.execute(
-                "UPDATE USERS SET wave = :wave WHERE name = :name",
+                "UPDATE USERS SET wave = :wave WHERE uid = :uid",
                 {
                     "wave": "[]",
-                    "name": name,
+                    "uid": user.uid,
                 })
+        # Clear any battles where this user was attacking now that they have no
+        # wave.
+        self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
         self.conn.commit()
 
         await self.__updateUser(name)
