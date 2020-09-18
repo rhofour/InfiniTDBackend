@@ -2,7 +2,7 @@ import unittest
 from typing import List
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.battle import BattleComputer, BattleEvent, EventType, FpCellPos, FpRow, FpCol
+from infinitdserver.battle import BattleComputer, BattleEvent, MoveEvent, DeleteEvent, ObjectType, FpCellPos, FpRow, FpCol
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
 
@@ -22,15 +22,19 @@ class TestBattleComputer(unittest.TestCase):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
         battleground = BattlegroundState.empty(test_data.gameConfig)
         expectedEvents: List[BattleEvent] = [
-            BattleEvent(
-                type = EventType.MONSTER,
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 0,
                 configId = 0,
                 startPos = FpCellPos(FpRow(0), FpCol(0)),
                 destPos = FpCellPos(FpRow(3), FpCol(0)),
                 startTime = 0.0,
                 endTime = 1.5,
-                deleteAtEnd = True,
+            ),
+            DeleteEvent(
+                type = ObjectType.MONSTER,
+                id = 0,
+                startTime = 1.5,
             ),
         ]
 
@@ -42,25 +46,33 @@ class TestBattleComputer(unittest.TestCase):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
         battleground = BattlegroundState.empty(test_data.gameConfig)
         expectedEvents: List[BattleEvent] = [
-            BattleEvent(
-                type = EventType.MONSTER,
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 0,
                 configId = 0,
                 startPos = FpCellPos(FpRow(0), FpCol(0)),
                 destPos = FpCellPos(FpRow(3), FpCol(0)),
                 startTime = 0.0,
                 endTime = 1.5,
-                deleteAtEnd = True,
             ),
-            BattleEvent(
-                type = EventType.MONSTER,
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 1,
                 configId = 0,
                 startPos = FpCellPos(FpRow(0), FpCol(0)),
                 destPos = FpCellPos(FpRow(3), FpCol(0)),
                 startTime = 0.5,
                 endTime = 2.0,
-                deleteAtEnd = True,
+            ),
+            DeleteEvent(
+                type = ObjectType.MONSTER,
+                id = 0,
+                startTime = 1.5,
+            ),
+            DeleteEvent(
+                type = ObjectType.MONSTER,
+                id = 1,
+                startTime = 2.0,
             ),
         ]
 
@@ -72,25 +84,28 @@ class TestBattleComputer(unittest.TestCase):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig2row2col)
         battleground = BattlegroundState.empty(test_data.gameConfig2row2col)
         expectedEvents: List[BattleEvent] = [
-            BattleEvent(
-                type = EventType.MONSTER,
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 0,
                 configId = 0,
                 startPos = FpCellPos(FpRow(1), FpCol(1)),
                 destPos = FpCellPos(FpRow(0), FpCol(1)),
                 startTime = 0.0,
                 endTime = 0.5,
-                deleteAtEnd = False,
             ),
-            BattleEvent(
-                type = EventType.MONSTER,
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 0,
                 configId = 0,
                 startPos = FpCellPos(FpRow(0), FpCol(1)),
                 destPos = FpCellPos(FpRow(0), FpCol(0)),
                 startTime = 0.5,
                 endTime = 1.0,
-                deleteAtEnd = True,
+            ),
+            DeleteEvent(
+                type = ObjectType.MONSTER,
+                id = 0,
+                startTime = 1.0,
             ),
         ]
 
@@ -114,45 +129,51 @@ class TestBattleComputer(unittest.TestCase):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig2row2col, seed=4)
         battleground = BattlegroundState.empty(test_data.gameConfig2row2col)
         expectedEvents: List[BattleEvent] = [
-            BattleEvent(
-                type = EventType.MONSTER,
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 0,
                 configId = 0,
                 startPos = FpCellPos(FpRow(1), FpCol(1)),
                 destPos = FpCellPos(FpRow(0), FpCol(1)),
                 startTime = 0.0,
                 endTime = 0.5,
-                deleteAtEnd = False,
             ),
-            BattleEvent(
-                type = EventType.MONSTER,
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 0,
                 configId = 0,
                 startPos = FpCellPos(FpRow(0), FpCol(1)),
                 destPos = FpCellPos(FpRow(0), FpCol(0)),
                 startTime = 0.5,
                 endTime = 1.0,
-                deleteAtEnd = True,
             ),
-            BattleEvent(
-                type = EventType.MONSTER,
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 1,
                 configId = 0,
                 startPos = FpCellPos(FpRow(1), FpCol(1)),
                 destPos = FpCellPos(FpRow(1), FpCol(0)),
                 startTime = 0.5,
                 endTime = 1.0,
-                deleteAtEnd = False,
             ),
-            BattleEvent(
-                type = EventType.MONSTER,
+            DeleteEvent(
+                type = ObjectType.MONSTER,
+                id = 0,
+                startTime = 1.0,
+            ),
+            MoveEvent(
+                type = ObjectType.MONSTER,
                 id = 1,
                 configId = 0,
                 startPos = FpCellPos(FpRow(1), FpCol(0)),
                 destPos = FpCellPos(FpRow(0), FpCol(0)),
                 startTime = 1.0,
                 endTime = 1.5,
-                deleteAtEnd = True,
+            ),
+            DeleteEvent(
+                type = ObjectType.MONSTER,
+                id = 1,
+                startTime = 1.5,
             ),
         ]
 

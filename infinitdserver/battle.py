@@ -3,7 +3,7 @@ from collections import deque
 from dataclasses import dataclass, asdict
 from enum import Enum
 import math
-from typing import List, Deque, NewType
+from typing import List, Deque, NewType, Union
 import random
 
 from dataclasses_json import dataclass_json
@@ -14,6 +14,7 @@ from infinitdserver.paths import findShortestPaths, compressPath
 
 FpRow = NewType('FpRow', float)
 FpCol = NewType('FpCol', float)
+TIME_PRECISION = 4 # Number of decimal places to use for times
 
 @dataclass_json
 @dataclass(frozen=True)
@@ -28,32 +29,45 @@ class FpCellPos:
     def __eq__(self, other):
         return math.isclose(self.row, other.row) and math.isclose(self.col, other.col)
 
-class EventType(Enum):
+class ObjectType(Enum):
     MONSTER = 'monster'
     PROJECTILE = 'projectile'
 
 @dataclass_json
 @dataclass(frozen=True)
-class BattleEvent:
-    type: EventType
+class MoveEvent:
+    type: ObjectType
     id: int # Uniquely refers to one monster or projectile
     configId: ConfigId # Which config to lookup
     startPos: FpCellPos
     destPos: FpCellPos
     startTime: float # When this movement starts
     endTime: float # When this movement ends
-    deleteAtEnd: bool # Whether this object should disappear on reaching its target
-    # TODO: Add ability to reduce the health of a monster at the end
 
     def __eq__(self, other):
-        return (self.type == other.type and
+        return (isinstance(other, MoveEvent) and
+                self.type == other.type and
                 self.id == other.id and
                 self.configId == other.configId and
                 self.startPos == other.startPos and
                 self.destPos == other.destPos and
                 math.isclose(self.startTime, other.startTime) and
-                math.isclose(self.endTime, other.endTime) and
-                self.deleteAtEnd == other.deleteAtEnd)
+                math.isclose(self.endTime, other.endTime))
+
+@dataclass_json
+@dataclass(frozen=True)
+class DeleteEvent:
+    type: ObjectType
+    id: int
+    startTime: float
+
+    def __eq__(self, other):
+        return (isinstance(other, DeleteEvent) and
+                self.type == other.type and
+                self.id == other.id and
+                self.startTime == other.startTime)
+
+BattleEvent = Union[MoveEvent, DeleteEvent]
 
 @dataclass(frozen=False)
 class MonsterState:
@@ -114,17 +128,24 @@ class BattleComputer:
                 startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
                 destPos: FpCellPos = FpCellPos.fromCellPos(path[1])
                 dist = max(abs(startPos.row - destPos.row), abs(startPos.col - destPos.col))
-                newMonsterEvent = BattleEvent(
-                    type = EventType.MONSTER,
+                endTime = round(gameTime + (dist / monsterConfig.speed), TIME_PRECISION)
+                newMonsterEvent = MoveEvent(
+                    type = ObjectType.MONSTER,
                     id = newMonster.id,
                     configId = newMonster.config.id,
                     startPos = startPos,
                     destPos = destPos,
-                    startTime = gameTime,
-                    endTime = gameTime + (dist / monsterConfig.speed),
-                    deleteAtEnd = len(path) == 2,
+                    startTime = round(gameTime, TIME_PRECISION),
+                    endTime = endTime,
                 )
                 events.append(newMonsterEvent)
+                if (len(path) == 2):
+                    deleteEvent = DeleteEvent(
+                        type = ObjectType.MONSTER,
+                        id = newMonster.id,
+                        startTime = endTime,
+                    )
+                    events.append(deleteEvent)
 
             # Update existing monster positions
             spawnOpen = True
@@ -174,17 +195,25 @@ class BattleComputer:
                         else:
                             monster.pos = FpCellPos(FpRow(dest.row), FpCol(dest.col - remainingDist))
                         timeToNewDest = abs(newDest.col - monster.pos.col) / monster.config.speed
-                    newEvent = BattleEvent(
-                        type = EventType.MONSTER,
+
+                    endTime = round(gameTime + self.gameTickSecs + timeToNewDest, TIME_PRECISION)
+                    newEvent = MoveEvent(
+                        type = ObjectType.MONSTER,
                         id = monster.id,
                         configId = monster.config.id,
                         startPos = FpCellPos.fromCellPos(dest),
                         destPos = FpCellPos.fromCellPos(newDest),
-                        startTime = gameTime + initialDist / monster.config.speed,
-                        endTime = gameTime + self.gameTickSecs + timeToNewDest,
-                        deleteAtEnd = monster.targetInPath == len(path) - 1,
+                        startTime = round(gameTime + initialDist / monster.config.speed, TIME_PRECISION),
+                        endTime = endTime,
                     )
                     events.append(newEvent)
+                    if monster.targetInPath == len(path) - 1:
+                        deleteEvent = DeleteEvent(
+                            type = ObjectType.MONSTER,
+                            id = monster.id,
+                            startTime = endTime,
+                        )
+                        events.append(deleteEvent)
 
                 if abs(spawnPoint.row - monster.pos.row) < 1 and abs(spawnPoint.col - monster.pos.col) < 1:
                     spawnOpen = False
