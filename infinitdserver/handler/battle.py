@@ -22,4 +22,12 @@ class BattleHandler(BaseDbHandler):
             self.set_status(403) # Forbidden
             return
 
+        # Attempt to start a battle
+        try:
+            await self.db.startBattle(name=name)
+        except (ValueError, UserInBattleException, UserHasInsufficientGoldException) as e:
+            print("BattleHandler POST error: " + str(e))
+            self.write(str(e))
+            return
+
         self.set_status(201) # CREATED

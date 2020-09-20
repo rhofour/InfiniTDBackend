@@ -4,6 +4,7 @@ import sqlite3
 import json
 from typing import Optional
 
+from infinitdserver.battle import encodeEvents, decodeEvents
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.user import User
 from infinitdserver.game_config import GameConfig
@@ -240,7 +241,7 @@ class Db:
             towerConfig = self.gameConfig.towers[existingTower.id]
         except IndexError:
             # This should never happen as long as the game config matches the database.
-            raise ValueError(f"Invalid tower ID {towerId}")
+            raise ValueError(f"Invalid tower ID {existingTower.id}")
 
         battleground.towers.towers[row][col] = None
         sellAmount = math.floor(towerConfig.cost * self.gameConfig.misc.sellMultiplier)
@@ -309,5 +310,29 @@ class Db:
         # wave.
         self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
         self.conn.commit()
+
+        await self.__updateUser(name)
+
+    async def startBattle(self, name: str):
+        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        user = self.getUserByName(name)
+        if user is None:
+            self.conn.commit()
+            raise ValueError(f"{name} is not a registered user.");
+
+        if user.inBattle:
+            self.conn.commit()
+            raise UserInBattleException()
+
+        self.conn.execute("UPDATE USERS SET inBattle = TRUE")
+        self.conn.commit()
+
+        # Check if a battle already exists, if not generate it
+        res = self.conn.execute(
+            "SELECT from battles where attacking_uid = :uid AND defending_uid = :uid",
+            { "uid", user.uid }
+        )
+        if res: # Battle exists
+            encoded_events = decodeEvents(res[0])
 
         await self.__updateUser(name)

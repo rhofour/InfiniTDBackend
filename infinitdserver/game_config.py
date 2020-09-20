@@ -1,12 +1,14 @@
 from dataclasses import dataclass, asdict
 from typing import NewType, Tuple, Dict, Any
 
+import cattr
 from dataclasses_json import dataclass_json
 
 Row = NewType('Row', int)
 Col = NewType('Col', int)
 Url = NewType('Url', str)
 ConfigId = NewType('ConfigId', int)
+cattr.register_structure_hook(ConfigId, lambda d, _: ConfigId(d))
 
 @dataclass_json
 @dataclass(frozen=True)

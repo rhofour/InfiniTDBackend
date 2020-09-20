@@ -1,42 +1,48 @@
-from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass, asdict
-from enum import Enum
+from enum import Enum, unique, auto
 import math
-from typing import List, Deque, NewType, Union
+from typing import List, Deque, NewType, Union, Dict, Any
 import random
+import json
 
+import attr
+import cattr
 from dataclasses_json import dataclass_json
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.game_config import GameConfig, ConfigId, CellPos, MonsterConfig
 from infinitdserver.paths import findShortestPaths, compressPath
 
-FpRow = NewType('FpRow', float)
-FpCol = NewType('FpCol', float)
 TIME_PRECISION = 4 # Number of decimal places to use for times
 
-@dataclass_json
-@dataclass(frozen=True)
+FpRow = NewType('FpRow', float)
+cattr.register_structure_hook(FpRow, lambda d, _: FpRow(d))
+FpCol = NewType('FpCol', float)
+cattr.register_structure_hook(FpCol, lambda d, _: FpCol(d))
+
+@attr.s(frozen=True, auto_attribs=True)
 class FpCellPos:
     row: FpRow
     col: FpCol
 
     @staticmethod
-    def fromCellPos(cellPos: CellPos) -> FpCellPos:
+    def fromCellPos(cellPos: CellPos) -> Any:
+        # TODO: fix this annotation when
+        # https://github.com/Tinche/cattrs/issues/41 is fixed.
         return FpCellPos(FpRow(cellPos.row), FpCol(cellPos.col))
 
     def __eq__(self, other):
         return math.isclose(self.row, other.row) and math.isclose(self.col, other.col)
 
+@unique
 class ObjectType(Enum):
-    MONSTER = 'monster'
-    PROJECTILE = 'projectile'
+    MONSTER = auto()
+    PROJECTILE = auto()
 
-@dataclass_json
-@dataclass(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class MoveEvent:
-    type: ObjectType
+    objType: ObjectType
     id: int # Uniquely refers to one monster or projectile
     configId: ConfigId # Which config to lookup
     startPos: FpCellPos
@@ -44,30 +50,28 @@ class MoveEvent:
     startTime: float # When this movement starts
     endTime: float # When this movement ends
 
-    def __eq__(self, other):
-        return (isinstance(other, MoveEvent) and
-                self.type == other.type and
-                self.id == other.id and
-                self.configId == other.configId and
-                self.startPos == other.startPos and
-                self.destPos == other.destPos and
-                math.isclose(self.startTime, other.startTime) and
-                math.isclose(self.endTime, other.endTime))
-
-@dataclass_json
-@dataclass(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class DeleteEvent:
-    type: ObjectType
+    objType: ObjectType
     id: int
     startTime: float
 
-    def __eq__(self, other):
-        return (isinstance(other, DeleteEvent) and
-                self.type == other.type and
-                self.id == other.id and
-                self.startTime == other.startTime)
-
 BattleEvent = Union[MoveEvent, DeleteEvent]
+
+def decodeEvent(eventObj: Dict, t) -> BattleEvent:
+    if "endTime" in eventObj:
+        return cattr.structure(eventObj, MoveEvent)
+    return cattr.structure(eventObj, DeleteEvent)
+
+cattr.register_structure_hook(BattleEvent, decodeEvent)
+
+def encodeEvents(events: List[BattleEvent]) -> str:
+    return json.dumps(cattr.unstructure(events))
+
+def decodeEvents(eventsStr: str) -> List[BattleEvent]:
+    eventsList = json.loads(eventsStr)
+    battleEvents = cattr.structure(eventsList, List[BattleEvent])
+    return battleEvents
 
 @dataclass(frozen=False)
 class MonsterState:
@@ -130,7 +134,7 @@ class BattleComputer:
                 dist = max(abs(startPos.row - destPos.row), abs(startPos.col - destPos.col))
                 endTime = round(gameTime + (dist / monsterConfig.speed), TIME_PRECISION)
                 newMonsterEvent = MoveEvent(
-                    type = ObjectType.MONSTER,
+                    objType = ObjectType.MONSTER,
                     id = newMonster.id,
                     configId = newMonster.config.id,
                     startPos = startPos,
@@ -141,7 +145,7 @@ class BattleComputer:
                 events.append(newMonsterEvent)
                 if (len(path) == 2):
                     deleteEvent = DeleteEvent(
-                        type = ObjectType.MONSTER,
+                        objType = ObjectType.MONSTER,
                         id = newMonster.id,
                         startTime = endTime,
                     )
@@ -198,7 +202,7 @@ class BattleComputer:
 
                     endTime = round(gameTime + self.gameTickSecs + timeToNewDest, TIME_PRECISION)
                     newEvent = MoveEvent(
-                        type = ObjectType.MONSTER,
+                        objType = ObjectType.MONSTER,
                         id = monster.id,
                         configId = monster.config.id,
                         startPos = FpCellPos.fromCellPos(dest),
@@ -209,7 +213,7 @@ class BattleComputer:
                     events.append(newEvent)
                     if monster.targetInPath == len(path) - 1:
                         deleteEvent = DeleteEvent(
-                            type = ObjectType.MONSTER,
+                            objType = ObjectType.MONSTER,
                             id = monster.id,
                             startTime = endTime,
                         )

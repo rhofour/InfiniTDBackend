@@ -1,8 +1,12 @@
 import unittest
-from typing import List
+from typing import List, NewType
+
+import attr
+import cattr
+from enum import Enum, unique, auto
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.battle import BattleComputer, BattleEvent, MoveEvent, DeleteEvent, ObjectType, FpCellPos, FpRow, FpCol
+from infinitdserver.battle import BattleComputer, BattleEvent, MoveEvent, DeleteEvent, ObjectType, FpCellPos, FpRow, FpCol, encodeEvents, decodeEvents
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
 
@@ -23,16 +27,16 @@ class TestBattleComputer(unittest.TestCase):
         battleground = BattlegroundState.empty(test_data.gameConfig)
         expectedEvents: List[BattleEvent] = [
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(0), FpCol(0)),
                 destPos = FpCellPos(FpRow(3), FpCol(0)),
                 startTime = 0.0,
                 endTime = 1.5,
             ),
             DeleteEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
                 startTime = 1.5,
             ),
@@ -47,30 +51,30 @@ class TestBattleComputer(unittest.TestCase):
         battleground = BattlegroundState.empty(test_data.gameConfig)
         expectedEvents: List[BattleEvent] = [
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(0), FpCol(0)),
                 destPos = FpCellPos(FpRow(3), FpCol(0)),
                 startTime = 0.0,
                 endTime = 1.5,
             ),
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 1,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(0), FpCol(0)),
                 destPos = FpCellPos(FpRow(3), FpCol(0)),
                 startTime = 0.5,
                 endTime = 2.0,
             ),
             DeleteEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
                 startTime = 1.5,
             ),
             DeleteEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 1,
                 startTime = 2.0,
             ),
@@ -85,25 +89,25 @@ class TestBattleComputer(unittest.TestCase):
         battleground = BattlegroundState.empty(test_data.gameConfig2row2col)
         expectedEvents: List[BattleEvent] = [
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(1), FpCol(1)),
                 destPos = FpCellPos(FpRow(0), FpCol(1)),
                 startTime = 0.0,
                 endTime = 0.5,
             ),
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(0), FpCol(1)),
                 destPos = FpCellPos(FpRow(0), FpCol(0)),
                 startTime = 0.5,
                 endTime = 1.0,
             ),
             DeleteEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
                 startTime = 1.0,
             ),
@@ -130,48 +134,48 @@ class TestBattleComputer(unittest.TestCase):
         battleground = BattlegroundState.empty(test_data.gameConfig2row2col)
         expectedEvents: List[BattleEvent] = [
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(1), FpCol(1)),
                 destPos = FpCellPos(FpRow(0), FpCol(1)),
                 startTime = 0.0,
                 endTime = 0.5,
             ),
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(0), FpCol(1)),
                 destPos = FpCellPos(FpRow(0), FpCol(0)),
                 startTime = 0.5,
                 endTime = 1.0,
             ),
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 1,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(1), FpCol(1)),
                 destPos = FpCellPos(FpRow(1), FpCol(0)),
                 startTime = 0.5,
                 endTime = 1.0,
             ),
             DeleteEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 0,
                 startTime = 1.0,
             ),
             MoveEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 1,
-                configId = 0,
+                configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(1), FpCol(0)),
                 destPos = FpCellPos(FpRow(0), FpCol(0)),
                 startTime = 1.0,
                 endTime = 1.5,
             ),
             DeleteEvent(
-                type = ObjectType.MONSTER,
+                objType = ObjectType.MONSTER,
                 id = 1,
                 startTime = 1.5,
             ),
@@ -180,3 +184,49 @@ class TestBattleComputer(unittest.TestCase):
         results = battleComputer.computeBattle(battleground, [ConfigId(0), ConfigId(0)])
 
         self.assertListEqual(results, expectedEvents)
+
+class TestBattleEventEncodingAndDecoding(unittest.TestCase):
+    def setUp(self):
+        self.maxDiff = None
+
+    def test_oneMoveEvent(self):
+        event = MoveEvent(
+            objType = ObjectType.MONSTER,
+            id = 1,
+            configId = ConfigId(0),
+            startPos = FpCellPos(FpRow(1), FpCol(0)),
+            destPos = FpCellPos(FpRow(0), FpCol(0)),
+            startTime = 1.0,
+            endTime = 1.5,
+        )
+
+        encodedStr = encodeEvents([event])
+        print(encodedStr)
+        decodedEvents = decodeEvents(encodedStr)
+
+        self.assertListEqual(decodedEvents, [event])
+
+    def test_twoEvents(self):
+        events = [
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 1,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(1), FpCol(0)),
+                destPos = FpCellPos(FpRow(0), FpCol(0)),
+                startTime = 1.0,
+                endTime = 1.5,
+            ),
+            DeleteEvent(
+                objType = ObjectType.MONSTER,
+                id = 1,
+                startTime = 1.5,
+            ),
+        ]
+
+        encodedStr = encodeEvents(events)
+        print(encodedStr)
+        decodedEvents = decodeEvents(encodedStr)
+
+        self.assertListEqual(decodedEvents, events)
+
