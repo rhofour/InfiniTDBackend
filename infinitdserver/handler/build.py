@@ -52,7 +52,7 @@ class BuildHandler(BaseDbHandler):
         try:
             await self.db.buildTower(name=name, row=row, col=col, towerId=towerId)
         except (ValueError, UserInBattleException, UserHasInsufficientGoldException) as e:
-            print("BuildHandler error: " + str(e))
+            print("BuildHandler error: " + repr(e))
             self.set_status(409) # Conflict
             self.write(str(e))
             return

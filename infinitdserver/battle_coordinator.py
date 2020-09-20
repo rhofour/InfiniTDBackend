@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Dict, Union, Callable, Deque
 
 from collections import deque
@@ -9,6 +10,7 @@ from infinitdserver.sse import SseQueues
 class StreamingBattle:
     """StreamingBattle handles streaming battle data out in "real time"
     to potentially multiple clients."""
+    BUFFER_TIME_SECS: float = 0.1
     startTime: float = -1.0 # -1 signifies the battle hasn't started yet
     pastEvents: List[BattleEvent] = []
     futureEvents: Deque[BattleEvent]
@@ -17,21 +19,50 @@ class StreamingBattle:
     def __init__(self, updateFn: Callable[[Union[float, BattleEvent]], None]):
         self.updateFn = updateFn
 
-    def start(self, events: List[BattleEvent]):
-        self.startTime = time.time()
+    async def start(self, events: List[BattleEvent]):
         self.futureEvents = deque(events)
 
-    def stop(self):
+        # Send all events occurring in the buffer window
+        numInitialEvents = 0
+        for event in self.futureEvents:
+            if event.startTime > self.BUFFER_TIME_SECS:
+                break
+            await self.updateFn(event)
+            numInitialEvents += 1
+
+        # Move the initial events to the past events
+        while numInitialEvents:
+            self.pastEvents.append(self.futureEvents.popleft())
+            numInitialEvents -= 1
+
+        # Start running
+        self.startTime = time.time()
+        await self.updateFn(0.0)
+
+        while self.futureEvents:
+            elapsedTime = time.time() - self.startTime
+            event: BattleEvent = self.futureEvents[0]
+            timeToEvent = event.startTime - elapsedTime
+            if timeToEvent > self.BUFFER_TIME_SECS:
+                await asyncio.sleep(timeToEvent - self.BUFFER_TIME_SECS + 0.0001)
+                continue
+
+            # Send the event
+            await self.updateFn(event)
+            self.pastEvents.append(self.futureEvents.popleft())
+
+
+    async def stop(self):
         self.startTime = -1.0
         self.pastEvents = []
-        updateFn(-1.0) # Send an update to halt the battle.
+        await self.updateFn(-1.0) # Send an update to halt the battle.
 
     def join(self) -> List[Union[BattleEvent, float]]:
         """Send the new client all past events and the current time."""
-        if startTime == -1.0:
+        if self.startTime == -1.0:
             return [-1.0]
         else:
-            battleTime = time.time() - startTime
+            battleTime = time.time() - self.startTime
             return self.pastEvents + [battleTime]
 
 class BattleCoordinator:
@@ -43,11 +74,11 @@ class BattleCoordinator:
         self.battleQueues = battleQueues
 
     def getBattle(self, name: str):
-        if name not in battlesInProgress:
+        if name not in self.battles:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
-        return battles[name]
+        return self.battles[name]
 
-    def startBattle(self, name: str, events: List[BattleEvent]):
-        if name not in battlesInProgress:
+    async def startBattle(self, name: str, events: List[BattleEvent]):
+        if name not in self.battles:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
-        self.battles[name].start(events)
+        await self.battles[name].start(events)

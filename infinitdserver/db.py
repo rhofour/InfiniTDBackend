@@ -333,13 +333,15 @@ class Db:
             self.conn.commit()
             raise UserInBattleException()
 
-        self.conn.execute("UPDATE USERS SET inBattle = TRUE")
+        self.conn.execute("UPDATE users SET inBattle = TRUE where uid = :uid", { "uid": user.uid })
         self.conn.commit()
+
+        await self.__updateUser(name)
 
         # Check if a battle already exists, if not generate it
         res = self.conn.execute(
-            "SELECT from battles where attacking_uid = :uid AND defending_uid = :uid;",
-            { "uid", user.uid }
+            "SELECT battle_events FROM battles WHERE attacking_uid = :uid AND defending_uid = :uid;",
+            { "uid": user.uid }
         ).fetchone()
         if res: # Battle exists
             events = Battle.decodeEvents(res[0])
@@ -351,7 +353,14 @@ class Db:
             battle = Battle(events = events)
             self.conn.execute(
                     "INSERT into battles (attacking_uid, defending_uid, battle_events) VALUES (:uid, :uid, :events);",
-                    { "uid": user.uid, "events": battle.encode() }
+                    { "uid": user.uid, "events": battle.encodeEvents() }
             )
 
+        await self.battleCoordinator.startBattle(name, events)
+
+        # Note the battle has finished
+        self.conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid;", { "uid": user.uid })
         await self.__updateUser(name)
+
+    def clearInBattle(self):
+        self.conn.execute("UPDATE users SET inBattle = FALSE;")

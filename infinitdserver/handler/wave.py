@@ -43,7 +43,7 @@ class WaveHandler(BaseDbHandler):
         try:
             await self.db.addToWave(name=name, monsterId=monsterId)
         except (ValueError, UserInBattleException)  as e:
-            print("Wave POST error: " + str(e))
+            print("Wave POST error: " + repr(e))
             self.set_status(409) # Conflict
             self.write(str(e))
             return
@@ -64,7 +64,7 @@ class WaveHandler(BaseDbHandler):
         try:
             await self.db.clearWave(name=name)
         except (ValueError, UserInBattleException)  as e:
-            print("Wave DELETE error: " + str(e))
+            print("Wave DELETE error: " + repr(e))
             self.set_status(404) # Not found
             self.write(str(e))
             return

@@ -40,7 +40,7 @@ class SellHandler(BaseDbHandler):
         try:
             await self.db.sellTower(name=name, row=row, col=col)
         except (ValueError, UserInBattleException)  as e:
-            print("SellHandler error: " + str(e))
+            print("SellHandler error: " + repr(e))
             self.set_status(404) # Not found
             self.write(str(e))
             return

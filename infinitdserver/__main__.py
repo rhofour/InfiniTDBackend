@@ -74,7 +74,9 @@ async def main():
     battleCoordinator = BattleCoordinator(queues['battle'])
     db = Db(gameConfig = gameConfig, userQueues = queues['user'], bgQueues = queues['battleground'],
             battleCoordinator = battleCoordinator, debug=True)
-    app = make_app(db, queues, gameConfig)
+    # Make sure no one is stuck in a battle.
+    db.clearInBattle()
+    app = make_app(db, queues, gameConfig, battleCoordinator)
     app.listen(8794)
     print("Listening on port 8794.")
     loop = asyncio.get_running_loop()

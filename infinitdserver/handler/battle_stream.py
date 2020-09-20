@@ -10,7 +10,7 @@ class BattleStreamHandler(SseStreamHandler):
     def initialize(self, db: Db, queues: SseQueues, battleCoordinator: BattleCoordinator):
         self.db = db
         self.queues = queues
-        self.battleCoordinator = BattleCoordinator
+        self.battleCoordinator = battleCoordinator
 
     async def initialState(self, name):
-        return battleCoordinator.getBattle(name).join()
+        return self.battleCoordinator.getBattle(name).join()

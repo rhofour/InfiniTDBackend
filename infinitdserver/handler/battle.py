@@ -26,7 +26,8 @@ class BattleHandler(BaseDbHandler):
         try:
             await self.db.startBattle(name=name)
         except (ValueError, UserInBattleException, UserHasInsufficientGoldException) as e:
-            print("BattleHandler POST error: " + str(e))
+            print("BattleHandler POST error: " + repr(e))
+            self.set_status(409) # Conflict
             self.write(str(e))
             return
 
