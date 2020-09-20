@@ -46,3 +46,8 @@ class BattleCoordinator:
         if name not in battlesInProgress:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         return battles[name]
+
+    def startBattle(self, name: str, events: List[BattleEvent]):
+        if name not in battlesInProgress:
+            self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
+        self.battles[name].start(events)

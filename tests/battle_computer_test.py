@@ -6,7 +6,7 @@ import cattr
 from enum import Enum, unique, auto
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.battle import BattleComputer, BattleEvent, MoveEvent, DeleteEvent, ObjectType, FpCellPos, FpRow, FpCol, encodeEvents, decodeEvents
+from infinitdserver.battle import Battle, BattleComputer, BattleEvent, MoveEvent, DeleteEvent, ObjectType, FpCellPos, FpRow, FpCol
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
 
@@ -190,43 +190,47 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
         self.maxDiff = None
 
     def test_oneMoveEvent(self):
-        event = MoveEvent(
-            objType = ObjectType.MONSTER,
-            id = 1,
-            configId = ConfigId(0),
-            startPos = FpCellPos(FpRow(1), FpCol(0)),
-            destPos = FpCellPos(FpRow(0), FpCol(0)),
-            startTime = 1.0,
-            endTime = 1.5,
+        battle = Battle(
+            events = [
+                MoveEvent(
+                    objType = ObjectType.MONSTER,
+                    id = 1,
+                    configId = ConfigId(0),
+                    startPos = FpCellPos(FpRow(1), FpCol(0)),
+                    destPos = FpCellPos(FpRow(0), FpCol(0)),
+                    startTime = 1.0,
+                    endTime = 1.5,
+                ),
+            ]
         )
 
-        encodedStr = encodeEvents([event])
-        print(encodedStr)
-        decodedEvents = decodeEvents(encodedStr)
+        encodedStr = battle.encodeEvents()
+        decodedEvents = Battle.decodeEvents(encodedStr)
 
-        self.assertListEqual(decodedEvents, [event])
+        self.assertEqual(battle.events, decodedEvents)
 
     def test_twoEvents(self):
-        events = [
-            MoveEvent(
-                objType = ObjectType.MONSTER,
-                id = 1,
-                configId = ConfigId(0),
-                startPos = FpCellPos(FpRow(1), FpCol(0)),
-                destPos = FpCellPos(FpRow(0), FpCol(0)),
-                startTime = 1.0,
-                endTime = 1.5,
-            ),
-            DeleteEvent(
-                objType = ObjectType.MONSTER,
-                id = 1,
-                startTime = 1.5,
-            ),
-        ]
+        battle = Battle(
+            events = [
+                MoveEvent(
+                    objType = ObjectType.MONSTER,
+                    id = 1,
+                    configId = ConfigId(0),
+                    startPos = FpCellPos(FpRow(1), FpCol(0)),
+                    destPos = FpCellPos(FpRow(0), FpCol(0)),
+                    startTime = 1.0,
+                    endTime = 1.5,
+                ),
+                DeleteEvent(
+                    objType = ObjectType.MONSTER,
+                    id = 1,
+                    startTime = 1.5,
+                ),
+            ]
+        )
 
-        encodedStr = encodeEvents(events)
-        print(encodedStr)
-        decodedEvents = decodeEvents(encodedStr)
+        encodedStr = battle.encodeEvents()
+        decodedEvents = Battle.decodeEvents(encodedStr)
 
-        self.assertListEqual(decodedEvents, events)
+        self.assertEqual(battle.events, decodedEvents)
 

@@ -6,6 +6,7 @@ import os
 import tornado.testing
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
+from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.db import Db
 from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig, TowerConfig, MiscConfig
 from infinitdserver.handler.sell import SellHandler
@@ -19,13 +20,16 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
         self.gameConfig = test_data.gameConfig
         userQueues = SseQueues()
         bgQueues = SseQueues()
+        battleCoordinator = BattleCoordinator(SseQueues())
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
-                db_path=self.db_path)
+                battleCoordinator = battleCoordinator, db_path=self.db_path)
+
         self.db.register(uid="test_uid", name="bob")
         self.initialBattleground = BattlegroundState.empty(self.gameConfig)
         self.initialBattleground.towers.towers[0][1] = BgTowerState(2)
         self.initialBattleground.towers.towers[1][2] = BgTowerState(1)
         asyncio.get_event_loop().run_until_complete(self.db.setBattleground("bob", self.initialBattleground))
+
         return tornado.web.Application([
             (r"/sell/(.*)/([0-9]*)/([0-9]*)", SellHandler,
                 dict(db=self.db, gameConfig=self.gameConfig)),

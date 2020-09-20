@@ -65,13 +65,18 @@ def decodeEvent(eventObj: Dict, t) -> BattleEvent:
 
 cattr.register_structure_hook(BattleEvent, decodeEvent)
 
-def encodeEvents(events: List[BattleEvent]) -> str:
-    return json.dumps(cattr.unstructure(events))
+@attr.s(frozen=True, auto_attribs=True)
+class Battle:
+    events: List[BattleEvent]
 
-def decodeEvents(eventsStr: str) -> List[BattleEvent]:
-    eventsList = json.loads(eventsStr)
-    battleEvents = cattr.structure(eventsList, List[BattleEvent])
-    return battleEvents
+    def encodeEvents(self) -> str:
+        return json.dumps(cattr.unstructure(self.events))
+
+    @staticmethod
+    def decodeEvents(encodedStr: str) -> Any:
+        eventsList = json.loads(encodedStr)
+        battleEvents = cattr.structure(eventsList, List[BattleEvent])
+        return battleEvents
 
 @dataclass(frozen=False)
 class MonsterState:

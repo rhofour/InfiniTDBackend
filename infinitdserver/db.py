@@ -4,7 +4,8 @@ import sqlite3
 import json
 from typing import Optional
 
-from infinitdserver.battle import encodeEvents, decodeEvents
+from infinitdserver.battle import Battle, BattleComputer
+from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.user import User
 from infinitdserver.game_config import GameConfig
@@ -22,8 +23,14 @@ class Db:
     SELECT_USER_STATEMENT = (
             "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave FROM users")
 
+    gameConfig: GameConfig
+    userQueues: SseQueues
+    bgQueues: SseQueues
+    battleComputer: BattleComputer
+    battleCoordinator: BattleCoordinator
 
-    def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues, db_path=None, debug=False):
+    def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues,
+            battleCoordinator: BattleCoordinator, db_path=None, debug=False):
         if db_path is None:
             db_path = self.DEFAULT_DB_PATH
         self.conn = sqlite3.connect(db_path)
@@ -32,8 +39,10 @@ class Db:
         self.conn.execute("PRAGMA journal_mode=WAL;")
         self.__create_tables()
         self.gameConfig = gameConfig
-        self.userQueues: SseQueues = userQueues
-        self.bgQueues: SseQueues = bgQueues
+        self.userQueues = userQueues
+        self.bgQueues = bgQueues
+        self.battleComputer = BattleComputer(gameConfig = gameConfig)
+        self.battleCoordinator = battleCoordinator
 
     def __del__(self):
         self.conn.close()
@@ -329,10 +338,20 @@ class Db:
 
         # Check if a battle already exists, if not generate it
         res = self.conn.execute(
-            "SELECT from battles where attacking_uid = :uid AND defending_uid = :uid",
+            "SELECT from battles where attacking_uid = :uid AND defending_uid = :uid;",
             { "uid", user.uid }
-        )
+        ).fetchone()
         if res: # Battle exists
-            encoded_events = decodeEvents(res[0])
+            events = Battle.decodeEvents(res[0])
+        else: # Calculate a new battle
+            battleground = self.getBattleground(name)
+            if battleground is None: # This should be impossible since we know the user exists.
+                raise ValueError(f"Cannot find battleground for {name}")
+            events = self.battleComputer.computeBattle(battleground, user.wave)
+            battle = Battle(events = events)
+            self.conn.execute(
+                    "INSERT into battles (attacking_uid, defending_uid, battle_events) VALUES (:uid, :uid, :events);",
+                    { "uid": user.uid, "events": battle.encode() }
+            )
 
         await self.__updateUser(name)

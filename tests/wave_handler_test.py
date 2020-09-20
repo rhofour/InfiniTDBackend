@@ -5,6 +5,7 @@ import os
 
 import tornado.testing
 
+from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.db import Db
 from infinitdserver.game_config import MonsterConfig
 from infinitdserver.handler.wave import WaveHandler
@@ -18,9 +19,12 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
         self.gameConfig = test_data.gameConfig
         userQueues = SseQueues()
         bgQueues = SseQueues()
+        battleCoordinator = BattleCoordinator(SseQueues())
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
-                db_path=self.db_path)
+                battleCoordinator = battleCoordinator, db_path=self.db_path)
+
         self.db.register(uid="test_uid", name="bob")
+
         return tornado.web.Application([
             (r"/wave/(.*)", WaveHandler,
                 dict(db=self.db, gameConfig=self.gameConfig)),
@@ -70,10 +74,13 @@ class TestWaveHandlerDelete(tornado.testing.AsyncHTTPTestCase):
         self.gameConfig = test_data.gameConfig
         userQueues = SseQueues()
         bgQueues = SseQueues()
+        battleCoordinator = BattleCoordinator(SseQueues())
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
-                db_path=self.db_path)
+                battleCoordinator = battleCoordinator, db_path=self.db_path)
+
         self.db.register(uid="test_uid", name="bob")
         asyncio.get_event_loop().run_until_complete(self.db.addToWave("bob", 1))
+
         return tornado.web.Application([
             (r"/wave/(.*)", WaveHandler,
                 dict(db=self.db, gameConfig=self.gameConfig)),

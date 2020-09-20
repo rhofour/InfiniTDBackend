@@ -6,6 +6,7 @@ import os
 import tornado.testing
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
+from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.db import Db
 from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig, TowerConfig, MiscConfig
 from infinitdserver.handler.build import BuildHandler
@@ -19,9 +20,12 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.gameConfig = test_data.gameConfig
         userQueues = SseQueues()
         bgQueues = SseQueues()
+        battleCoordinator = BattleCoordinator(SseQueues())
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
-                db_path=self.db_path)
+                battleCoordinator = battleCoordinator, db_path=self.db_path)
+
         self.db.register(uid="test_uid", name="bob")
+
         return tornado.web.Application([
             (r"/build/(.*)/([0-9]*)/([0-9]*)", BuildHandler,
                 dict(db=self.db, gameConfig=self.gameConfig)),

@@ -42,13 +42,12 @@ async def updateGoldEveryMinute(db):
         else:
             print("updateGoldEveryMinute is running {-waitTime} behind.")
 
-def make_app(db, queues, gameConfig):
+def make_app(db, queues, gameConfig, battleCoordinator):
     cred = credentials.Certificate("./privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "../static"),
     }
-    battleCoordinator = BattleCoordinator(queues['battle'])
     return tornado.web.Application([
         (r"/users", UsersHandler, dict(db=db)),
         (r"/user/(.*)", UserHandler, dict(db=db)),
@@ -72,8 +71,9 @@ async def main():
     queues = {}
     for queueName in ['battle', 'battleground', 'user']:
         queues[queueName] = SseQueues()
+    battleCoordinator = BattleCoordinator(queues['battle'])
     db = Db(gameConfig = gameConfig, userQueues = queues['user'], bgQueues = queues['battleground'],
-            debug=True)
+            battleCoordinator = battleCoordinator, debug=True)
     app = make_app(db, queues, gameConfig)
     app.listen(8794)
     print("Listening on port 8794.")

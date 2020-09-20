@@ -6,6 +6,7 @@ from aiounittest import AsyncTestCase
 
 from infinitdserver.db import Db, UserInBattleException, UserHasInsufficientGoldException
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
+from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig, MiscConfig
 from infinitdserver.sse import SseQueues
 import test_data
@@ -17,8 +18,9 @@ class TestDb(AsyncTestCase):
         self.gameConfig = test_data.gameConfig
         userQueues = SseQueues()
         bgQueues = SseQueues()
+        battleCoordinator = BattleCoordinator(SseQueues())
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
-                db_path=self.db_path)
+                battleCoordinator = battleCoordinator, db_path=self.db_path)
 
     def tearDown(self):
         os.remove(self.db_path)
