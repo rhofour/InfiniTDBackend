@@ -1,10 +1,12 @@
 import abc
+import json
 from typing import Dict
 
 import tornado.web
 from tornado.iostream import StreamClosedError
 from asyncio_multisubscriber_queue import MultisubscriberQueue
 from dataclasses_json import DataClassJsonMixin
+import cattr
 
 class SseQueues:
     queuesByParam: Dict[str, MultisubscriberQueue]
@@ -35,8 +37,12 @@ class SseStreamHandler(tornado.web.RequestHandler, metaclass=abc.ABCMeta):
         self.set_header("content-type", "text/event-stream")
         self.set_header("cache-control", "no-cache")
 
-    async def publish(self, data: DataClassJsonMixin):
-        self.write(f"data: {data.to_json()}\n\n")
+    async def publish(self, data):
+        if isinstance(data, DataClassJsonMixin):
+            self.write(f"data: {data.to_json()}\n\n")
+        else:
+            encoded = json.dumps(cattr.unstructure(data))
+            self.write(f"data: {encoded}\n\n")
         await self.flush()
 
     async def get(self, param):
