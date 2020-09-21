@@ -183,7 +183,7 @@ class Db:
         except IndexError:
             raise ValueError(f"Invalid tower ID {towerId}")
 
-        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        self.conn.isolation_level = "IMMEDIATE"
         user = self.getUserByName(name)
         if user is None:
             raise ValueError(f"{name} is not a registered user.");
@@ -231,7 +231,7 @@ class Db:
         await asyncio.wait([self.__updateUser(name), self.__updateBattleground(name)])
 
     async def sellTower(self, name: str, row: int, col: int):
-        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        self.conn.isolation_level = "IMMEDIATE"
         user = self.getUserByName(name)
         if user is None:
             self.conn.commit()
@@ -273,7 +273,7 @@ class Db:
         except IndexError:
             raise ValueError(f"Invalid monster ID {monsterId}")
 
-        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        self.conn.isolation_level = "IMMEDIATE"
         user = self.getUserByName(name)
         if user is None:
             self.conn.commit()
@@ -299,7 +299,7 @@ class Db:
         await self.__updateUser(name)
 
     async def clearWave(self, name: str):
-        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        self.conn.isolation_level = "IMMEDIATE"
         user = self.getUserByName(name)
         if user is None:
             self.conn.commit()
@@ -323,7 +323,7 @@ class Db:
         await self.__updateUser(name)
 
     async def startBattle(self, name: str):
-        self.conn.execute("BEGIN IMMEDIATE TRANSACTION")
+        self.conn.isolation_level = "IMMEDIATE"
         user = self.getUserByName(name)
         if user is None:
             self.conn.commit()

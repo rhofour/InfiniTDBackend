@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Dict, Union, Callable, Deque
+from typing import List, Dict, Union, Callable, Deque, Awaitable
 
 from collections import deque
 import time
@@ -14,12 +14,14 @@ class StreamingBattle:
     startTime: float = -1.0 # -1 signifies the battle hasn't started yet
     pastEvents: List[BattleEvent] = []
     futureEvents: Deque[BattleEvent]
-    updateFn: Callable[[Union[float, BattleEvent]], None]
+    updateFn: Callable[[Union[float, BattleEvent]], Awaitable[None]]
 
-    def __init__(self, updateFn: Callable[[Union[float, BattleEvent]], None]):
+    def __init__(self, updateFn: Callable[[Union[float, BattleEvent]], Awaitable[None]]):
         self.updateFn = updateFn
 
     async def start(self, events: List[BattleEvent]):
+        if not events:
+            return # Do nothing if events is empty
         self.futureEvents = deque(events)
 
         # Send all events occurring in the buffer window
