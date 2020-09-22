@@ -53,6 +53,7 @@ class StreamingBattle:
             await self.updateFn(event)
             self.pastEvents.append(self.futureEvents.popleft())
 
+        await self.stop()
 
     async def stop(self):
         self.startTime = -1.0
