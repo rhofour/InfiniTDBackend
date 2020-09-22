@@ -57,7 +57,7 @@ class StreamingBattle:
 
     async def stop(self):
         self.startTime = -1.0
-        self.pastEvents = []
+        self.futureEvents = deque()
         await self.updateFn(-1.0) # Send an update to halt the battle.
 
     def join(self) -> List[Union[BattleEvent, float]]:
