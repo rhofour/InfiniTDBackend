@@ -38,12 +38,19 @@ class SseStreamHandler(tornado.web.RequestHandler, metaclass=abc.ABCMeta):
         self.set_header("cache-control", "no-cache")
 
     async def publish(self, data):
-        if isinstance(data, DataClassJsonMixin):
-            self.write(f"data: {data.to_json()}\n\n")
+        if isinstance(data, list):
+            for x in data:
+                self.publishElement(x)
         else:
-            encoded = json.dumps(cattr.unstructure(data))
-            self.write(f"data: {encoded}\n\n")
+            self.publishElement(data)
         await self.flush()
+
+    def publishElement(self, element):
+        if isinstance(element, DataClassJsonMixin):
+            self.write(f"data: {element.to_json()}\n\n")
+        else:
+            encoded = json.dumps(cattr.unstructure(element))
+            self.write(f"data: {encoded}\n\n")
 
     async def get(self, param):
         with self.queues.queue_context(param) as q:
