@@ -1,4 +1,5 @@
 import unittest
+from random import Random
 
 from infinitdserver.game_config import CellPos
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
@@ -6,6 +7,77 @@ from infinitdserver.paths import makePathMap, findShortestPaths, compressPath, P
 
 def emptyBattleground(rows: int, cols: int):
     return BattlegroundState(towers = BgTowersState([[None for c in range(cols)] for r in range(rows)]))
+
+class TestGetRandomPath(unittest.TestCase):
+    def test_diagonal2(self):
+        battleground = emptyBattleground(2, 2)
+        start = CellPos(0, 0)
+        end = CellPos(1, 1)
+        pathMap = makePathMap(battleground, start, end)
+        self.assertIsNotNone(pathMap)
+
+        for i in range(10):
+            with self.subTest(seed=i):
+                path = pathMap.getRandomPath(2, Random(i)) # pytype: disable=attribute-error
+                self.assertEqual(len(path), 3)
+                self.assertEqual(path[0], start)
+                self.assertEqual(path[-1], end)
+                # Make sure each position is adjacent to the previous
+                prevElem = path[0]
+                for elem in path[1:]:
+                    self.assertGreaterEqual(elem.row, prevElem.row - 1)
+                    self.assertLessEqual(elem.row, prevElem.row + 1)
+                    self.assertGreaterEqual(elem.col, prevElem.col - 1)
+                    self.assertLessEqual(elem.col, prevElem.col + 1)
+                    prevElem = elem
+
+    def test_diagonal5(self):
+        battleground = emptyBattleground(5, 5)
+        start = CellPos(0, 0)
+        end = CellPos(4, 4)
+        pathMap = makePathMap(battleground, start, end)
+        self.assertIsNotNone(pathMap)
+
+        for i in range(10):
+            with self.subTest(seed=i):
+                path = pathMap.getRandomPath(5, Random(i)) # pytype: disable=attribute-error
+                self.assertEqual(len(path), 9)
+                self.assertEqual(path[0], start)
+                self.assertEqual(path[-1], end)
+                # Make sure each position is adjacent to the previous
+                prevElem = path[0]
+                for elem in path[1:]:
+                    self.assertGreaterEqual(elem.row, prevElem.row - 1)
+                    self.assertLessEqual(elem.row, prevElem.row + 1)
+                    self.assertGreaterEqual(elem.col, prevElem.col - 1)
+                    self.assertLessEqual(elem.col, prevElem.col + 1)
+                    prevElem = elem
+
+    def test_diagonal5_with_obstacles(self):
+        battleground = emptyBattleground(5, 5)
+        battleground.towers.towers[2][2] = BgTowerState(0)
+        battleground.towers.towers[2][3] = BgTowerState(0)
+        battleground.towers.towers[3][2] = BgTowerState(0)
+        battleground.towers.towers[3][3] = BgTowerState(0)
+        start = CellPos(0, 0)
+        end = CellPos(4, 4)
+        pathMap = makePathMap(battleground, start, end)
+        self.assertIsNotNone(pathMap)
+
+        for i in range(10):
+            with self.subTest(seed=i):
+                path = pathMap.getRandomPath(5, Random(i)) # pytype: disable=attribute-error
+                self.assertEqual(len(path), 9)
+                self.assertEqual(path[0], start)
+                self.assertEqual(path[-1], end)
+                # Make sure each position is adjacent to the previous
+                prevElem = path[0]
+                for elem in path[1:]:
+                    self.assertGreaterEqual(elem.row, prevElem.row - 1)
+                    self.assertLessEqual(elem.row, prevElem.row + 1)
+                    self.assertGreaterEqual(elem.col, prevElem.col - 1)
+                    self.assertLessEqual(elem.col, prevElem.col + 1)
+                    prevElem = elem
 
 class TestPathExists(unittest.TestCase):
     def test_startBlocked(self):

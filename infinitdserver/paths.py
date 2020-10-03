@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from random import Random
 from typing import List, Set, Optional
 
 from infinitdserver.game_config import CellPos, Row, Col
@@ -7,6 +8,37 @@ from infinitdserver.battleground_state import BattlegroundState
 @dataclass(frozen=True)
 class PathMap:
     dists: List[int]
+
+    def getRandomPath(self, numCols: int, rand: Optional[Random] = None) -> List[CellPos]:
+        if rand is None:
+            rand = Random()
+        numRows = len(self.dists) / numCols
+        def getNeighbors(elem: int) -> List[int]:
+            col = elem % numCols
+            row = elem // numCols
+            neighbors = []
+            if col > 0:
+                neighbors.append(elem - 1)
+            if col < numCols - 1:
+                neighbors.append(elem + 1)
+            if row > 0:
+                neighbors.append(elem - numCols)
+            if row < numRows - 1:
+                neighbors.append(elem + numCols)
+            return neighbors
+
+        path = []
+        currentDist = -1
+        start = self.dists.index(0)
+        possibleNeighbors = [start]
+        while possibleNeighbors:
+            currentPos = rand.choice(possibleNeighbors)
+            path.append(CellPos.fromNumber(currentPos, numCols))
+            currentDist += 1
+            possibleNeighbors = [neighbor
+                    for neighbor in getNeighbors(currentPos)
+                    if self.dists[neighbor] == currentDist + 1]
+        return path
 
 def compressPath(path: List[CellPos]) -> List[CellPos]:
     if len(path) < 2:

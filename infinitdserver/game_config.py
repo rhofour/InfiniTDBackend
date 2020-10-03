@@ -1,5 +1,6 @@
+from __future__ import annotations
 from dataclasses import dataclass, asdict
-from typing import NewType, Tuple, Dict, Any
+from typing import NewType, Tuple, Dict
 
 import cattr
 from dataclasses_json import dataclass_json
@@ -18,6 +19,10 @@ class CellPos:
 
     def toNumber(self, numCols: int) -> int:
         return self.row * numCols + self.col;
+
+    @staticmethod
+    def fromNumber(number: int, numCols: int) -> CellPos:
+        return CellPos(number // numCols, number % numCols)
 
 @dataclass_json
 @dataclass(frozen=True)
