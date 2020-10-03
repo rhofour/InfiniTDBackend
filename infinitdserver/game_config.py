@@ -16,6 +16,9 @@ class CellPos:
     row: Row
     col: Col
 
+    def toNumber(self, numCols: int) -> int:
+        return self.row * numCols + self.col;
+
 @dataclass_json
 @dataclass(frozen=True)
 class PlayfieldConfig:

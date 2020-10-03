@@ -10,7 +10,7 @@ from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.user import User
 from infinitdserver.game_config import GameConfig
 from infinitdserver.sse import SseQueues
-from infinitdserver.paths import findShortestPaths
+from infinitdserver.paths import pathExists
 
 class UserInBattleException(Exception):
     pass
@@ -207,11 +207,11 @@ class Db:
         battleground.towers.towers[row][col] = BgTowerState(towerId)
 
         # Check if there is still a path from start to exit.
-        paths = findShortestPaths(
+        blocked = not pathExists(
                 battleground,
                 self.gameConfig.playfield.monsterEnter,
                 self.gameConfig.playfield.monsterExit)
-        if not paths:
+        if blocked:
             self.conn.commit()
             raise ValueError(f"Building at {row}, {col} would block the path.")
 
