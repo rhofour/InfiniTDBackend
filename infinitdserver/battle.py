@@ -99,8 +99,7 @@ class BattleComputer:
 
     def computeBattle(self, battleground: BattlegroundState, wave: List[ConfigId]) -> List[BattleEvent]:
         events: List[BattleEvent] = []
-        nextMonsterId = 0
-        nextProjectileId = 0
+        nextId = 0
         unspawnedMonsters = wave[::-1] # Reverse so we can pop off elements efficiently
         spawnedMonsters: Deque[MonsterState] = deque()
         gameTime = 0.0
@@ -125,12 +124,12 @@ class BattleComputer:
                     raise ValueError(f"Unknown monster ID: {monsterConfigId}")
                 path = compressPath(pathMap.getRandomPath(self.gameConfig.playfield.numCols, rand))
                 newMonster = MonsterState(
-                        id = nextMonsterId,
+                        id = nextId,
                         config = monsterConfig,
                         pos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter),
                         health = monsterConfig.health,
                         path = path)
-                nextMonsterId += 1
+                nextId += 1
                 spawnedMonsters.append(newMonster)
                 startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
                 destPos: FpCellPos = FpCellPos.fromCellPos(path[1])
