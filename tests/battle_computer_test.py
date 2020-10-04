@@ -85,6 +85,7 @@ class TestBattleComputer(unittest.TestCase):
         self.assertListEqual(results, expectedEvents)
 
     def test_oneMonsterOneCorner(self):
+        # Note which path the monster takes depends on the seed.
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig2row2col)
         battleground = BattlegroundState.empty(test_data.gameConfig2row2col)
         expectedEvents: List[BattleEvent] = [
@@ -93,7 +94,7 @@ class TestBattleComputer(unittest.TestCase):
                 id = 0,
                 configId = ConfigId(0),
                 startPos = FpCellPos(FpRow(1), FpCol(1)),
-                destPos = FpCellPos(FpRow(0), FpCol(1)),
+                destPos = FpCellPos(FpRow(1), FpCol(0)),
                 startTime = 0.0,
                 endTime = 0.5,
             ),
@@ -101,7 +102,7 @@ class TestBattleComputer(unittest.TestCase):
                 objType = ObjectType.MONSTER,
                 id = 0,
                 configId = ConfigId(0),
-                startPos = FpCellPos(FpRow(0), FpCol(1)),
+                startPos = FpCellPos(FpRow(1), FpCol(0)),
                 destPos = FpCellPos(FpRow(0), FpCol(0)),
                 startTime = 0.5,
                 endTime = 1.0,
@@ -130,7 +131,7 @@ class TestBattleComputer(unittest.TestCase):
 
     def test_twoMonstersOneCorner(self):
         # Note which path each monster takes depends on the seed.
-        battleComputer = BattleComputer(gameConfig = test_data.gameConfig2row2col, seed=4)
+        battleComputer = BattleComputer(gameConfig = test_data.gameConfig2row2col, seed=5)
         battleground = BattlegroundState.empty(test_data.gameConfig2row2col)
         expectedEvents: List[BattleEvent] = [
             MoveEvent(

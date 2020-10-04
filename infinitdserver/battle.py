@@ -3,7 +3,7 @@ from dataclasses import dataclass, asdict
 from enum import Enum, unique, auto
 import math
 from typing import List, Deque, NewType, Union, Dict, Any
-import random
+from random import Random
 import json
 
 import attr
@@ -12,7 +12,7 @@ from dataclasses_json import dataclass_json
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.game_config import GameConfig, ConfigId, CellPos, MonsterConfig
-from infinitdserver.paths import findShortestPaths, compressPath
+from infinitdserver.paths import PathMap, makePathMap, compressPath
 
 TIME_PRECISION = 4 # Number of decimal places to use for times
 
@@ -84,7 +84,7 @@ class MonsterState:
     config: MonsterConfig
     pos: FpCellPos
     health: float
-    pathId: int
+    path: List[CellPos]
     targetInPath: int = 1
 
 class BattleComputer:
@@ -104,14 +104,13 @@ class BattleComputer:
         unspawnedMonsters = wave[::-1] # Reverse so we can pop off elements efficiently
         spawnedMonsters: Deque[MonsterState] = deque()
         gameTime = 0.0
-        random.seed(self.startingSeed)
+        rand = Random(self.startingSeed)
 
-        paths = findShortestPaths(
+        pathMap = makePathMap(
                 battleground,
                 self.gameConfig.playfield.monsterEnter,
                 self.gameConfig.playfield.monsterExit)
-        paths = [compressPath(path) for path in paths]
-        if not paths:
+        if not pathMap:
             raise ValueError("Cannot compute battle with no path.")
 
         spawnPoint = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
@@ -124,14 +123,13 @@ class BattleComputer:
                     monsterConfig = self.gameConfig.monsters[monsterConfigId]
                 except KeyError:
                     raise ValueError(f"Unknown monster ID: {monsterConfigId}")
-                pathId = random.randrange(0, len(paths))
-                path = paths[pathId]
+                path = compressPath(pathMap.getRandomPath(self.gameConfig.playfield.numCols, rand))
                 newMonster = MonsterState(
                         id = nextMonsterId,
                         config = monsterConfig,
                         pos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter),
                         health = monsterConfig.health,
-                        pathId = pathId)
+                        path = path)
                 nextMonsterId += 1
                 spawnedMonsters.append(newMonster)
                 startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
@@ -160,8 +158,7 @@ class BattleComputer:
             spawnOpen = True
             finishedMonsters = []
             for monster in spawnedMonsters:
-                path = paths[monster.pathId]
-                dest = path[monster.targetInPath]
+                dest = monster.path[monster.targetInPath]
                 distPerTick = monster.config.speed * self.gameTickSecs
 
                 if monster.pos.row == float(dest.row):
@@ -186,12 +183,12 @@ class BattleComputer:
                         else:
                             monster.pos = FpCellPos(monster.pos.row - distPerTick, monster.pos.col)
                 else: # Either finish the path or move to the next segment
-                    if monster.targetInPath == len(path) - 1: # We reached the end
+                    if monster.targetInPath == len(monster.path) - 1: # We reached the end
                         finishedMonsters.append(monster)
                         continue
                     # Continue to the next segment of the path
                     monster.targetInPath += 1
-                    newDest = path[monster.targetInPath]
+                    newDest = monster.path[monster.targetInPath]
                     if movingHorizontally: # Now we're moving vertically
                         if newDest.row > dest.col:
                             monster.pos = FpCellPos(FpRow(dest.row + remainingDist), FpCol(dest.col))
@@ -216,7 +213,7 @@ class BattleComputer:
                         endTime = endTime,
                     )
                     events.append(newEvent)
-                    if monster.targetInPath == len(path) - 1:
+                    if monster.targetInPath == len(monster.path) - 1:
                         deleteEvent = DeleteEvent(
                             objType = ObjectType.MONSTER,
                             id = monster.id,
