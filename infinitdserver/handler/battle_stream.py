@@ -13,4 +13,7 @@ class BattleStreamHandler(SseStreamHandler):
         self.battleCoordinator = battleCoordinator
 
     async def initialState(self, name):
-        return self.battleCoordinator.getBattle(name).join()
+        print(f"Attemting to stream battle: {name}")
+        initialState = self.battleCoordinator.getBattle(name).join()
+        print(f"Initial state: {initialState}")
+        return initialState

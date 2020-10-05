@@ -29,5 +29,5 @@ class BaseDbHandler(BaseHandler):
             try:
                 return firebase_admin.auth.verify_id_token(token)
             except Exception as e:
-                print(e)
+                print(f"Authorization error: {e}")
         self.reply401()

@@ -18,7 +18,7 @@ class BattleHandler(BaseDbHandler):
         decoded_token = self.verifyAuthentication()
         user = self.db.getUserByUid(decoded_token["uid"])
         if user.name != name:
-            print(f"Got build request for {name} from {user.name}.")
+            print(f"Got battle start request for {name} from {user.name}.")
             self.set_status(403) # Forbidden
             return
 
