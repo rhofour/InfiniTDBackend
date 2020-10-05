@@ -376,10 +376,6 @@ class Db:
             await self.__updateUser(name)
         self.battleCoordinator.startBattle(name, events, setUserNotInBattle)
 
-        # TODO: Figure out how to do this after the battle is over (probably
-        # add a callback above)
-        # Note the battle has finished
-
     def clearInBattle(self):
         assert self.conn.in_transaction is False
         self.conn.execute("UPDATE users SET inBattle = FALSE;")
