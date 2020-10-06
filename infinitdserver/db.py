@@ -151,7 +151,6 @@ class Db:
     async def __updateUser(self, name):
         if name in self.userQueues:
             user = self.getUserByName(name)
-            print(f"__updateUser({name}): {user}")
             await self.userQueues.sendUpdate(name, user)
 
     async def __updateBattleground(self, name):

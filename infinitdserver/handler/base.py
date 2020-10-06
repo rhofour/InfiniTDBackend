@@ -1,16 +1,28 @@
+from time import time
+
 import firebase_admin.auth
 import tornado.web
 
 from infinitdserver.db import Db
 
 class BaseHandler(tornado.web.RequestHandler):
+    startedTime: float
+
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, authorization, content-type")
         self.set_header("Access-Control-Allow-Methods", "GET, OPTIONS, POST, DELETE")
 
     def options(self, *args):
-        print("Got OPTIONS request.")
+        pass
+
+    def prepare(self):
+        self.startedTime = time()
+
+    def on_finish(self):
+        duration = time() - self.startedTime
+        if duration > 0.1:
+            print(f"{self.__class__.__name__} took {duration}s to complete.")
 
     def reply401(self):
         self.set_status(401)
