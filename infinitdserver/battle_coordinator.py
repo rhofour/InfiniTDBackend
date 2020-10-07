@@ -23,6 +23,7 @@ class StreamingBattle:
         if not events:
             return # Do nothing if events is empty
         self.futureEvents = deque(events)
+        self.pastEvents = []
 
         # Send all events occurring in the buffer window
         numInitialEvents = 0
@@ -32,7 +33,7 @@ class StreamingBattle:
             await self.updateFn(event)
             numInitialEvents += 1
 
-        # Move the initial events to the past events
+        # Move the initial events from futureEvents to the pastEvents
         while numInitialEvents:
             self.pastEvents.append(self.futureEvents.popleft())
             numInitialEvents -= 1
@@ -58,6 +59,7 @@ class StreamingBattle:
     async def stop(self):
         self.startTime = -1.0
         self.futureEvents = deque()
+        self.pastEvents = []
         await self.updateFn(-1.0) # Send an update to halt the battle.
 
     def join(self) -> List[Union[BattleEvent, float]]:
