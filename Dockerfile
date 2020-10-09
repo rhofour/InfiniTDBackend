@@ -1,9 +1,13 @@
 FROM python:3.8-buster
 
 RUN pip install pipenv
-COPY Pipfile* /tmp/InfiniTDServer/
-RUN cd /tmp/InfiniTDServer && pipenv install
+ENV PROJECT_DIR /tmp/InfiniTDServer/
+WORKDIR ${PROJECT_DIR}
 
-COPY . /tmp/InfiniTDServer
+COPY Pipfile* ${PROJECT_DIR}
+RUN pipenv install --deploy
+
+COPY . ${PROJECT_DIR}
+
 EXPOSE 8794/tcp
-RUN cd /tmp/InfiniTDServer && pipenv run python -m infinitdserver
+CMD ["pipenv",  "run", "python", "-m", "infinitdserver"]
