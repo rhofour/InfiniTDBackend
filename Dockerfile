@@ -1,7 +1,7 @@
 FROM python:3.8-buster
 
 RUN pip install pipenv
-ENV PROJECT_DIR /tmp/InfiniTDServer/
+ENV PROJECT_DIR /InfiniTDServer/
 WORKDIR ${PROJECT_DIR}
 
 COPY Pipfile* ${PROJECT_DIR}
