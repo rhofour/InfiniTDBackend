@@ -81,8 +81,8 @@ async def main():
     queues = {}
     for queueName in ['battle', 'battleground', 'user']:
         queues[queueName] = SseQueues()
-    battleCoordinator = BattleCoordinator(queues['battle'])
     Logger.setDefault(Logger("data/logs.db", printVerbosity=args.verbosity, debug=args.debug))
+    battleCoordinator = BattleCoordinator(queues['battle'])
     db = Db(gameConfig = gameConfig, userQueues = queues['user'], bgQueues = queues['battleground'],
             battleCoordinator = battleCoordinator, debug=args.debug)
     # Make sure no one is stuck in a battle.
