@@ -27,7 +27,12 @@ class BattleHandler(BaseDbHandler):
         # Attempt to start a battle
         try:
             await self.db.startBattle(name=name, handler="BattleHandler", requestId=self.requestId)
-        except (ValueError, UserInBattleException, UserHasInsufficientGoldException, BattleCalculationException) as e:
+        except (BattleCalculationException) as e:
+            self.logError("BattleHandler battle calculation error: " + repr(e), uid=uid)
+            self.set_status(409) # Conflict
+            self.write(str(e))
+            return
+        except (ValueError, UserInBattleException, UserHasInsufficientGoldException) as e:
             self.logInfo("BattleHandler POST error: " + repr(e), uid=uid)
             self.set_status(409) # Conflict
             self.write(str(e))
