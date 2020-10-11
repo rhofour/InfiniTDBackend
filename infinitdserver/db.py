@@ -4,7 +4,7 @@ import sqlite3
 import json
 from typing import Optional
 
-from infinitdserver.battle import Battle, BattleComputer
+from infinitdserver.battle import Battle, BattleComputer, BattleCalculationException
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.user import User
@@ -363,7 +363,12 @@ class Db:
             battleground = self.getBattleground(name)
             if battleground is None: # This should be impossible since we know the user exists.
                 raise ValueError(f"Cannot find battleground for {name}")
-            events = self.battleComputer.computeBattle(battleground, user.wave)
+            try:
+                events = self.battleComputer.computeBattle(battleground, user.wave)
+            except BattleCalculationException as e:
+                self.conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid", { "uid": user.uid })
+                self.conn.commit()
+                raise e
             battle = Battle(events = events)
             self.conn.execute(
                     "INSERT into battles (attacking_uid, defending_uid, battle_events) VALUES (:uid, :uid, :events);",

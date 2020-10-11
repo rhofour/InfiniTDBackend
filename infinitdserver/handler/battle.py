@@ -1,3 +1,4 @@
+from infinitdserver.battle import BattleCalculationException
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.db import Db, UserInBattleException, UserHasInsufficientGoldException
 from infinitdserver.handler.base import BaseDbHandler
@@ -26,7 +27,7 @@ class BattleHandler(BaseDbHandler):
         # Attempt to start a battle
         try:
             await self.db.startBattle(name=name, handler="BattleHandler", requestId=self.requestId)
-        except (ValueError, UserInBattleException, UserHasInsufficientGoldException) as e:
+        except (ValueError, UserInBattleException, UserHasInsufficientGoldException, BattleCalculationException) as e:
             self.logInfo("BattleHandler POST error: " + repr(e), uid=uid)
             self.set_status(409) # Conflict
             self.write(str(e))

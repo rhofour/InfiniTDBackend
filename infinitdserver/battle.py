@@ -21,6 +21,9 @@ cattr.register_structure_hook(FpRow, lambda d, _: FpRow(d))
 FpCol = NewType('FpCol', float)
 cattr.register_structure_hook(FpCol, lambda d, _: FpCol(d))
 
+class BattleCalculationException(Exception):
+    pass
+
 @attr.s(frozen=True, auto_attribs=True)
 class FpCellPos:
     row: FpRow
@@ -167,7 +170,7 @@ class BattleComputer:
                     initialDist = abs(monster.pos.row - dest.row)
                     movingHorizontally = False
                 else:
-                    raise Exception(f"Monster isn't lined up with destination. Monster {monster.pos} Dest {dest}")
+                    raise BattleCalculationException(f"Monster {monster.id} isn't lined up with destination. Monster {monster.pos} Dest {dest}")
 
                 remainingDist = distPerTick - initialDist
                 if remainingDist < 0: # Advance normally
