@@ -1,7 +1,7 @@
 # Don't store the Firebase private key in Git
 privateFirebaseKey.json
-# Don't store the database
-data.db*
+# Don't store the mutable data
+data
 *.egg-info
 # Pytype stuff
 .pytype
