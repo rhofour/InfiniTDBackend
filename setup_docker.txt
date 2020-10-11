@@ -9,9 +9,9 @@ First, create a Firebase project and download this file.
 Next, create a named volume with this file. Here's an easy way
 to do that:
 podman volume create backend-data
-podman container create --name temp --mount type=volume,source=backend-data,target=/InfiniTDServer hello-world
-podman cp ./privateFirebaseKey.json temp:/InfiniTDServer/
+podman container create --name temp --mount type=volume,source=backend-data,target=/InfiniTDServer/data hello-world
+podman cp ./privateFirebaseKey.json temp:/InfiniTDServer/data/
 podman rm temp
 
 # Run
-podman run --mount type=volume,source=backend-data,target=/InfiniTDServer -p 8794:8794 -d infinitd-backend
+podman run --mount type=volume,source=backend-data,target=/InfiniTDServer/data -p 8794:8794 -d infinitd-backend

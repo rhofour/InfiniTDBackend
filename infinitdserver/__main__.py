@@ -43,7 +43,7 @@ async def updateGoldEveryMinute(db):
             print("updateGoldEveryMinute is running {-waitTime} behind.")
 
 def make_app(db, queues, gameConfig, battleCoordinator):
-    cred = credentials.Certificate("./privateFirebaseKey.json")
+    cred = credentials.Certificate("./data/privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "../static"),

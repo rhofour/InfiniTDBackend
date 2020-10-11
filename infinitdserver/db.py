@@ -19,7 +19,7 @@ class UserHasInsufficientGoldException(Exception):
     pass
 
 class Db:
-    DEFAULT_DB_PATH = "data.db"
+    DEFAULT_DB_PATH = "data/data.db"
     SELECT_USER_STATEMENT = (
             "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave FROM users")
 
