@@ -7,5 +7,5 @@ class NameTakenHandler(BaseDbHandler):
     # TODO(rofer): Switch to using response headers to send this.
     # 204 for name found, 404 for not found
     def get(self, name):
-        print("Got request for isNameTaken/" + name)
+        self.logInfo("Got request for isNameTaken/" + name)
         self.write({"isTaken": self.db.nameTaken(name)})

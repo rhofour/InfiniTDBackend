@@ -6,6 +6,7 @@ import time
 
 from infinitdserver.battle import BattleComputer, BattleEvent
 from infinitdserver.sse import SseQueues
+from infinitdserver.logger import Logger
 
 class StreamingBattle:
     """StreamingBattle handles streaming battle data out in "real time"
@@ -77,18 +78,20 @@ class BattleCoordinator:
 
     def __init__(self, battleQueues: SseQueues):
         self.battleQueues = battleQueues
+        self.logger = Logger.getDefault()
 
     def getBattle(self, name: str):
         if name not in self.battles:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         return self.battles[name]
 
-    def startBattle(self, name: str, events: List[BattleEvent], callback: Callable[[], Awaitable[None]]):
+    def startBattle(self, name: str, events: List[BattleEvent], callback: Callable[[], Awaitable[None]],
+            handler: str = "BattleCoordinator", requestId = -1):
         if name not in self.battles:
-            print(f"Coordinator is making a new StreamingBattle for {name}")
+            self.logger.info(handler, requestId, f"Coordinator is making a new StreamingBattle for {name}")
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         loop = asyncio.get_running_loop()
-        print(f"Coordinator is starting a StreamingBattle for {name}")
+        self.logger.info(handler, requestId, f"Coordinator is starting a StreamingBattle for {name}")
         async def startBattleThenCallCallback():
             await self.battles[name].start(events)
             await callback()

@@ -11,10 +11,12 @@ from infinitdserver.db import Db
 from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig, TowerConfig, MiscConfig
 from infinitdserver.handler.build import BuildHandler
 from infinitdserver.sse import SseQueues
+from infinitdserver.logger import Logger, MockLogger
 import test_data
 
 class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
+        Logger.setDefault(MockLogger())
         tmp_file, tmp_path = tempfile.mkstemp()
         self.db_path = tmp_path
         self.gameConfig = test_data.gameConfig

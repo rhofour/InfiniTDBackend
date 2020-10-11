@@ -11,6 +11,7 @@ from infinitdserver.user import User
 from infinitdserver.game_config import GameConfig
 from infinitdserver.sse import SseQueues
 from infinitdserver.paths import pathExists
+from infinitdserver.logger import Logger
 
 class UserInBattleException(Exception):
     pass
@@ -43,6 +44,7 @@ class Db:
         self.bgQueues = bgQueues
         self.battleComputer = BattleComputer(gameConfig = gameConfig)
         self.battleCoordinator = battleCoordinator
+        self.logger = Logger.getDefault()
 
     def __del__(self):
         self.conn.close()
@@ -125,11 +127,11 @@ class Db:
                     })
             self.conn.commit()
         except sqlite3.IntegrityError as err:
-            # This is likely because the name was already taken. 
-            print("IntegrityError when registering a new user: ", err)
+            # This is likely because the name was already taken.
+            self.logger.warn("DB", -1, "IntegrityError when registering a new user: ", err)
             return False
         except sqlite3.DatabaseError as err:
-            print("DatabaseError when registering a new user: ", err)
+            self.logger.warn("DB", -1, "DatabaseError when registering a new user: ", err)
             return False
         return True
 
@@ -330,7 +332,7 @@ class Db:
 
         await self.__updateUser(name)
 
-    async def startBattle(self, name: str):
+    async def startBattle(self, name: str, handler: str = "DB", requestId: int = -1):
         assert self.conn.in_transaction is False
         self.conn.execute("BEGIN IMMEDIATE")
         user = self.getUserByName(name)
@@ -338,7 +340,7 @@ class Db:
             self.conn.commit()
             raise ValueError(f"{name} is not a registered user.");
 
-        print(f"DB startBattle with user: {user}")
+        self.logger.info(handler, requestId, f"startBattle with user: {user}")
         if user.inBattle:
             self.conn.commit()
             raise UserInBattleException()
@@ -354,10 +356,10 @@ class Db:
             { "uid": user.uid }
         ).fetchone()
         if res: # Battle exists
-            print(f"Found battle for {name}")
+            self.logger.info(handler, requestId, f"Found battle for {name}")
             events = Battle.decodeEvents(res[0])
         else: # Calculate a new battle
-            print(f"Calculating new battle for {name}")
+            self.logger.info(handler, requestId, f"Calculating new battle for {name}")
             battleground = self.getBattleground(name)
             if battleground is None: # This should be impossible since we know the user exists.
                 raise ValueError(f"Cannot find battleground for {name}")

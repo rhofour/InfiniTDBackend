@@ -12,21 +12,22 @@ class BattleHandler(BaseDbHandler):
         self.battleCoordinator = BattleCoordinator
 
     async def post(self, name: str):
-        print(f"Got POST request for controlBattle/{name}")
+        self.logInfo(f"Got POST request for controlBattle/{name}")
 
         # Check that the name matches the authorized user
         decoded_token = self.verifyAuthentication()
-        user = self.db.getUserByUid(decoded_token["uid"])
+        uid = decoded_token["uid"]
+        user = self.db.getUserByUid(uid)
         if user.name != name:
-            print(f"Got battle start request for {name} from {user.name}.")
+            self.logInfo(f"Got battle start request for {name} from {user.name}.")
             self.set_status(403) # Forbidden
             return
 
         # Attempt to start a battle
         try:
-            await self.db.startBattle(name=name)
+            await self.db.startBattle(name=name, handler="BattleHandler", requestId=self.requestId)
         except (ValueError, UserInBattleException, UserHasInsufficientGoldException) as e:
-            print("BattleHandler POST error: " + repr(e))
+            self.logInfo("BattleHandler POST error: " + repr(e), uid=uid)
             self.set_status(409) # Conflict
             self.write(str(e))
             return

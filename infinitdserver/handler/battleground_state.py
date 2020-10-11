@@ -1,5 +1,6 @@
 from infinitdserver.db import Db
-from infinitdserver.sse import SseStreamHandler, SseQueues
+from infinitdserver.sse import SseQueues
+from infinitdserver.handler.sse import SseStreamHandler
 
 class BattlegroundStateHandler(SseStreamHandler):
     db: Db

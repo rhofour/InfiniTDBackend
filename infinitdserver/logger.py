@@ -38,18 +38,18 @@ class Logger:
         self.conn.commit()
 
     def error(self, handler: str, requestId: int, msg: str, uid: Optional[str] = None):
-        self.__log(handler, requestId, msg, verbosity=1, uid=uid)
+        self._log(handler, requestId, msg, verbosity=1, uid=uid)
 
     def warn(self, handler: str, requestId: int, msg: str, uid: Optional[str] = None):
-        self.__log(handler, requestId, msg, verbosity=2, uid=uid)
+        self._log(handler, requestId, msg, verbosity=2, uid=uid)
 
     def info(self, handler: str, requestId: int, msg: str, uid: Optional[str] = None):
-        self.__log(handler, requestId, msg, verbosity=3, uid=uid)
+        self._log(handler, requestId, msg, verbosity=3, uid=uid)
 
-    def __log(self, handler: str, requestId: int, msg: str, verbosity: int, uid: Optional[str] = None):
+    def _log(self, handler: str, requestId: int, msg: str, verbosity: int, uid: Optional[str] = None):
         if self.printVerbosity >= verbosity:
             timeStr = strftime("%a %H:%M:%S")
-            print(f"{timeStr} {handler}: {msg}")
+            print(f"{timeStr} {handler} {requestId}: {msg}")
         self.conn.execute(
                 "INSERT INTO logs (time, uid, requestId, handler, msg, verbosity) "
                 "VALUES (date('now'), :uid, :requestId, :handler, :msg, :verbosity);",
@@ -61,3 +61,21 @@ class Logger:
                     "verbosity": verbosity,
                 })
         self.conn.commit()
+
+class MockLogger(Logger):
+    def __init__(self):
+        print("Created mock logger")
+
+    def _log(self, handler: str, requestId: int, msg: str, verbosity: int, uid: Optional[str] = None):
+        verbosityStr = "???:"
+        if verbosity == 1:
+            verbosityStr = "ERROR:"
+        elif verbosity == 2:
+            verbosityStr = "WARN:"
+        elif verbosity == 3:
+            verbosityStr = "INFO:"
+        timeStr = strftime("%a %H:%M:%S")
+        print(f"{verbosityStr} {timeStr} {handler} {requestId}: {msg}")
+
+    def __del__(self):
+        pass
