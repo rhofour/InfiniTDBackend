@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import os
 from random import randrange
@@ -69,20 +70,26 @@ def make_app(db, queues, gameConfig, battleCoordinator):
     ], **settings)
 
 async def main():
+    parser = argparse.ArgumentParser(description="Backend for InfiniTD.")
+    parser.add_argument('-d', '--debug', action="store_true")
+    parser.add_argument('-v', '--verbosity', action="store", type=int, default=0)
+    parser.add_argument('-p', '--port', action="store", type=int, default=8794)
+    args = parser.parse_args()
+
     with open('game_config.json') as gameConfigFile:
         gameConfig = GameConfig.from_json(gameConfigFile.read())
     queues = {}
     for queueName in ['battle', 'battleground', 'user']:
         queues[queueName] = SseQueues()
     battleCoordinator = BattleCoordinator(queues['battle'])
-    Logger.setDefault(Logger("data/logs.db", printVerbosity=3, debug=True))
+    Logger.setDefault(Logger("data/logs.db", printVerbosity=args.verbosity, debug=args.debug))
     db = Db(gameConfig = gameConfig, userQueues = queues['user'], bgQueues = queues['battleground'],
-            battleCoordinator = battleCoordinator, debug=True)
+            battleCoordinator = battleCoordinator, debug=args.debug)
     # Make sure no one is stuck in a battle.
     db.clearInBattle()
     app = make_app(db, queues, gameConfig, battleCoordinator)
-    app.listen(8794)
-    print("Listening on port 8794.")
+    app.listen(args.port)
+    print(f"Listening on port {args.port}.")
     loop = asyncio.get_running_loop()
     gold_task = loop.create_task(updateGoldEveryMinute(db))
     await asyncio.wait([gold_task])
