@@ -368,6 +368,7 @@ class Db:
             except BattleCalculationException as e:
                 self.conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid", { "uid": user.uid })
                 self.conn.commit()
+                await self.__updateUser(name)
                 raise e
             battle = Battle(events = events)
             self.conn.execute(
