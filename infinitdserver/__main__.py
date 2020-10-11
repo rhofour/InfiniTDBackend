@@ -13,6 +13,8 @@ from infinitdserver.game_config import GameConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.sse import SseQueues
+from infinitdserver.logger import Logger
+
 from infinitdserver.handler.base import BaseHandler, BaseDbHandler
 from infinitdserver.handler.user import UserHandler
 from infinitdserver.handler.users import UsersHandler
@@ -30,6 +32,7 @@ from infinitdserver.handler.battle_stream import BattleStreamHandler
 
 async def updateGoldEveryMinute(db):
     oneMinute = timedelta(minutes=1)
+    logger: Logger = Logger.getDefault()
     while True:
         startTime = datetime.now()
         await db.accumulateGold()
@@ -40,7 +43,7 @@ async def updateGoldEveryMinute(db):
         if waitTime.seconds > 0:
             await asyncio.sleep(waitTime.seconds)
         else:
-            print("updateGoldEveryMinute is running {-waitTime} behind.")
+            logger.warn("updateGoldEveryMinute", -1, f"updateGoldEveryMinute is running {-waitTime} behind.")
 
 def make_app(db, queues, gameConfig, battleCoordinator):
     cred = credentials.Certificate("./data/privateFirebaseKey.json")
@@ -72,6 +75,7 @@ async def main():
     for queueName in ['battle', 'battleground', 'user']:
         queues[queueName] = SseQueues()
     battleCoordinator = BattleCoordinator(queues['battle'])
+    Logger.setDefault(Logger("data/logs.db", printVerbosity=3, debug=True))
     db = Db(gameConfig = gameConfig, userQueues = queues['user'], bgQueues = queues['battleground'],
             battleCoordinator = battleCoordinator, debug=True)
     # Make sure no one is stuck in a battle.

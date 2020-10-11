@@ -1,12 +1,17 @@
 from time import time
+from typing import Optional, ClassVar
 
 import firebase_admin.auth
 import tornado.web
 
 from infinitdserver.db import Db
+from infinitdserver.logger import Logger
 
 class BaseHandler(tornado.web.RequestHandler):
     startedTime: float
+    logger: Logger
+    requestId: int
+    nextRequestId: ClassVar[int] = 0
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
@@ -17,12 +22,17 @@ class BaseHandler(tornado.web.RequestHandler):
         pass
 
     def prepare(self):
-        self.startedTime = time()
+        self.logger = Logger.getDefault()
+        self.requestId = self.nextRequestId
+        self.nextRequestId += 1
+
+        self.logInfo("Started")
+
+    def logInfo(self, msg: str, uid: Optional[str] = None):
+        self.logger.info(self.__class__.__name__, self.requestId, msg, uid=uid)
 
     def on_finish(self):
-        duration = time() - self.startedTime
-        if duration > 0.1:
-            print(f"{self.__class__.__name__} took {duration}s to complete.")
+        self.logInfo("Finished")
 
     def reply401(self):
         self.set_status(401)
