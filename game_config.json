@@ -18,25 +18,25 @@
   "tiles": [
     {
       "id": 0,
-      "url": "http://localhost:8794/static/CrappyGrass.png"
+      "url": "static/CrappyGrass.png"
     },
     {
       "id": 1,
-      "url": "http://localhost:8794/static/CrappyDirt.png"
+      "url": "static/CrappyDirt.png"
     },
     {
       "id": 2,
-      "url": "http://localhost:8794/static/CrappyStartDirt.png"
+      "url": "static/CrappyStartDirt.png"
     },
     {
       "id": 3,
-      "url": "http://localhost:8794/static/CrappyEndDirt.png"
+      "url": "static/CrappyEndDirt.png"
     }
   ],
   "towers": [
     {
       "id": 0,
-      "url": "http://localhost:8794/static/CrappyTowerSmall.png",
+      "url": "static/CrappyTowerSmall.png",
       "name": "Boring Tower",
       "cost": 1.0,
       "firingRate": 2.0,
@@ -45,7 +45,7 @@
     },
     {
       "id": 1,
-      "url": "http://localhost:8794/static/CrappyTower.png",
+      "url": "static/CrappyTower.png",
       "name": "Better Tower",
       "cost": 5.0,
       "firingRate": 2.5,
@@ -56,7 +56,7 @@
   "monsters": [
     {
       "id": 0,
-      "url": "http://localhost:8794/static/GraySlime.png",
+      "url": "static/GraySlime.png",
       "name": "Lame Slime",
       "health": 10.0,
       "speed": 2.0,
@@ -64,7 +64,7 @@
     },
     {
       "id": 1,
-      "url": "http://localhost:8794/static/GreenSlime.png",
+      "url": "static/GreenSlime.png",
       "name": "Green Slime",
       "health": 50.0,
       "speed": 2.0,
@@ -72,7 +72,7 @@
     },
     {
       "id": 2,
-      "url": "http://localhost:8794/static/YellowSlime.png",
+      "url": "static/YellowSlime.png",
       "name": "Yellow Slime",
       "health": 15.0,
       "speed": 5.0,
