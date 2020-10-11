@@ -172,6 +172,8 @@ class BattleComputer:
                 else:
                     raise BattleCalculationException(f"Monster {monster.id} isn't lined up with destination. Monster {monster.pos} Dest {dest}")
 
+                # Remaining dist is how far the enemy can move after reaching
+                # the destination.
                 remainingDist = distPerTick - initialDist
                 if remainingDist < 0: # Advance normally
                     if movingHorizontally:
@@ -191,18 +193,25 @@ class BattleComputer:
                     # Continue to the next segment of the path
                     monster.targetInPath += 1
                     newDest = monster.path[monster.targetInPath]
-                    if movingHorizontally: # Now we're moving vertically
-                        if newDest.row > dest.col:
-                            monster.pos = FpCellPos(FpRow(dest.row + remainingDist), FpCol(dest.col))
-                        else:
-                            monster.pos = FpCellPos(FpRow(dest.row - remainingDist), FpCol(dest.col))
-                        timeToNewDest = abs(newDest.row - monster.pos.row) / monster.config.speed
-                    else: # Now we'removing horizontally
+                    # Figure out if we're moving horizontally for vertically
+                    if dest.row == float(newDest.row):
+                        movingHorizontally = True
+                    elif dest.col == float(newDest.col): # Moving vertically
+                        movingHorizontally = False
+                    else:
+                        raise BattleCalculationException(f"Monster {monster.id} isn't lined up with new destination. Monster {monster.pos} NewDest {dest}")
+                    if movingHorizontally:
                         if newDest.col > dest.col:
                             monster.pos = FpCellPos(FpRow(dest.row), FpCol(dest.col + remainingDist))
                         else:
                             monster.pos = FpCellPos(FpRow(dest.row), FpCol(dest.col - remainingDist))
                         timeToNewDest = abs(newDest.col - monster.pos.col) / monster.config.speed
+                    else:
+                        if newDest.row > dest.col:
+                            monster.pos = FpCellPos(FpRow(dest.row + remainingDist), FpCol(dest.col))
+                        else:
+                            monster.pos = FpCellPos(FpRow(dest.row - remainingDist), FpCol(dest.col))
+                        timeToNewDest = abs(newDest.row - monster.pos.row) / monster.config.speed
 
                     endTime = round(gameTime + self.gameTickSecs + timeToNewDest, TIME_PRECISION)
                     newEvent = MoveEvent(
