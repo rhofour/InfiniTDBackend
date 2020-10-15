@@ -28,7 +28,7 @@ class ControlBattleHandler(BaseDbHandler):
         try:
             await self.db.startBattle(name=name, handler="ControlBattleHandler", requestId=self.requestId)
         except (BattleCalculationException) as e:
-            self.logError("Battle calculation error: " + repr(e), uid=uid)
+            self.logError(f"Battle calculation error: {e}", uid=uid)
             self.set_status(409) # Conflict
             self.write(str(e))
             return

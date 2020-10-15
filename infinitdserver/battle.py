@@ -22,7 +22,9 @@ FpCol = NewType('FpCol', float)
 cattr.register_structure_hook(FpCol, lambda d, _: FpCol(d))
 
 class BattleCalculationException(Exception):
-    pass
+    def __init__(self, battleground: BattlegroundState, message: str):
+        self.battleground_json = battleground.to_json()
+        self.message = message
 
 @attr.s(frozen=True, auto_attribs=True)
 class FpCellPos:
@@ -170,7 +172,8 @@ class BattleComputer:
                     initialDist = abs(monster.pos.row - dest.row)
                     movingHorizontally = False
                 else:
-                    raise BattleCalculationException(f"Monster {monster.id} isn't lined up with destination. Monster {monster.pos} Dest {dest}")
+                    raise BattleCalculationException(battleground,
+                            f"Monster {monster.id} isn't lined up with destination. Monster {monster.pos} Dest {dest}")
 
                 # Remaining dist is how far the enemy can move after reaching
                 # the destination.
@@ -199,7 +202,8 @@ class BattleComputer:
                     elif dest.col == float(newDest.col): # Moving vertically
                         movingHorizontally = False
                     else:
-                        raise BattleCalculationException(f"Monster {monster.id} isn't lined up with new destination. Monster {monster.pos} NewDest {dest}")
+                        raise BattleCalculationException(battleground,
+                                f"Monster {monster.id} isn't lined up with new destination. Monster {monster.pos} NewDest {dest}")
                     if movingHorizontally:
                         if newDest.col > dest.col:
                             monster.pos = FpCellPos(FpRow(dest.row), FpCol(dest.col + remainingDist))
