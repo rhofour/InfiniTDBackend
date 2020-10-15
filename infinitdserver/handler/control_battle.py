@@ -1,6 +1,6 @@
 from infinitdserver.battle import BattleCalculationException
 from infinitdserver.battle_coordinator import BattleCoordinator
-from infinitdserver.db import Db, UserInBattleException, UserHasInsufficientGoldException
+from infinitdserver.db import Db, UserInBattleException, UserNotInBattleException, UserHasInsufficientGoldException
 from infinitdserver.handler.base import BaseDbHandler
 
 class ControlBattleHandler(BaseDbHandler):
@@ -38,4 +38,27 @@ class ControlBattleHandler(BaseDbHandler):
             self.write(str(e))
             return
 
-        self.set_status(201) # CREATED
+        self.set_status(201) # Created
+
+    async def delete(self, name: str):
+        self.logInfo(f"Got DELETE request for controlBattle/{name}")
+
+        # Check that the name matches the authorized user
+        decoded_token = self.verifyAuthentication()
+        uid = decoded_token["uid"]
+        user = self.db.getUserByUid(uid)
+        if user.name != name:
+            self.logInfo(f"Got battle stop request for {name} from {user.name}.")
+            self.set_status(403) # Forbidden
+            return
+
+        # Attempt to stop the battle
+        try:
+            await self.db.stopBattle(name=name, handler="ControlBattleHandler", requestId=self.requestId)
+        except UserNotInBattleException as e:
+            self.logInfo("DELETE error: " + repr(e), uid=uid)
+            self.set_status(404) # Not Found
+            self.write(str(e))
+            return
+
+        self.set_status(204) # No Content

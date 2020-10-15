@@ -16,6 +16,9 @@ from infinitdserver.logger import Logger
 class UserInBattleException(Exception):
     pass
 
+class UserNotInBattleException(Exception):
+    pass
+
 class UserHasInsufficientGoldException(Exception):
     pass
 
@@ -382,6 +385,25 @@ class Db:
             self.conn.commit()
             await self.__updateUser(name)
         self.battleCoordinator.startBattle(name, events, setUserNotInBattle)
+
+    async def stopBattle(self, name: str, handler: str = "DB", requestId: int = -1):
+        assert self.conn.in_transaction is False
+        self.conn.execute("BEGIN IMMEDIATE")
+        user = self.getUserByName(name)
+        if user is None:
+            self.conn.commit()
+            raise ValueError(f"{name} is not a registered user.");
+
+        self.logger.info(handler, requestId, f"startBattle with user: {user}")
+        if not user.inBattle:
+            self.conn.commit()
+            raise UserNotInBattleException()
+
+        async def setUserNotInBattle():
+            self.conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid;", { "uid": user.uid })
+            self.conn.commit()
+            await self.__updateUser(name)
+        self.battleCoordinator.stopBattle(name, setUserNotInBattle)
 
     def clearInBattle(self):
         assert self.conn.in_transaction is False
