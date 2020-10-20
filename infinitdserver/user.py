@@ -71,7 +71,6 @@ class MutableUser:
         return getattr(self._user, name)
 
     def __setattr__(self, name, value):
-        print(f"__setattr__({name}, {value})")
         try:
             setattr(self._user, name, value)
             #super(MutableUser, self).__setattr__(name, value)

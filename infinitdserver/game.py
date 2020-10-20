@@ -148,7 +148,7 @@ class Game:
     def joinBattle(self, name: str):
         return self.battleCoordinator.getBattle(name).join()
 
-    def startBattle(self, user: MutableUser, handler: str, requestId: int):
+    async def startBattle(self, user: MutableUser, handler: str, requestId: int):
         if user.inBattle:
             raise UserInBattleException()
 
@@ -156,7 +156,8 @@ class Game:
         # Manually update the user and end the transaction while the battle is
         # calculated. Since the user is marked as in battle none of their data
         # can change even outside of the transaction.
-        self._db.updateUser(user)
+        awaitable = self._db.updateUser(user)
+        await awaitable
         self._db.leaveTransaction()
 
         try:
@@ -169,8 +170,8 @@ class Game:
         # We need this because the user context is expecting to be in a
         # transaction at the end.
         self._db.enterTransaction()
-        def setUserNotInBattleCallback():
-            self._db.setUserNotInBattle(uid=user.uid, name=user.name)
+        async def setUserNotInBattleCallback():
+            await self._db.setUserNotInBattle(uid=user.uid, name=user.name)
         self.battleCoordinator.startBattle(user.name, battle.events, setUserNotInBattleCallback)
 
     async def stopBattle(self, user: MutableUser):

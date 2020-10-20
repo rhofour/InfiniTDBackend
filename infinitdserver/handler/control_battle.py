@@ -32,7 +32,7 @@ class ControlBattleHandler(BaseHandler):
         with self.getMutableUser(expectedName=name) as user:
             # Attempt to stop the battle
             try:
-                await self.game.stopBattle(name=name)
+                await self.game.stopBattle(user)
             except UserNotInBattleException as e:
                 self.logInfo("DELETE error: " + repr(e), uid=user.uid)
                 self.set_status(404) # Not Found

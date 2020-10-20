@@ -4,6 +4,7 @@ from typing import Optional, ClassVar, Awaitable, Callable, List
 
 import firebase_admin.auth
 import tornado.web
+from tornado.ioloop import IOLoop
 
 from infinitdserver.game import Game, UserMatchingError
 from infinitdserver.db import MutableUserContext
@@ -28,7 +29,7 @@ class BaseHandler(tornado.web.RequestHandler):
         self.logInfo("Started")
 
     def on_finish(self):
-        self.logInfo("Finished")
+        self.logInfo(f"Finished, awaiting {len(self.awaitables)} awaitables.")
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
@@ -57,7 +58,9 @@ class BaseHandler(tornado.web.RequestHandler):
         uid = decodedToken["uid"]
         try:
             def addAwaitable(a: Awaitable[None]):
-                self.awaitables.append(a)
+                async def awaitCallback():
+                    await a
+                IOLoop.current().add_callback(awaitCallback)
             return self.game.getMutableUserContext(uid = uid, expectedName = expectedName, addAwaitable = addAwaitable)
         except UserMatchingError as e:
             self.logWarn(str(e), uid=uid)
@@ -67,9 +70,6 @@ class BaseHandler(tornado.web.RequestHandler):
             self.logWarn(str(e), uid=uid)
             self.set_status(404) # Not found
             raise tornado.web.Finish()
-
-    async def on_finish(self):
-        asyncio.create_task(asyncio.wait(self.awaitables))
 
     # Logging methods
     def logInfo(self, msg: str, uid: Optional[str] = None):

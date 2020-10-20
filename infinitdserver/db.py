@@ -270,7 +270,6 @@ class Db:
                         "inBattle": user.inBattle,
                         "wave": json.dumps(user.wave),
                     })
-        print(user)
         if user.waveModified:
             # Clear any battles where this user was attacking now that they have a different wave.
             self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
