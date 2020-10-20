@@ -1,3 +1,5 @@
+import attr
+
 from infinitdserver.game import Game
 from infinitdserver.handler.base import BaseHandler
 
@@ -6,8 +8,8 @@ class ThisUserHandler(BaseHandler):
 
     def get(self):
         decoded_token = self.verifyAuthentication()
-        user = self.game.getUserByUid(decoded_token["uid"])
+        user = self.game.getUserSummaryByUid(decoded_token["uid"])
         if user:
-            self.write(user.to_dict())
+            self.write(attr.asdict(user))
         else:
             self.set_status(404)

@@ -54,11 +54,14 @@ class Game:
                 debug=debug,
                 dbPath = dbPath)
 
-    def getUsers(self) -> List[FrozenUserSummary]:
+    def getUserSummaries(self) -> List[FrozenUserSummary]:
         return self._db.getUsers()
 
     def getUserSummaryByName(self, name: str) -> Optional[FrozenUserSummary]:
         return self._db.getUserSummaryByName(name)
+
+    def getUserSummaryByUid(self, uid: str) -> Optional[User]:
+        return self._db.getUserSummaryByUid(uid)
 
     def getUserByUid(self, uid: str) -> Optional[User]:
         return self._db.getUserByUid(uid)
@@ -180,7 +183,7 @@ class Game:
         self._db.clearInBattle()
 
     async def accumulateGold(self):
-        return self._db.accumulateGold()
+        await self._db.accumulateGold()
 
     async def setBattleground(self, name: str, newBattleground: BattlegroundState):
         """Directly sets the Battleground for a given user. For test purposes only."""

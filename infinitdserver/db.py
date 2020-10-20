@@ -94,6 +94,12 @@ class Db:
             return Db.__extractUserSummaryFromRow(res)
         return None
 
+    def getUserSummaryByUid(self, uid: str) -> Optional[FrozenUser]:
+        res = self.conn.execute(self.SELECT_USER_SUMMARY_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
+        if res:
+            return Db.__extractUserSummaryFromRow(res)
+        return None
+
     def getUserByUid(self, uid: str) -> Optional[FrozenUser]:
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
         if res:
