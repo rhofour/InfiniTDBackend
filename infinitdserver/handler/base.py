@@ -14,12 +14,10 @@ class BaseHandler(tornado.web.RequestHandler):
     logger: Logger
     game: Game
     requestId: int
-    awaitables: List[Awaitable[None]]
     nextRequestId: ClassVar[int] = 0
 
     def initialize(self, game):
         self.game = game
-        self.awaitables = []
 
     def prepare(self):
         self.logger = Logger.getDefault()
@@ -29,7 +27,7 @@ class BaseHandler(tornado.web.RequestHandler):
         self.logInfo("Started")
 
     def on_finish(self):
-        self.logInfo(f"Finished, awaiting {len(self.awaitables)} awaitables.")
+        self.logInfo("Finished")
 
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
