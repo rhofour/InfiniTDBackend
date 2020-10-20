@@ -1,25 +1,24 @@
+import asyncio
 from time import time
-from typing import Optional, ClassVar
+from typing import Optional, ClassVar, Awaitable, Callable, List
 
 import firebase_admin.auth
 import tornado.web
 
-from infinitdserver.db import Db
+from infinitdserver.game import Game, UserMatchingError
+from infinitdserver.db import MutableUserContext
 from infinitdserver.logger import Logger
 
-class LoggedHandler(tornado.web.RequestHandler):
+class BaseHandler(tornado.web.RequestHandler):
     logger: Logger
+    game: Game
     requestId: int
+    awaitables: List[Awaitable[None]]
     nextRequestId: ClassVar[int] = 0
 
-    def logInfo(self, msg: str, uid: Optional[str] = None):
-        self.logger.info(self.__class__.__name__, self.requestId, msg, uid=uid)
-
-    def logWarn(self, msg: str, uid: Optional[str] = None):
-        self.logger.warn(self.__class__.__name__, self.requestId, msg, uid=uid)
-
-    def logError(self, msg: str, uid: Optional[str] = None):
-        self.logger.error(self.__class__.__name__, self.requestId, msg, uid=uid)
+    def initialize(self, game):
+        self.game = game
+        self.awaitables = []
 
     def prepare(self):
         self.logger = Logger.getDefault()
@@ -31,7 +30,6 @@ class LoggedHandler(tornado.web.RequestHandler):
     def on_finish(self):
         self.logInfo("Finished")
 
-class BaseHandler(LoggedHandler):
     def set_default_headers(self):
         self.set_header("Access-Control-Allow-Origin", "*")
         self.set_header("Access-Control-Allow-Headers", "x-requested-with, authorization, content-type")
@@ -41,17 +39,9 @@ class BaseHandler(LoggedHandler):
         pass
 
     def reply401(self):
-        self.set_status(401)
+        self.set_status(401) # Unauthorized
         self.set_header("WWW-Authenticate", 'Bearer')
         raise tornado.web.Finish()
-
-class BaseDbHandler(BaseHandler):
-    db: Db
-    logger: Logger
-    requestId: int
-
-    def initialize(self, db):
-        self.db = db
 
     def verifyAuthentication(self):
         if self.request.headers['authorization'][:7] == "Bearer ":
@@ -61,3 +51,32 @@ class BaseDbHandler(BaseHandler):
             except Exception as e:
                 self.logWarn(f"Authorization error: {e}")
         self.reply401()
+
+    def getMutableUser(self, expectedName: str) -> MutableUserContext:
+        decodedToken = self.verifyAuthentication()
+        uid = decodedToken["uid"]
+        try:
+            def addAwaitable(a: Awaitable[None]):
+                self.awaitables.append(a)
+            return self.game.getMutableUserContext(uid = uid, expectedName = expectedName, addAwaitable = addAwaitable)
+        except UserMatchingError as e:
+            self.logWarn(str(e), uid=uid)
+            self.set_status(403) # Forbidden
+            raise tornado.web.Finish()
+        except ValueError as e:
+            self.logWarn(str(e), uid=uid)
+            self.set_status(404) # Not found
+            raise tornado.web.Finish()
+
+    async def on_finish(self):
+        asyncio.create_task(asyncio.wait(self.awaitables))
+
+    # Logging methods
+    def logInfo(self, msg: str, uid: Optional[str] = None):
+        self.logger.info(self.__class__.__name__, self.requestId, msg, uid=uid)
+
+    def logWarn(self, msg: str, uid: Optional[str] = None):
+        self.logger.warn(self.__class__.__name__, self.requestId, msg, uid=uid)
+
+    def logError(self, msg: str, uid: Optional[str] = None):
+        self.logger.error(self.__class__.__name__, self.requestId, msg, uid=uid)

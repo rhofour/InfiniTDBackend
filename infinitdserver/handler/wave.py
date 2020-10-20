@@ -3,19 +3,14 @@ import json
 import tornado
 import tornado.escape
 
-from infinitdserver.db import Db, UserInBattleException, UserHasInsufficientGoldException
+from infinitdserver.game import Game, UserInBattleException, UserHasInsufficientGoldException
 from infinitdserver.game_config import GameConfig
-from infinitdserver.handler.base import BaseDbHandler
+from infinitdserver.handler.base import BaseHandler
 
-class WaveHandler(BaseDbHandler):
-    db: Db # See https://github.com/google/pytype/issues/652
-    gameConfig: GameConfig
+class WaveHandler(BaseHandler):
+    game: Game # See https://github.com/google/pytype/issues/652
 
-    def initialize(self, db, gameConfig):
-        super(WaveHandler, self).initialize(db)
-        self.gameConfig = gameConfig
-
-    async def post(self, name: str):
+    def post(self, name: str):
         try:
             data = tornado.escape.json_decode(self.request.body)
         except json.decoder.JSONDecodeError:
@@ -26,49 +21,36 @@ class WaveHandler(BaseDbHandler):
         try:
             monsterId = data["monsterId"]
         except KeyError:
-            self.set_status(400)
-            return
-        if monsterId < 0 or monsterId >= len(self.gameConfig.monsters):
+            self.logWarn(f"Missing monsterId in data: {data}")
             self.set_status(400)
             return
 
-        # Check that the name matches the authorized user
-        decoded_token = self.verifyAuthentication()
-        uid = decoded_token["uid"]
-        user = self.db.getUserByUid(uid)
-        if user.name != name:
-            self.logWarn(f"Got wave POST request for {name} from {user.name}.", uid=uid)
-            self.set_status(403) # Forbidden
-            return
-
-        try:
-            await self.db.addToWave(name=name, monsterId=monsterId)
-        except (ValueError, UserInBattleException)  as e:
-            self.logWarn("Wave POST error: " + repr(e), uid=uid)
-            self.set_status(409) # Conflict
-            self.write(str(e))
-            return
+        with self.getMutableUser(expectedName=name) as user:
+            try:
+                self.game.addToWave(user, monsterId=monsterId)
+            except ValueError  as e:
+                self.logWarn("Wave ValueError: " + repr(e), uid=user.uid)
+                self.set_status(400) # Bad request
+                self.write(str(e))
+                return
+            except UserInBattleException  as e:
+                self.logWarn("Wave UserInBattleException: " + repr(e), uid=user.uid)
+                self.set_status(409) # Conflict
+                self.write(str(e))
+                return
 
         self.set_status(201) # OK
 
-    async def delete(self, name: str):
+    def delete(self, name: str):
         self.logInfo(f"Got DELETE request for wave/{name}")
 
-        # Check that the name matches the authorized user
-        decoded_token = self.verifyAuthentication()
-        uid = decoded_token["uid"]
-        user = self.db.getUserByUid(uid)
-        if user.name != name:
-            self.logInfo(f"Got wave DELETE request for {name} from {user.name}.", uid=uid)
-            self.set_status(403) # Forbidden
-            return
-
-        try:
-            await self.db.clearWave(name=name)
-        except (ValueError, UserInBattleException)  as e:
-            self.logWarn("Wave DELETE error: " + repr(e), uid=uid)
-            self.set_status(404) # Not found
-            self.write(str(e))
-            return
+        with self.getMutableUser(expectedName=name) as user:
+            try:
+                self.game.clearWave(user)
+            except (ValueError, UserInBattleException)  as e:
+                self.logWarn("Wave DELETE error: " + repr(e), uid=user.uid)
+                self.set_status(404) # Not found
+                self.write(str(e))
+                return
 
         self.set_status(200) # OK

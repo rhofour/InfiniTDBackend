@@ -2,29 +2,22 @@ import asyncio
 import math
 import sqlite3
 import json
-from typing import Optional
+from typing import Optional, List, Callable, Awaitable
 
 from infinitdserver.battle import Battle, BattleComputer, BattleCalculationException
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.user import User
+from infinitdserver.user import User, UserSummary, FrozenUser, FrozenUserSummary, MutableUser
 from infinitdserver.game_config import GameConfig
 from infinitdserver.sse import SseQueues
 from infinitdserver.paths import pathExists
 from infinitdserver.logger import Logger
 
-class UserInBattleException(Exception):
-    pass
-
-class UserNotInBattleException(Exception):
-    pass
-
-class UserHasInsufficientGoldException(Exception):
-    pass
-
 class Db:
     DEFAULT_DB_PATH = "data/data.db"
     SELECT_USER_STATEMENT = (
+            "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave, battleground FROM users")
+    SELECT_USER_SUMMARY_STATEMENT = (
             "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave FROM users")
 
     gameConfig: GameConfig
@@ -34,10 +27,10 @@ class Db:
     battleCoordinator: BattleCoordinator
 
     def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues,
-            battleCoordinator: BattleCoordinator, db_path=None, debug=False):
-        if db_path is None:
-            db_path = self.DEFAULT_DB_PATH
-        self.conn = sqlite3.connect(db_path, isolation_level=None)
+            battleCoordinator: BattleCoordinator, dbPath=None, debug=False):
+        if dbPath is None:
+            dbPath = self.DEFAULT_DB_PATH
+        self.conn = sqlite3.connect(dbPath, isolation_level=None)
         sqlite3.enable_callback_tracebacks(debug)
         # Enable Write-Ahead Logging: https://www.sqlite.org/wal.html
         self.conn.execute("PRAGMA journal_mode=WAL;")
@@ -73,8 +66,8 @@ class Db:
         self.conn.commit()
 
     @staticmethod
-    def __extractUserFromRow(row) -> User:
-        return User(
+    def __extractUserSummaryFromRow(row) -> FrozenUserSummary:
+        return FrozenUserSummary(
                 name = row[0],
                 uid = row[1],
                 gold = row[2],
@@ -83,21 +76,39 @@ class Db:
                 inBattle = row[5] == 1,
                 wave = json.loads(row[6]))
 
-    def getUserByUid(self, uid) -> Optional[User]:
+    @staticmethod
+    def __extractUserFromRow(row, targetClass=FrozenUser):
+        return targetClass(
+                name = row[0],
+                uid = row[1],
+                gold = row[2],
+                accumulatedGold = row[3],
+                goldPerMinute = row[4],
+                inBattle = row[5] == 1,
+                wave = json.loads(row[6]),
+                battleground = BattlegroundState.from_json(row[7]))
+
+    def getUserSummaryByName(self, name: str) -> Optional[FrozenUserSummary]:
+        res = self.conn.execute(self.SELECT_USER_SUMMARY_STATEMENT + " WHERE name = ?;", (name, )).fetchone()
+        if res:
+            return Db.__extractUserSummaryFromRow(res)
+        return None
+
+    def getUserByUid(self, uid: str) -> Optional[FrozenUser]:
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
         if res:
             return Db.__extractUserFromRow(res)
         return None
 
-    def getUserByName(self, name) -> Optional[User]:
-        res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE name = ?;", (name, )).fetchone()
+    def getUnfrozenUserByUid(self, uid: str) -> Optional[User]:
+        res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
         if res:
-            return Db.__extractUserFromRow(res)
+            return Db.__extractUserFromRow(res, User)
         return None
 
-    def getUsers(self) -> Optional[User]:
-        res = self.conn.execute(self.SELECT_USER_STATEMENT + " ORDER BY accumulatedGold DESC;")
-        res = [ Db.__extractUserFromRow(r) for r in res ]
+    def getUsers(self) -> List[FrozenUserSummary]:
+        res = self.conn.execute(self.SELECT_USER_SUMMARY_STATEMENT + " ORDER BY accumulatedGold DESC;")
+        res = [ Db.__extractUserSummaryFromRow(r) for r in res ]
         return res
 
     def getBattleground(self, name) -> Optional[BattlegroundState]:
@@ -106,20 +117,9 @@ class Db:
             return None
         return BattlegroundState.from_json(res[0])
 
-    def nameTaken(self, name):
-        assert self.conn.in_transaction is False
-        res = self.conn.execute("SELECT name FROM users WHERE name = ?;", (name, )).fetchone()
-        if res is None:
-            return False
-        return True
-
-    def register(self, uid=None, name=None):
-        assert self.conn.in_transaction is False
+    def register(self, uid: str, name: str):
         """Attempt to register a new user returning whether or not it was successful."""
-        if not uid:
-            raise ValueError("Register requires a UID.")
-        if not name:
-            raise ValueError("Register requires a name.")
+        assert self.conn.in_transaction is False
         try:
             emptyBattleground = BattlegroundState.empty(self.gameConfig)
             res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, battleground)"
@@ -131,15 +131,15 @@ class Db:
             self.conn.commit()
         except sqlite3.IntegrityError as err:
             # This is likely because the name was already taken.
-            self.logger.warn("DB", -1, "IntegrityError when registering a new user: ", err)
+            self.logger.warn("DB", -1, f"IntegrityError when registering a new user: {err}", uid=uid)
             return False
         except sqlite3.DatabaseError as err:
-            self.logger.warn("DB", -1, "DatabaseError when registering a new user: ", err)
+            self.logger.warn("DB", -1, f"DatabaseError when registering a new user: {err}", uid=uid)
             return False
         return True
 
     async def accumulateGold(self):
-        assert self.conn.in_transaction is False
+        self.enterTransaction()
         """Updates gold and accumulatedGold for every user based on goldPerMinute."""
         res = self.conn.execute("SELECT name FROM users WHERE inBattle == 0;")
         namesUpdated = [row[0] for row in res]
@@ -148,20 +148,24 @@ class Db:
             accumulatedGold = accumulatedGold + goldPerMinute,
             gold = gold + goldPerMinute
         WHERE inBattle == 0;""");
-        self.conn.commit()
+        self.leaveTransaction()
 
-        if namesUpdated:
-            await asyncio.wait([self.__updateUser(name) for name in namesUpdated])
+        await self.__updateUserListeners(namesUpdated)
 
-    async def __updateUser(self, name):
-        if name in self.userQueues:
-            user = self.getUserByName(name)
-            await self.userQueues.sendUpdate(name, user)
-
-    async def __updateBattleground(self, name):
+    async def __updateBattlegroundListeners(self, name):
         if name in self.bgQueues:
             battleground = self.getBattleground(name)
             await self.bgQueues.sendUpdate(name, battleground)
+
+    async def __updateUserListeners(self, names: List[str]) -> Awaitable[None]:
+        updateCalls = []
+        for name in names:
+            if name in self.userQueues:
+                user = self.getUserSummaryByName(name)
+                updateCalls.append(self.userQueues.sendUpdate(name, user))
+        if updateCalls:
+            await asyncio.wait(updateCalls)
+
 
     async def setInBattle(self, name: str, inBattle: bool):
         assert self.conn.in_transaction is False
@@ -171,11 +175,11 @@ class Db:
         self.conn.commit()
 
         if name in self.userQueues:
-            user = self.getUserByName(name)
+            user = self.getUserSummaryByName(name)
             await self.userQueues.sendUpdate(name, user)
 
     async def setBattleground(self, name: str, battleground: BattlegroundState):
-        """Directly sets the Battleground for a given user. For test purposes."""
+        """Directly sets the Battleground for a given user. For test purposes only."""
         self.conn.execute(
                 "UPDATE USERS SET battleground = :battleground WHERE name = :name",
                 {
@@ -184,227 +188,127 @@ class Db:
                 })
         self.conn.commit()
 
-        await self.__updateBattleground(name)
+        await self.__updateBattlegroundListeners(name)
 
-    async def buildTower(self, name: str, row: int, col: int, towerId: int):
-        assert self.conn.in_transaction is False
-        try:
-            towerConfig = self.gameConfig.towers[towerId]
-        except IndexError:
-            raise ValueError(f"Invalid tower ID {towerId}")
-
-        self.conn.execute("BEGIN IMMEDIATE")
-        user = self.getUserByName(name)
-        if user is None:
-            raise ValueError(f"{name} is not a registered user.");
-
-        if user.inBattle:
-            self.conn.commit()
-            raise UserInBattleException()
-
-        if user.gold < towerConfig.cost:
-            self.conn.commit()
-            raise UserHasInsufficientGoldException(
-                    f"{towerConfig.name} costs {towerConfig.cost}, but {name} only has {user.gold} gold.")
-
-        battleground = self.getBattleground(name)
-        existingTower = battleground.towers.towers[row][col]
-        if existingTower:
-            self.conn.commit()
-            existingTowerName = self.gameConfig.towers[existingTower.id].name
-            raise ValueError(f"{existingTowerName} already exists at row {row}, col {col}.")
-
-        battleground.towers.towers[row][col] = BgTowerState(towerId)
-
-        # Check if there is still a path from start to exit.
-        blocked = not pathExists(
-                battleground,
-                self.gameConfig.playfield.monsterEnter,
-                self.gameConfig.playfield.monsterExit)
-        if blocked:
-            self.conn.commit()
-            raise ValueError(f"Building at {row}, {col} would block the path.")
-
-        self.conn.execute(
-                "UPDATE USERS SET gold = :gold, battleground = :battleground WHERE uid = :uid",
-                {
-                    "gold": user.gold - towerConfig.cost,
-                    "battleground": battleground.to_json(),
-                    "uid": user.uid,
-                })
-
-        # Clear any battles where this user was defending now that they have a
-        # new battleground.
-        self.conn.execute("DELETE from battles WHERE defending_uid = :uid", { "uid": user.uid })
+    async def setUserNotInBattle(self, uid: str, name: str):
+        "Marks a user as no longer in a battle."
+        self.conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid;", { "uid": uid })
         self.conn.commit()
+        await self.__updateUserListeners([name])
 
-        await asyncio.wait([self.__updateUser(name), self.__updateBattleground(name)])
-
-    async def sellTower(self, name: str, row: int, col: int):
-        assert self.conn.in_transaction is False
-        self.conn.execute("BEGIN IMMEDIATE")
-        user = self.getUserByName(name)
-        if user is None:
-            self.conn.commit()
-            raise ValueError(f"{name} is not a registered user.");
-
-        if user.inBattle:
-            self.conn.commit()
-            raise UserInBattleException()
-
-        battleground = self.getBattleground(name)
-        existingTower: BgTowerState = battleground.towers.towers[row][col]
-        if existingTower is None:
-            self.conn.commit()
-            raise ValueError(f"No tower exists at row {row}, col {col}.")
-        try:
-            towerConfig = self.gameConfig.towers[existingTower.id]
-        except IndexError:
-            # This should never happen as long as the game config matches the database.
-            raise ValueError(f"Invalid tower ID {existingTower.id}")
-
-        battleground.towers.towers[row][col] = None
-        sellAmount = math.floor(towerConfig.cost * self.gameConfig.misc.sellMultiplier)
-        self.conn.execute(
-                "UPDATE USERS SET gold = :gold, accumulatedGold = :accumulatedGold, battleground = :battleground WHERE uid = :uid",
-                {
-                    "gold": user.gold + sellAmount,
-                    "accumulatedGold": user.accumulatedGold + sellAmount,
-                    "battleground": battleground.to_json(),
-                    "uid": user.uid,
-                })
-        self.conn.execute("DELETE from battles WHERE defending_uid = :uid", { "uid": user.uid })
-        self.conn.commit()
-
-        await asyncio.wait([self.__updateUser(name), self.__updateBattleground(name)])
-
-    async def addToWave(self, name: str, monsterId: int):
-        assert self.conn.in_transaction is False
-        try:
-            monsterConfig = self.gameConfig.monsters[monsterId]
-        except IndexError:
-            raise ValueError(f"Invalid monster ID {monsterId}")
-
-        self.conn.execute("BEGIN IMMEDIATE")
-        user = self.getUserByName(name)
-        if user is None:
-            self.conn.commit()
-            raise ValueError(f"{name} is not a registered user.");
-
-        if user.inBattle:
-            self.conn.commit()
-            raise UserInBattleException()
-
-        existingWave = user.wave
-        existingWave.append(monsterId)
-        self.conn.execute(
-                "UPDATE USERS SET wave = :wave WHERE uid = :uid",
-                {
-                    "wave": json.dumps(existingWave),
-                    "uid": user.uid,
-                })
-        # Clear any battles where this user was attacking now that they have a
-        # different wave.
-        self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
-        self.conn.commit()
-
-        await self.__updateUser(name)
-
-    async def clearWave(self, name: str):
-        assert self.conn.in_transaction is False
-        self.conn.execute("BEGIN IMMEDIATE")
-        user = self.getUserByName(name)
-        if user is None:
-            self.conn.commit()
-            raise ValueError(f"{name} is not a registered user.");
-
-        if user.inBattle:
-            self.conn.commit()
-            raise UserInBattleException()
-
-        self.conn.execute(
-                "UPDATE USERS SET wave = :wave WHERE uid = :uid",
-                {
-                    "wave": "[]",
-                    "uid": user.uid,
-                })
-        # Clear any battles where this user was attacking now that they have no
-        # wave.
-        self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
-        self.conn.commit()
-
-        await self.__updateUser(name)
-
-    async def startBattle(self, name: str, handler: str = "DB", requestId: int = -1):
-        assert self.conn.in_transaction is False
-        self.conn.execute("BEGIN IMMEDIATE")
-        user = self.getUserByName(name)
-        if user is None:
-            self.conn.commit()
-            raise ValueError(f"{name} is not a registered user.");
-
-        self.logger.info(handler, requestId, f"startBattle with user: {user}")
-        if user.inBattle:
-            self.conn.commit()
-            raise UserInBattleException()
-
-        self.conn.execute("UPDATE users SET inBattle = TRUE where uid = :uid", { "uid": user.uid })
-        self.conn.commit()
-
-        await self.__updateUser(name)
-
+    def getOrMakeBattle(self, user: MutableUser, handler: str, requestId: int) -> Battle:
         # Check if a battle already exists, if not generate it
         res = self.conn.execute(
             "SELECT battle_events FROM battles WHERE attacking_uid = :uid AND defending_uid = :uid;",
             { "uid": user.uid }
         ).fetchone()
         if res: # Battle exists
-            self.logger.info(handler, requestId, f"Found battle for {name}")
+            self.logger.info(handler, requestId, f"Found battle for {user.name}")
             events = Battle.decodeEvents(res[0])
+            battle = Battle(events = events)
+            return battle
         else: # Calculate a new battle
-            self.logger.info(handler, requestId, f"Calculating new battle for {name}")
-            battleground = self.getBattleground(name)
+            self.logger.info(handler, requestId, f"Calculating new battle for {user.name}")
+            battleground = user.battleground
             if battleground is None: # This should be impossible since we know the user exists.
-                raise ValueError(f"Cannot find battleground for {name}")
-            try:
-                events = self.battleComputer.computeBattle(battleground, user.wave)
-            except BattleCalculationException as e:
-                self.conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid", { "uid": user.uid })
-                self.conn.commit()
-                await self.__updateUser(name)
-                raise e
+                raise ValueError(f"Cannot find battleground for {user.name}")
+            events = self.battleComputer.computeBattle(battleground, user.wave)
             battle = Battle(events = events)
             self.conn.execute(
                     "INSERT into battles (attacking_uid, defending_uid, battle_events) VALUES (:uid, :uid, :events);",
                     { "uid": user.uid, "events": battle.encodeEvents() }
             )
             self.conn.commit()
-
-        async def setUserNotInBattle():
-            self.conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid;", { "uid": user.uid })
-            self.conn.commit()
-            await self.__updateUser(name)
-        self.battleCoordinator.startBattle(name, events, setUserNotInBattle)
-
-    async def stopBattle(self, name: str, handler: str = "DB", requestId: int = -1):
-        assert self.conn.in_transaction is False
-        self.conn.execute("BEGIN IMMEDIATE")
-        user = self.getUserByName(name)
-        if user is None:
-            self.conn.commit()
-            raise ValueError(f"{name} is not a registered user.");
-
-        self.logger.info(handler, requestId, f"startBattle with user: {user}")
-        if not user.inBattle:
-            self.conn.commit()
-            raise UserNotInBattleException()
-
-        async def setUserNotInBattle():
-            self.conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid;", { "uid": user.uid })
-            self.conn.commit()
-            await self.__updateUser(name)
-        self.battleCoordinator.stopBattle(name, setUserNotInBattle)
+            return battle
 
     def clearInBattle(self):
         assert self.conn.in_transaction is False
         self.conn.execute("UPDATE users SET inBattle = FALSE;")
+
+    def updateUser(self, user: MutableUser):
+        "Update a User."
+        # This is always called from within a transaction in ModifidableUser.
+        assert self.conn.in_transaction is True
+        if not user.summaryModified and not user.battlegroundModified:
+            return
+        # Update all columns except UID.
+        if user.battlegroundModified:
+            self.conn.execute(
+                    "UPDATE users SET "
+                    "name = :name, gold = :gold, accumulatedGold = :accumulatedGold, goldPerMinute = :goldPerMinute, "
+                    "inBattle = :inBattle, wave = :wave, battleground = :battleground "
+                    "where uid = :uid", {
+                        "uid": user.uid,
+                        "name": user.name,
+                        "gold": user.gold,
+                        "accumulatedGold": user.accumulatedGold,
+                        "goldPerMinute": user.goldPerMinute,
+                        "inBattle": user.inBattle,
+                        "wave": json.dumps(user.wave),
+                        "battleground": user.battleground.to_json(),
+                    })
+
+            # Clear any battles where this user was defending now that they have a new battleground.
+            self.conn.execute("DELETE from battles WHERE defending_uid = :uid", { "uid": user.uid })
+        else: # Skip updating the battleground
+            self.conn.execute(
+                    "UPDATE users SET "
+                    "name = :name, gold = :gold, accumulatedGold = :accumulatedGold, goldPerMinute = :goldPerMinute, "
+                    "inBattle = :inBattle, wave = :wave "
+                    "where uid = :uid", {
+                        "uid": user.uid,
+                        "name": user.name,
+                        "gold": user.gold,
+                        "accumulatedGold": user.accumulatedGold,
+                        "goldPerMinute": user.goldPerMinute,
+                        "inBattle": user.inBattle,
+                        "wave": json.dumps(user.wave),
+                    })
+        print(user)
+        if user.waveModified:
+            # Clear any battles where this user was attacking now that they have a different wave.
+            self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
+
+        awaitables = []
+        if user.summaryModified:
+            awaitables.append(self.__updateUserListeners([user.name]))
+        if user.battlegroundModified:
+            awaitables.append(self.__updateBattlegroundListeners(user.name))
+        if awaitables:
+            return asyncio.wait(awaitables)
+        else:
+            return asyncio.sleep(0)
+
+    def enterTransaction(self):
+        assert self.conn.in_transaction is False
+        self.conn.execute("BEGIN IMMEDIATE")
+
+    def leaveTransaction(self):
+        assert self.conn.in_transaction is True
+        self.conn.commit()
+
+    def getMutableUserContext(self, uid: str, addAwaitable) -> Optional['MutableUserContext']:
+        user = self.getUnfrozenUserByUid(uid)
+        if user is None:
+            return None
+        return MutableUserContext(user, self, addAwaitable)
+
+class MutableUserContext:
+    db: Db
+    mutableUser: MutableUser
+    addAwaitable: Callable[[Awaitable[None]], None]
+
+    def __init__(self, user: User, db: Db, addAwaitable):
+        self.mutableUser = MutableUser(user)
+        self.db = db
+        self.addAwaitable = addAwaitable
+
+    def __enter__(self):
+        self.db.enterTransaction()
+        return self.mutableUser
+
+    def __exit__(self, type, value, traceback):
+        if self.mutableUser.summaryModified or self.mutableUser.battlegroundModified:
+            awaitable: Awaitable[None] = self.db.updateUser(user = self.mutableUser)
+            self.addAwaitable(awaitable)
+        self.db.leaveTransaction()

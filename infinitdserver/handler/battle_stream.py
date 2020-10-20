@@ -1,20 +1,15 @@
-from infinitdserver.battle_coordinator import BattleCoordinator
-from infinitdserver.db import Db
-from infinitdserver.sse import SseQueues
+from infinitdserver.game import Game
 from infinitdserver.handler.sse import SseStreamHandler
 
 class BattleStreamHandler(SseStreamHandler):
-    db: Db
-    queues: SseQueues
-    battleCoordinator: BattleCoordinator
+    game: Game # See https://github.com/google/pytype/issues/652
 
-    def initialize(self, db: Db, queues: SseQueues, battleCoordinator: BattleCoordinator):
-        self.db = db
-        self.queues = queues
-        self.battleCoordinator = battleCoordinator
+    def initialize(self, game: Game):
+        super(BattleStreamHandler, self).initialize(game)
+        self.queues = game.battleQueues
 
-    async def initialState(self, name):
+    async def initialState(self, name: str):
         self.logInfo(f"Attemting to stream battle: {name}")
-        initialState = self.battleCoordinator.getBattle(name).join()
+        initialState = self.game.joinBattle(name)
         self.logInfo(f"Initial state: {initialState}")
         return initialState

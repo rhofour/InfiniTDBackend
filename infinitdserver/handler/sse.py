@@ -6,9 +6,10 @@ from tornado.iostream import StreamClosedError
 import cattr
 
 from infinitdserver.sse import SseQueues
-from infinitdserver.handler.base import LoggedHandler
+from infinitdserver.game import Game
+from infinitdserver.handler.base import BaseHandler
 
-class SseStreamHandler(LoggedHandler, metaclass=abc.ABCMeta):
+class SseStreamHandler(BaseHandler, metaclass=abc.ABCMeta):
     "A base handler for implementing Server-Sent Events."
     queues: SseQueues
 

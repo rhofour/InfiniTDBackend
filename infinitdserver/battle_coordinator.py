@@ -85,7 +85,7 @@ class BattleCoordinator:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         return self.battles[name]
 
-    def startBattle(self, name: str, events: List[BattleEvent], callback: Callable[[], Awaitable[None]],
+    def startBattle(self, name: str, events: List[BattleEvent], callback: Callable[[], None],
             handler: str = "BattleCoordinator", requestId = -1):
         if name not in self.battles:
             self.logger.info(handler, requestId, f"Coordinator is making a new StreamingBattle for {name}")
@@ -93,17 +93,10 @@ class BattleCoordinator:
         self.logger.info(handler, requestId, f"Coordinator is starting a StreamingBattle for {name}")
         async def startBattleThenCallCallback():
             await self.battles[name].start(events)
-            await callback()
+            callback()
         loop = asyncio.get_running_loop()
         loop.create_task(startBattleThenCallCallback())
 
-    def stopBattle(self, name: str, callback: Callable[[], Awaitable[None]],
-            handler: str = "BattleCoordinator", requestId = -1):
-        loop = asyncio.get_running_loop()
+    async def stopBattle(self, name: str):
         if name in self.battles:
-            async def stopBattleThenCallCallback():
-                await self.battles[name].stop()
-                await callback()
-            loop.create_task(stopBattleThenCallCallback())
-        else:
-            loop.create_task(callback())
+            await self.battles[name].stop()
