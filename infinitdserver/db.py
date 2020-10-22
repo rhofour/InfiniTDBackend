@@ -94,7 +94,7 @@ class Db:
             return Db.__extractUserSummaryFromRow(res)
         return None
 
-    def getUserSummaryByUid(self, uid: str) -> Optional[FrozenUser]:
+    def getUserSummaryByUid(self, uid: str) -> Optional[FrozenUserSummary]:
         res = self.conn.execute(self.SELECT_USER_SUMMARY_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
         if res:
             return Db.__extractUserSummaryFromRow(res)
@@ -163,7 +163,7 @@ class Db:
             battleground = self.getBattleground(name)
             await self.bgQueues.sendUpdate(name, battleground)
 
-    async def __updateUserListeners(self, names: List[str]) -> Awaitable[None]:
+    async def __updateUserListeners(self, names: List[str]):
         updateCalls = []
         for name in names:
             if name in self.userQueues:
@@ -231,7 +231,7 @@ class Db:
         assert self.conn.in_transaction is False
         self.conn.execute("UPDATE users SET inBattle = FALSE;")
 
-    def updateUser(self, user: MutableUser):
+    def updateUser(self, user: MutableUser, addAwaitable: Callable[[Awaitable[None]], None]):
         "Update a User."
         # This is always called from within a transaction in ModifidableUser.
         assert self.conn.in_transaction is True
@@ -274,15 +274,10 @@ class Db:
             # Clear any battles where this user was attacking now that they have a different wave.
             self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
 
-        awaitables = []
         if user.summaryModified:
-            awaitables.append(self.__updateUserListeners([user.name]))
+            addAwaitable(self.__updateUserListeners([user.name]))
         if user.battlegroundModified:
-            awaitables.append(self.__updateBattlegroundListeners(user.name))
-        if awaitables:
-            return asyncio.wait(awaitables)
-        else:
-            return asyncio.sleep(0)
+            addAwaitable(self.__updateBattlegroundListeners(user.name))
 
     def enterTransaction(self):
         assert self.conn.in_transaction is False
@@ -314,6 +309,5 @@ class MutableUserContext:
 
     def __exit__(self, type, value, traceback):
         if self.mutableUser.summaryModified or self.mutableUser.battlegroundModified:
-            awaitable: Awaitable[None] = self.db.updateUser(user = self.mutableUser)
-            self.addAwaitable(awaitable)
+            self.db.updateUser(user = self.mutableUser, addAwaitable = self.addAwaitable)
         self.db.leaveTransaction()

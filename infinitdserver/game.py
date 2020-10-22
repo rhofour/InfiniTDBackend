@@ -1,3 +1,4 @@
+import asyncio
 from typing import List, Optional, Awaitable, Callable
 import math
 
@@ -60,7 +61,7 @@ class Game:
     def getUserSummaryByName(self, name: str) -> Optional[FrozenUserSummary]:
         return self._db.getUserSummaryByName(name)
 
-    def getUserSummaryByUid(self, uid: str) -> Optional[User]:
+    def getUserSummaryByUid(self, uid: str) -> Optional[FrozenUserSummary]:
         return self._db.getUserSummaryByUid(uid)
 
     def getUserByUid(self, uid: str) -> Optional[User]:
@@ -156,8 +157,11 @@ class Game:
         # Manually update the user and end the transaction while the battle is
         # calculated. Since the user is marked as in battle none of their data
         # can change even outside of the transaction.
-        awaitable = self._db.updateUser(user)
-        await awaitable
+        awaitables: List[Awaitable[None]] = []
+        def addAwaitable(a: Awaitable[None]):
+            awaitables.append(a)
+        self._db.updateUser(user, addAwaitable=addAwaitable)
+        await asyncio.wait(awaitables)
         self._db.leaveTransaction()
 
         try:
