@@ -47,14 +47,8 @@ class ObjectType(Enum):
 
 @unique
 class EventType(Enum):
-    UPDATE_TIME = auto()
     MOVE = auto()
     DELETE = auto()
-
-@attr.s(frozen=True, auto_attribs=True)
-class UpdateTimeEvent:
-    startTime: float # Time since battle started (for synchronizing server and client)
-    eventType: EventType = EventType.UPDATE_TIME
 
 @attr.s(frozen=True, auto_attribs=True)
 class MoveEvent:
@@ -74,14 +68,12 @@ class DeleteEvent:
     startTime: float
     eventType: EventType = EventType.DELETE
 
-BattleEvent = Union[UpdateTimeEvent, MoveEvent, DeleteEvent]
+BattleEvent = Union[MoveEvent, DeleteEvent]
 
 def decodeEvent(eventObj: Dict, t) -> BattleEvent:
     print(eventObj)
     if "eventType" not in eventObj:
         raise ValueError(f"Event object is missing event type: {eventObj}")
-    if eventObj["eventType"] == EventType.UPDATE_TIME.value:
-        return cattr.structure(eventObj, UpdateTimeEvent)
     if eventObj["eventType"] == EventType.MOVE.value:
         return cattr.structure(eventObj, MoveEvent)
     if eventObj["eventType"] == EventType.DELETE.value:
