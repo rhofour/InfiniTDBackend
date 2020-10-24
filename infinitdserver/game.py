@@ -193,3 +193,6 @@ class Game:
     async def setBattleground(self, name: str, newBattleground: BattlegroundState):
         """Directly sets the Battleground for a given user. For test purposes only."""
         await self._db.setBattleground(name, newBattleground)
+
+    def resetBattles(self):
+        self._db.resetBattles()

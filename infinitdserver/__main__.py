@@ -68,6 +68,7 @@ async def main():
     parser.add_argument('-d', '--debug', action="store_true")
     parser.add_argument('-v', '--verbosity', action="store", type=int, default=0)
     parser.add_argument('-p', '--port', action="store", type=int, default=8794)
+    parser.add_argument('--reset-battles', action="store_true")
     args = parser.parse_args()
 
     with open('game_config.json') as gameConfigFile:
@@ -76,6 +77,8 @@ async def main():
     game = Game(gameConfig, debug=args.debug)
     # Make sure no one is stuck in a battle.
     game.clearInBattle()
+    if args.reset_battles:
+        game.resetBattles()
     app = make_app(game)
     app.listen(args.port)
     print(f"Listening on port {args.port}.")

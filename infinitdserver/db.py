@@ -294,6 +294,10 @@ class Db:
             return None
         return MutableUserContext(user, self, addAwaitable)
 
+    def resetBattles(self):
+        self.conn.execute("DELETE FROM battles")
+        self.conn.commit()
+
 class MutableUserContext:
     db: Db
     mutableUser: MutableUser
