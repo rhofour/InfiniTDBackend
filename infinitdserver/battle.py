@@ -8,7 +8,6 @@ import json
 
 import attr
 import cattr
-from dataclasses_json import dataclass_json
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.game_config import GameConfig, ConfigId, CellPos, MonsterConfig
@@ -85,6 +84,7 @@ cattr.register_structure_hook(BattleEvent, decodeEvent)
 @attr.s(frozen=True, auto_attribs=True)
 class Battle:
     events: List[BattleEvent]
+    name: str
 
     def encodeEvents(self) -> str:
         return json.dumps(cattr.unstructure(self.events))

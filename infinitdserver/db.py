@@ -208,10 +208,11 @@ class Db:
             "SELECT battle_events FROM battles WHERE attacking_uid = :uid AND defending_uid = :uid;",
             { "uid": user.uid }
         ).fetchone()
+        battleName = f"vs. {user.name} (live)"
         if res: # Battle exists
             self.logger.info(handler, requestId, f"Found battle for {user.name}")
             events = Battle.decodeEvents(res[0])
-            battle = Battle(events = events)
+            battle = Battle(events = events, name = battleName)
             return battle
         else: # Calculate a new battle
             self.logger.info(handler, requestId, f"Calculating new battle for {user.name}")
@@ -219,7 +220,7 @@ class Db:
             if battleground is None: # This should be impossible since we know the user exists.
                 raise ValueError(f"Cannot find battleground for {user.name}")
             events = self.battleComputer.computeBattle(battleground, user.wave)
-            battle = Battle(events = events)
+            battle = Battle(events = events, name = battleName)
             self.conn.execute(
                     "INSERT into battles (attacking_uid, defending_uid, battle_events) VALUES (:uid, :uid, :events);",
                     { "uid": user.uid, "events": battle.encodeEvents() }

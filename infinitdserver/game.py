@@ -176,7 +176,7 @@ class Game:
         self._db.enterTransaction()
         async def setUserNotInBattleCallback():
             await self._db.setUserNotInBattle(uid=user.uid, name=user.name)
-        self.battleCoordinator.startBattle(user.name, battle.events, setUserNotInBattleCallback)
+        self.battleCoordinator.startBattle(user.name, battle, setUserNotInBattleCallback)
 
     async def stopBattle(self, user: MutableUser):
         if not user.inBattle:

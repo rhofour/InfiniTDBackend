@@ -193,6 +193,7 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
 
     def test_oneMoveEvent(self):
         battle = Battle(
+            name = "testOneEvent",
             events = [
                 MoveEvent(
                     objType = ObjectType.MONSTER,
@@ -213,6 +214,7 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
 
     def test_twoEvents(self):
         battle = Battle(
+            name = "testTwoEvents",
             events = [
                 MoveEvent(
                     objType = ObjectType.MONSTER,
