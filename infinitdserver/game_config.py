@@ -1,7 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
-from typing import NewType, Tuple, Dict
+from enum import Enum, unique, auto
+from typing import NewType, Tuple, Dict, List
 
+import attr
 import cattr
 from dataclasses_json import dataclass_json
 
@@ -62,13 +64,54 @@ class MonsterConfig(IdentifiedImage):
     speed: float
     bounty: float
 
+MonstersDefeated = Dict[ConfigId, Tuple[int, int]]
+
+@unique
+class BonusType(Enum):
+    ADDITIVE = auto()
+    MULTIPLICATIVE = auto()
+
+@attr.s(frozen=True, auto_attribs=True)
+class BonusCondition:
+    percentDefeated: Optional[float]
+
+@attr.s(frozen=True, auto_attribs=True)
+class BattleBonus:
+    name: str
+    bonusType: BonusType
+    bonusAmount: float
+    conditions: List[BonusCondition]
+
+    def isEarned(self, monstersDefeated: MonstersDefeated) -> bool:
+        totalMonsters = 0
+        totalNumDefeated = 0
+
+        for (monsterId, (numDefeated, numSent)) in monstersDefeated.items():
+            totalMonsters += numSent
+            totalNumDefeated += numDefeated
+        percentDefeated = totalNumDefeated / totalMonsters * 100 if totalMonsters > 0 else -1
+
+        for condition in self.conditions:
+            if (condition.percentDefeated is not None and
+                    condition.percentDefeated > percentDefeated):
+                return False
+        return True
+
+    def getAmount(self, curGold: float) -> float:
+        if self.bonusType == BonusType.ADDITIVE:
+            return self.bonusAmount;
+        if self.bonusType == BonusType.MULTIPLICATIVE:
+            return curGold * (self.bonusAmount - 1);
+        raise ValueError(f"Unknown bonus type: {self.bonusType}")
+
+
 @dataclass_json
 @dataclass(frozen=True)
 class MiscConfig:
     sellMultiplier: float
     startingGold: int
     minGoldPerMinute: float
-    fullWaveMultiplier: float
+    battleBonuses: List[BattleBonus]
 
 @dataclass_json
 @dataclass(frozen=True)

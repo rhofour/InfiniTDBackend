@@ -75,7 +75,7 @@ gameConfig = GameConfig(
         sellMultiplier = 0.5,
         startingGold = 100,
         minGoldPerMinute = 1.0,
-        fullWaveMultiplier = 3.0,
+        battleBonuses = [],
     ))
 
 gameConfig2row2col = GameConfig(
@@ -87,5 +87,5 @@ gameConfig2row2col = GameConfig(
         sellMultiplier = 0.5,
         startingGold = 100,
         minGoldPerMinute = 1.0,
-        fullWaveMultiplier = 3.0,
+        battleBonuses = [],
     ))

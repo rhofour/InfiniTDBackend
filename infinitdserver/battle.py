@@ -2,7 +2,7 @@ from collections import deque
 from dataclasses import dataclass, asdict
 from enum import Enum, unique, auto
 import math
-from typing import List, Deque, NewType, Union, Dict, Any
+from typing import List, Deque, NewType, Union, Dict, Any, Tuple, Optional
 from random import Random
 import json
 
@@ -10,7 +10,7 @@ import attr
 import cattr
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.game_config import GameConfig, ConfigId, CellPos, MonsterConfig
+from infinitdserver.game_config import GameConfig, ConfigId, CellPos, MonsterConfig, ConfigId, BattleBonus
 from infinitdserver.paths import PathMap, makePathMap, compressPath
 
 TIME_PRECISION = 4 # Number of decimal places to use for times
@@ -80,6 +80,10 @@ def decodeEvent(eventObj: Dict, t) -> BattleEvent:
     raise ValueError(f"Unknown event type: {eventObj['eventType']}")
 
 cattr.register_structure_hook(BattleEvent, decodeEvent)
+
+@attr.s(frozen=True, auto_attribs=True)
+class BattleResults:
+    bonuses: List[BattleBonus]
 
 @attr.s(frozen=True, auto_attribs=True)
 class Battle:

@@ -83,6 +83,13 @@
     "sellMultiplier": 0.8,
     "startingGold": 100,
     "minGoldPerMinute": 1.0,
-    "fullWaveMultiplier": 2.0
+    "battleBonuses": [
+      {
+        "name": "Participation",
+        "bonusType": 1,
+        "bonusAmount": 1,
+        "conditions": [ { "percentDefeated": 0.0 } ]
+      }
+    ]
   }
 }
