@@ -7,7 +7,7 @@ from enum import Enum, unique, auto
 
 from infinitdserver.game_config import GameConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.battle import Battle, BattleComputer, BattleEvent, MoveEvent, DeleteEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol
+from infinitdserver.battle import Battle, BattleComputer, BattleEvent, MoveEvent, DeleteEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol, BattleResults
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
 
@@ -19,9 +19,8 @@ class TestBattleComputerEvents(unittest.TestCase):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
         battleground = BattlegroundState.empty(test_data.gameConfig)
 
-        results = battleComputer.computeBattle(battleground, [])
-
-        self.assertListEqual(results.events, [])
+        with self.assertRaises(ValueError) as context:
+            results = battleComputer.computeBattle(battleground, [])
 
     def test_oneMonsterNoTowers(self):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
@@ -204,7 +203,12 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
                     startTime = 1.0,
                     endTime = 1.5,
                 ),
-            ]
+            ],
+            results = BattleResults(
+                monstersDefeated = {ConfigId(0): (0, 1)},
+                bonuses = [],
+                reward = 0.0,
+                timeSecs = 1.5)
         )
 
         encodedStr = battle.encodeEvents()
@@ -230,7 +234,12 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
                     id = 1,
                     startTime = 1.5,
                 ),
-            ]
+            ],
+            results = BattleResults(
+                monstersDefeated = {ConfigId(0): (0, 1)},
+                bonuses = [],
+                reward = 0.0,
+                timeSecs = 1.5)
         )
 
         encodedStr = battle.encodeEvents()

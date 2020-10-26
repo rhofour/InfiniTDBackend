@@ -86,9 +86,10 @@ class BattleResults:
     monstersDefeated: MonstersDefeated
     bonuses: List[ConfigId]
     reward: float
+    timeSecs: float
 
     @staticmethod
-    def fromMonstersDefeated(monstersDefeated: MonstersDefeated, gameConfig: GameConfig) -> Any:
+    def fromMonstersDefeated(monstersDefeated: MonstersDefeated, gameConfig: GameConfig, timeSecs: float) -> Any:
         # First, calculate the base reward from monstersDefeated
         reward = 0.0
         for (monsterConfigId, (numDefeated, _)) in monstersDefeated.items():
@@ -105,24 +106,35 @@ class BattleResults:
                 bonuses.append(possibleBonus.id)
 
         return BattleResults(
-            monstersDefeated = monstersDefeated,
-            bonuses = bonuses,
-            reward = reward
-        )
+                monstersDefeated = monstersDefeated,
+                bonuses = bonuses,
+                reward = reward,
+                timeSecs = timeSecs
+            )
 
 @attr.s(frozen=True, auto_attribs=True)
 class Battle:
     events: List[BattleEvent]
     name: str
+    results: BattleResults
 
     def encodeEvents(self) -> str:
         return json.dumps(cattr.unstructure(self.events))
+
+    def encodeResults(self) -> str:
+        return json.dumps(cattr.unstructure(self.results))
 
     @staticmethod
     def decodeEvents(encodedStr: str) -> Any:
         eventsList = json.loads(encodedStr)
         battleEvents = cattr.structure(eventsList, List[BattleEvent])
         return battleEvents
+
+    @staticmethod
+    def decodeResults(encodedStr: str) -> Any:
+        resultsJson = json.loads(encodedStr)
+        battleResults = cattr.structure(resultsJson, BattleResults)
+        return battleResults
 
 @dataclass(frozen=False)
 class MonsterState:
@@ -163,6 +175,9 @@ class BattleComputer:
                 self.gameConfig.playfield.monsterExit)
         if not pathMap:
             raise ValueError("Cannot compute battle with no path.")
+
+        if not wave:
+            raise ValueError("Cannot compute battle with empty wave.")
 
         spawnPoint = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
         spawnOpen = True
@@ -304,7 +319,7 @@ class BattleComputer:
 
         # Calculate bonuses using monstersDefeated
         battleResults = BattleResults.fromMonstersDefeated(
-                monstersDefeated, self.gameConfig)
+                monstersDefeated, self.gameConfig, gameTime)
         return BattleCalcResults(
                 events = sorted(events, key=lambda ev: ev.startTime),
                 results = battleResults,

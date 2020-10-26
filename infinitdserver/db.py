@@ -34,7 +34,7 @@ class Db:
         sqlite3.enable_callback_tracebacks(debug)
         # Enable Write-Ahead Logging: https://www.sqlite.org/wal.html
         self.conn.execute("PRAGMA journal_mode=WAL;")
-        self.__create_tables()
+        self.__createTables()
         self.gameConfig = gameConfig
         self.userQueues = userQueues
         self.bgQueues = bgQueues
@@ -45,7 +45,7 @@ class Db:
     def __del__(self):
         self.conn.close()
 
-    def __create_tables(self):
+    def __createTables(self):
         self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS users("
                 "uid TEXT PRIMARY KEY, "
@@ -61,7 +61,8 @@ class Db:
                 "CREATE TABLE IF NOT EXISTS battles("
                 "attacking_uid TEXT KEY, "
                 "defending_uid TEXT KEY, "
-                "battle_events TEXT"
+                "events TEXT, "
+                "results TEXT"
                 ");")
         self.conn.commit()
 
@@ -205,14 +206,16 @@ class Db:
     def getOrMakeBattle(self, user: MutableUser, handler: str, requestId: int) -> Battle:
         # Check if a battle already exists, if not generate it
         res = self.conn.execute(
-            "SELECT battle_events FROM battles WHERE attacking_uid = :uid AND defending_uid = :uid;",
+            "SELECT events, results FROM battles "
+            "WHERE attacking_uid = :uid AND defending_uid = :uid;",
             { "uid": user.uid }
         ).fetchone()
         battleName = f"vs. {user.name} (live)"
         if res: # Battle exists
             self.logger.info(handler, requestId, f"Found battle for {user.name}")
             events = Battle.decodeEvents(res[0])
-            battle = Battle(events = events, name = battleName)
+            results = Battle.decodeResults(res[1])
+            battle = Battle(events = events, name = battleName, results = results)
             return battle
         else: # Calculate a new battle
             self.logger.info(handler, requestId, f"Calculating new battle for {user.name}")
@@ -220,10 +223,15 @@ class Db:
             if battleground is None: # This should be impossible since we know the user exists.
                 raise ValueError(f"Cannot find battleground for {user.name}")
             battleCalcResults = self.battleComputer.computeBattle(battleground, user.wave)
-            battle = Battle(events = battleCalcResults.events, name = battleName)
+            battle = Battle(events = battleCalcResults.events, name = battleName,
+                    results = battleCalcResults.results)
             self.conn.execute(
-                    "INSERT into battles (attacking_uid, defending_uid, battle_events) VALUES (:uid, :uid, :events);",
-                    { "uid": user.uid, "events": battle.encodeEvents() }
+                    "INSERT into battles (attacking_uid, defending_uid, events, results) "
+                    "VALUES (:uid, :uid, :events, :results);",
+                    {
+                        "uid": user.uid, "events": battle.encodeEvents(),
+                        "results": battle.encodeResults()
+                    }
             )
             self.conn.commit()
             return battle
@@ -295,8 +303,9 @@ class Db:
         return MutableUserContext(user, self, addAwaitable)
 
     def resetBattles(self):
-        self.conn.execute("DELETE FROM battles")
+        self.conn.execute("DROP TABLE battles")
         self.conn.commit()
+        self.__createTables()
 
 class MutableUserContext:
     db: Db
