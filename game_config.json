@@ -85,6 +85,7 @@
     "minGoldPerMinute": 1.0,
     "battleBonuses": [
       {
+        "id": 0,
         "name": "Participation",
         "bonusType": 1,
         "bonusAmount": 1,

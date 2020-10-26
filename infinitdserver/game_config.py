@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, asdict
 from enum import Enum, unique, auto
-from typing import NewType, Tuple, Dict, List
+from typing import NewType, Tuple, Dict, List, Optional
 
 import attr
 import cattr
@@ -77,6 +77,7 @@ class BonusCondition:
 
 @attr.s(frozen=True, auto_attribs=True)
 class BattleBonus:
+    id: ConfigId
     name: str
     bonusType: BonusType
     bonusAmount: float

@@ -1,6 +1,6 @@
 import unittest
 
-from infinitdserver.game_config import BonusType, BonusCondition, BattleBonus
+from infinitdserver.game_config import BonusType, BonusCondition, BattleBonus, ConfigId
 
 class TestBattleBonus(unittest.TestCase):
     def setUp(self):
@@ -8,6 +8,7 @@ class TestBattleBonus(unittest.TestCase):
 
     def test_additiveBonus(self):
         additiveBonus = BattleBonus(
+                id = ConfigId(0),
                 name = "additive bonus",
                 bonusType = BonusType.ADDITIVE,
                 bonusAmount = 10.0,
@@ -17,6 +18,7 @@ class TestBattleBonus(unittest.TestCase):
 
     def test_multiplicativeBonus(self):
         multiplicativeBonus = BattleBonus(
+                id = ConfigId(0),
                 name = "multiplicative bonus",
                 bonusType = BonusType.MULTIPLICATIVE,
                 bonusAmount = 1.5,
@@ -26,14 +28,15 @@ class TestBattleBonus(unittest.TestCase):
 
     def test_noConditionsIsAlwaysEarned(self):
         additiveBonus = BattleBonus(
+                id = ConfigId(0),
                 name = "additive bonus",
                 bonusType = BonusType.ADDITIVE,
                 bonusAmount = 10.0,
                 conditions = [])
         emptyResults = {}
-        noDefeatResults = {0: (0,5), 1: (0, 3)}
-        mixedResults = {0: (2, 5), 1: (1, 3)}
-        perfectResults = {0: (5, 5), 1: (3, 3)}
+        noDefeatResults = {ConfigId(0): (0,5), ConfigId(1): (0, 3)}
+        mixedResults = {ConfigId(0): (2, 5), ConfigId(1): (1, 3)}
+        perfectResults = {ConfigId(0): (5, 5), ConfigId(1): (3, 3)}
 
         self.assertTrue(additiveBonus.isEarned(emptyResults))
         self.assertTrue(additiveBonus.isEarned(noDefeatResults))
@@ -42,14 +45,15 @@ class TestBattleBonus(unittest.TestCase):
 
     def test_zeroPercentDefeatedCondition(self):
         bonus = BattleBonus(
+                id = ConfigId(0),
                 name = "test bonus",
                 bonusType = BonusType.ADDITIVE,
                 bonusAmount = 10.0,
                 conditions = [BonusCondition(percentDefeated = 0.0)])
         emptyResults = {}
-        noDefeatResults = {0: (0,5), 1: (0, 3)}
-        mixedResults = {0: (2, 5), 1: (1, 3)}
-        perfectResults = {0: (5, 5), 1: (3, 3)}
+        noDefeatResults = {ConfigId(0): (0,5), ConfigId(1): (0, 3)}
+        mixedResults = {ConfigId(0): (2, 5), ConfigId(1): (1, 3)}
+        perfectResults = {ConfigId(0): (5, 5), ConfigId(1): (3, 3)}
 
         self.assertFalse(bonus.isEarned(emptyResults))
         self.assertTrue(bonus.isEarned(noDefeatResults))
@@ -58,14 +62,15 @@ class TestBattleBonus(unittest.TestCase):
 
     def test_fiftyPercentDefeatedCondition(self):
         bonus = BattleBonus(
+                id = ConfigId(0),
                 name = "test bonus",
                 bonusType = BonusType.ADDITIVE,
                 bonusAmount = 10.0,
                 conditions = [BonusCondition(percentDefeated = 50.0)])
         emptyResults = {}
-        noDefeatResults = {0: (0,5), 1: (0, 3)}
-        mixedResults = {0: (3, 5), 1: (2, 4)}
-        perfectResults = {0: (5, 5), 1: (3, 3)}
+        noDefeatResults = {ConfigId(0): (0,5), ConfigId(1): (0, 3)}
+        mixedResults = {ConfigId(0): (3, 5), ConfigId(1): (2, 4)}
+        perfectResults = {ConfigId(0): (5, 5), ConfigId(1): (3, 3)}
 
         self.assertFalse(bonus.isEarned(emptyResults))
         self.assertFalse(bonus.isEarned(noDefeatResults))
@@ -74,14 +79,15 @@ class TestBattleBonus(unittest.TestCase):
 
     def test_oneHundredPercentDefeatedCondition(self):
         bonus = BattleBonus(
+                id = ConfigId(0),
                 name = "test bonus",
                 bonusType = BonusType.ADDITIVE,
                 bonusAmount = 10.0,
                 conditions = [BonusCondition(percentDefeated = 100.0)])
         emptyResults = {}
-        noDefeatResults = {0: (0,5), 1: (0, 3)}
-        mixedResults = {0: (3, 5), 1: (2, 4)}
-        perfectResults = {0: (5, 5), 1: (3, 3)}
+        noDefeatResults = {ConfigId(0): (0,5), ConfigId(1): (0, 3)}
+        mixedResults = {ConfigId(0): (3, 5), ConfigId(1): (2, 4)}
+        perfectResults = {ConfigId(0): (5, 5), ConfigId(1): (3, 3)}
 
         self.assertFalse(bonus.isEarned(emptyResults))
         self.assertFalse(bonus.isEarned(noDefeatResults))
@@ -90,6 +96,7 @@ class TestBattleBonus(unittest.TestCase):
 
     def test_multiplePercentDefeatedConditions(self):
         bonus = BattleBonus(
+                id = ConfigId(0),
                 name = "test bonus",
                 bonusType = BonusType.ADDITIVE,
                 bonusAmount = 10.0,
@@ -97,9 +104,9 @@ class TestBattleBonus(unittest.TestCase):
                     BonusCondition(percentDefeated = 10.0),
                     BonusCondition(percentDefeated = 50.0)])
         emptyResults = {}
-        noDefeatResults = {0: (0,5), 1: (0, 3)}
-        mixedResults = {0: (3, 5), 1: (2, 4)}
-        perfectResults = {0: (5, 5), 1: (3, 3)}
+        noDefeatResults = {ConfigId(0): (0,5), ConfigId(1): (0, 3)}
+        mixedResults = {ConfigId(0): (3, 5), ConfigId(1): (2, 4)}
+        perfectResults = {ConfigId(0): (5, 5), ConfigId(1): (3, 3)}
 
         self.assertFalse(bonus.isEarned(emptyResults))
         self.assertFalse(bonus.isEarned(noDefeatResults))
