@@ -10,7 +10,7 @@ import attr
 import cattr
 
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.game_config import GameConfig, ConfigId, CellPos, MonsterConfig, ConfigId, BattleBonus
+from infinitdserver.game_config import GameConfig, ConfigId, CellPos, MonsterConfig, ConfigId, BattleBonus, MonstersDefeated, BattleBonus, BonusCondition
 from infinitdserver.paths import PathMap, makePathMap, compressPath
 
 TIME_PRECISION = 4 # Number of decimal places to use for times
@@ -83,7 +83,32 @@ cattr.register_structure_hook(BattleEvent, decodeEvent)
 
 @attr.s(frozen=True, auto_attribs=True)
 class BattleResults:
-    bonuses: List[BattleBonus]
+    monstersDefeated: MonstersDefeated
+    bonuses: List[ConfigId]
+    reward: float
+
+    @staticmethod
+    def fromMonstersDefeated(monstersDefeated: MonstersDefeated, gameConfig: GameConfig) -> Any:
+        # First, calculate the base reward from monstersDefeated
+        reward = 0.0
+        for (monsterConfigId, (numDefeated, _)) in monstersDefeated.items():
+            monsterConfig = gameConfig.monsters[monsterConfigId]
+            reward += numDefeated * monsterConfig.bounty
+
+        # Next, calculate which bonuses apply
+        bonuses = []
+        possibleBonuses = gameConfig.misc.battleBonuses
+        for possibleBonusId in possibleBonuses:
+            possibleBonus = gameConfig.misc.battleBonuses[possibleBonusId]
+            if possibleBonus.isEarned(monstersDefeated):
+                reward += possibleBonus.getAmount(reward)
+                bonuses.append(possibleBonus.id)
+
+        return BattleResults(
+            monstersDefeated = monstersDefeated,
+            bonuses = bonuses,
+            reward = reward
+        )
 
 @attr.s(frozen=True, auto_attribs=True)
 class Battle:
@@ -108,6 +133,11 @@ class MonsterState:
     path: List[CellPos]
     targetInPath: int = 1
 
+@dataclass(frozen=True)
+class BattleCalcResults:
+    events: List[BattleEvent]
+    results: BattleResults
+
 class BattleComputer:
     startingSeed: int
     gameConfig: GameConfig
@@ -118,13 +148,14 @@ class BattleComputer:
         self.startingSeed = seed
         self.gameTickSecs = gameTickSecs
 
-    def computeBattle(self, battleground: BattlegroundState, wave: List[ConfigId]) -> List[BattleEvent]:
+    def computeBattle(self, battleground: BattlegroundState, wave: List[ConfigId]) -> BattleCalcResults:
         events: List[BattleEvent] = []
         nextId = 0
         unspawnedMonsters = wave[::-1] # Reverse so we can pop off elements efficiently
         spawnedMonsters: Deque[MonsterState] = deque()
         gameTime = 0.0
         rand = Random(self.startingSeed)
+        monstersDefeated: MonstersDefeated = {}
 
         pathMap = makePathMap(
                 battleground,
@@ -152,6 +183,13 @@ class BattleComputer:
                         path = path)
                 nextId += 1
                 spawnedMonsters.append(newMonster)
+
+                # Update monsters defeated dict to note the new monster
+                prevMonstersDefeatedState = monstersDefeated.get(monsterConfig.id, (0, 0))
+                monstersDefeated[monsterConfig.id] = (
+                        prevMonstersDefeatedState[0], prevMonstersDefeatedState[1] + 1)
+
+                # Add the battle events for the new monster
                 startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
                 destPos: FpCellPos = FpCellPos.fromCellPos(path[1])
                 dist = max(abs(startPos.row - destPos.row), abs(startPos.col - destPos.col))
@@ -197,14 +235,18 @@ class BattleComputer:
                 if remainingDist < 0: # Advance normally
                     if movingHorizontally:
                         if float(dest.col) > monster.pos.col:
-                            monster.pos = FpCellPos(monster.pos.row, monster.pos.col + distPerTick)
+                            monster.pos = FpCellPos(
+                                    FpRow(monster.pos.row), FpCol(monster.pos.col + distPerTick))
                         else:
-                            monster.pos = FpCellPos(monster.pos.row, monster.pos.col - distPerTick)
+                            monster.pos = FpCellPos(
+                                    FpRow(monster.pos.row), FpCol(monster.pos.col - distPerTick))
                     else:
                         if float(dest.row) > monster.pos.row:
-                            monster.pos = FpCellPos(monster.pos.row + distPerTick, monster.pos.col)
+                            monster.pos = FpCellPos(
+                                    FpRow(monster.pos.row + distPerTick), FpCol(monster.pos.col))
                         else:
-                            monster.pos = FpCellPos(monster.pos.row - distPerTick, monster.pos.col)
+                            monster.pos = FpCellPos(
+                                    FpRow(monster.pos.row - distPerTick), FpCol(monster.pos.col))
                 else: # Either finish the path or move to the next segment
                     if monster.targetInPath == len(monster.path) - 1: # We reached the end
                         finishedMonsters.append(monster)
@@ -260,4 +302,10 @@ class BattleComputer:
 
             gameTime += self.gameTickSecs
 
-        return sorted(events, key=lambda ev: ev.startTime)
+        # Calculate bonuses using monstersDefeated
+        battleResults = BattleResults.fromMonstersDefeated(
+                monstersDefeated, self.gameConfig)
+        return BattleCalcResults(
+                events = sorted(events, key=lambda ev: ev.startTime),
+                results = battleResults,
+            )

@@ -11,7 +11,7 @@ from infinitdserver.battle import Battle, BattleComputer, BattleEvent, MoveEvent
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
 
-class TestBattleComputer(unittest.TestCase):
+class TestBattleComputerEvents(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
 
@@ -21,7 +21,7 @@ class TestBattleComputer(unittest.TestCase):
 
         results = battleComputer.computeBattle(battleground, [])
 
-        self.assertListEqual(results, [])
+        self.assertListEqual(results.events, [])
 
     def test_oneMonsterNoTowers(self):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
@@ -45,7 +45,7 @@ class TestBattleComputer(unittest.TestCase):
 
         results = battleComputer.computeBattle(battleground, [ConfigId(0)])
 
-        self.assertListEqual(results, expectedEvents)
+        self.assertListEqual(results.events, expectedEvents)
 
     def test_twoMonsterNoTowers(self):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
@@ -83,7 +83,7 @@ class TestBattleComputer(unittest.TestCase):
 
         results = battleComputer.computeBattle(battleground, [ConfigId(0), ConfigId(0)])
 
-        self.assertListEqual(results, expectedEvents)
+        self.assertListEqual(results.events, expectedEvents)
 
     def test_oneMonsterOneCorner(self):
         # Note which path the monster takes depends on the seed.
@@ -117,7 +117,7 @@ class TestBattleComputer(unittest.TestCase):
 
         results = battleComputer.computeBattle(battleground, [ConfigId(0)])
 
-        self.assertListEqual(results, expectedEvents)
+        self.assertListEqual(results.events, expectedEvents)
 
     def test_oneMonsterOneCornerLowRes(self):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig2row2col)
@@ -128,7 +128,7 @@ class TestBattleComputer(unittest.TestCase):
         results = battleComputer.computeBattle(battleground, [ConfigId(0)])
         lowResResults = lowResBattleComputer.computeBattle(battleground, [ConfigId(0)])
 
-        self.assertListEqual(results, lowResResults)
+        self.assertListEqual(results.events, lowResResults.events)
 
     def test_twoMonstersOneCorner(self):
         # Note which path each monster takes depends on the seed.
@@ -185,7 +185,7 @@ class TestBattleComputer(unittest.TestCase):
 
         results = battleComputer.computeBattle(battleground, [ConfigId(0), ConfigId(0)])
 
-        self.assertListEqual(results, expectedEvents)
+        self.assertListEqual(results.events, expectedEvents)
 
 class TestBattleEventEncodingAndDecoding(unittest.TestCase):
     def setUp(self):
@@ -237,11 +237,3 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
         decodedEvents = Battle.decodeEvents(encodedStr)
 
         self.assertEqual(battle.events, decodedEvents)
-
-    def test_realCase1(self):
-        gameConfig = GameConfig.from_json('{"playfield": {"numRows": 14, "numCols": 10, "monsterEnter": {"row": 0, "col": 0}, "monsterExit": {"row": 13, "col": 0}, "backgroundId": 0, "pathId": 1, "pathStartId": 2, "pathEndId": 3}, "tiles": [{"id": 0, "url": "static/CrappyGrass.png"}, {"id": 1, "url": "static/CrappyDirt.png"}, {"id": 2, "url": "static/CrappyStartDirt.png"}, {"id": 3, "url": "static/CrappyEndDirt.png"}], "towers": [{"id": 0, "url": "static/CrappyTowerSmall.png", "name": "Boring Tower", "cost": 1.0, "firingRate": 2.0, "range": 300.0, "damage": 5.0}, {"id": 1, "url": "static/CrappyTower.png", "name": "Better Tower", "cost": 5.0, "firingRate": 2.5, "range": 500.0, "damage": 15.0}], "monsters": [{"id": 0, "url": "static/GraySlime.png", "name": "Lame Slime", "health": 10.0, "speed": 2.0, "bounty": 1.0}, {"id": 1, "url": "static/GreenSlime.png", "name": "Green Slime", "health": 50.0, "speed": 2.0, "bounty": 6.0}, {"id": 2, "url": "static/YellowSlime.png", "name": "Yellow Slime", "health": 15.0, "speed": 5.0, "bounty": 5.0}], "misc": {"sellMultiplier": 0.8, "startingGold": 100, "minGoldPerMinute": 1.0, "battleBonuses": []}}')
-        battleComputer = BattleComputer(gameConfig = gameConfig)
-        json_data = '{"towers": {"towers": [[null, null, null, null, null, {"id": 0}, null, null, null, null], [{"id": 0}, null, null, {"id": 0}, null, null, {"id": 0}, null, null, null], [null, {"id": 0}, null, null, {"id": 0}, null, null, null, null, null], [null, {"id": 0}, null, null, null, {"id": 0}, null, null, null, null], [{"id": 0}, null, null, {"id": 0}, null, null, null, null, null, null], [null, {"id": 0}, null, null, {"id": 0}, null, null, null, null, null], [null, {"id": 0}, null, null, null, {"id": 0}, null, null, null, null], [null, {"id": 0}, null, {"id": 0}, null, null, null, null, null, null], [null, {"id": 0}, null, null, {"id": 0}, null, null, null, null, null], [null, null, {"id": 0}, null, null, {"id": 0}, null, null, null, null], [null, null, null, {"id": 0}, null, null, null, null, null, null], [null, null, null, null, {"id": 0}, null, null, null, null, null], [null, null, null, null, null, {"id": 0}, null, null, null, null], [null, null, null, null, null, null, null, null, null, null]]}}'
-        battleground = BattlegroundState.from_json(json_data)
-        results = battleComputer.computeBattle(battleground, [ConfigId(0)])
-

@@ -1,4 +1,4 @@
-from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig, MiscConfig, MonsterConfig
+from infinitdserver.game_config import *
 
 playfieldConfig4row3col = PlayfieldConfig(
     numRows = 4,
@@ -24,24 +24,24 @@ playfieldConfig2row2col = PlayfieldConfig(
 
 towers = [
     TowerConfig(
-        id = 0,
-        url = "",
+        id = ConfigId(0),
+        url = Url(""),
         name = "Cheap Tower",
         cost = 1,
         firingRate = 1.0,
         range = 10.0,
         damage = 5.0),
     TowerConfig(
-        id = 1,
-        url = "",
+        id = ConfigId(1),
+        url = Url(""),
         name = "Expensive Tower",
         cost = 101,
         firingRate = 1.0,
         range = 10.0,
         damage = 5.0),
     TowerConfig(
-        id = 2,
-        url = "",
+        id = ConfigId(2),
+        url = Url(""),
         name = "Other Tower",
         cost = 2,
         firingRate = 1.0,
@@ -51,41 +51,54 @@ towers = [
 
 monsters = [
         MonsterConfig(
-            id = 0,
-            url = "",
+            id = ConfigId(0),
+            url = Url(""),
             name = "Test Enemy 0",
             health = 5.0,
             speed = 2.0,
             bounty = 10.0),
         MonsterConfig(
-            id = 1,
-            url = "",
+            id = ConfigId(1),
+            url = Url(""),
             name = "Test Enemy 1",
             health = 8.0,
             speed = 3.5,
             bounty = 20.0),
     ]
 
-gameConfig = GameConfig(
+battleBonuses = [
+        BattleBonus(
+            id = ConfigId(0),
+            name = "Participation",
+            bonusType = BonusType.ADDITIVE,
+            bonusAmount = 1,
+            conditions = [ BonusCondition(percentDefeated = 0.0) ],
+        ),
+    ]
+
+gameConfigData = GameConfigData(
     playfield = playfieldConfig4row3col,
-    tiles = (),
+    tiles = [],
     towers = towers,
     monsters = monsters,
-    misc = MiscConfig(
+    misc = MiscConfigData(
         sellMultiplier = 0.5,
         startingGold = 100,
         minGoldPerMinute = 1.0,
-        battleBonuses = [],
+        battleBonuses = battleBonuses,
     ))
 
-gameConfig2row2col = GameConfig(
+gameConfig2row2colData = GameConfigData(
     playfield = playfieldConfig2row2col,
-    tiles = (),
+    tiles = [],
     towers = towers,
     monsters = monsters,
-    misc = MiscConfig(
+    misc = MiscConfigData(
         sellMultiplier = 0.5,
         startingGold = 100,
         minGoldPerMinute = 1.0,
-        battleBonuses = [],
+        battleBonuses = battleBonuses,
     ))
+
+gameConfig = GameConfig.fromGameConfigData(gameConfigData)
+gameConfig2row2col = GameConfig.fromGameConfigData(gameConfig2row2colData)

@@ -5,12 +5,13 @@ from random import randrange
 import json
 from datetime import datetime, timedelta
 
+import cattr
 import tornado.web
 import firebase_admin
 from firebase_admin import credentials
 
 from infinitdserver.game import Game
-from infinitdserver.game_config import GameConfig
+from infinitdserver.game_config import GameConfig, GameConfigData
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
 from infinitdserver.logger import Logger
 
@@ -72,7 +73,9 @@ async def main():
     args = parser.parse_args()
 
     with open('game_config.json') as gameConfigFile:
-        gameConfig = GameConfig.from_json(gameConfigFile.read())
+        gameConfigData = cattr.structure(json.loads(gameConfigFile.read()), GameConfigData)
+        #gameConfigData = GameConfigData.from_json(gameConfigFile.read())
+        gameConfig = GameConfig.fromGameConfigData(gameConfigData)
     Logger.setDefault(Logger("data/logs.db", printVerbosity=args.verbosity, debug=args.debug))
     game = Game(gameConfig, debug=args.debug)
     # Make sure no one is stuck in a battle.

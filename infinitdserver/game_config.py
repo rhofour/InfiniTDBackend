@@ -1,20 +1,20 @@
-from __future__ import annotations
 from dataclasses import dataclass, asdict
 from enum import Enum, unique, auto
 from typing import NewType, Tuple, Dict, List, Optional
 
 import attr
 import cattr
-from dataclasses_json import dataclass_json
 
 Row = NewType('Row', int)
 Col = NewType('Col', int)
 Url = NewType('Url', str)
 ConfigId = NewType('ConfigId', int)
+cattr.register_structure_hook(Row, lambda d, _: Row(d))
+cattr.register_structure_hook(Col, lambda d, _: Col(d))
+cattr.register_structure_hook(Url, lambda d, _: Url(d))
 cattr.register_structure_hook(ConfigId, lambda d, _: ConfigId(d))
 
-@dataclass_json
-@dataclass(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class CellPos:
     row: Row
     col: Col
@@ -23,11 +23,10 @@ class CellPos:
         return self.row * numCols + self.col;
 
     @staticmethod
-    def fromNumber(number: int, numCols: int) -> CellPos:
-        return CellPos(number // numCols, number % numCols)
+    def fromNumber(number: int, numCols: int):
+        return CellPos(Row(number // numCols), Col(number % numCols))
 
-@dataclass_json
-@dataclass(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class PlayfieldConfig:
     numRows: int
     numCols: int
@@ -38,17 +37,16 @@ class PlayfieldConfig:
     pathStartId: int
     pathEndId: int
 
-@dataclass(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class IdentifiedImage:
     id: ConfigId
     url: Url
 
-@dataclass(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class TileConfig(IdentifiedImage):
     pass
 
-@dataclass_json
-@dataclass(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class TowerConfig(IdentifiedImage):
     name: str
     cost: float
@@ -56,8 +54,7 @@ class TowerConfig(IdentifiedImage):
     range: float
     damage: float
 
-@dataclass_json
-@dataclass(frozen=True)
+@attr.s(frozen=True, auto_attribs=True)
 class MonsterConfig(IdentifiedImage):
     name: str
     health: float
@@ -98,27 +95,66 @@ class BattleBonus:
                 return False
         return True
 
-    def getAmount(self, curGold: float) -> float:
+    def getAmount(self, curReward: float) -> float:
         if self.bonusType == BonusType.ADDITIVE:
             return self.bonusAmount;
         if self.bonusType == BonusType.MULTIPLICATIVE:
-            return curGold * (self.bonusAmount - 1);
+            return curReward * (self.bonusAmount - 1);
         raise ValueError(f"Unknown bonus type: {self.bonusType}")
 
+def idedListToDict(xs):
+    d = {}
+    for x in xs:
+        d[x.id] = x
+    return d
 
-@dataclass_json
-@dataclass(frozen=True)
-class MiscConfig:
+@attr.s(frozen=True, auto_attribs=True)
+class MiscConfigData:
     sellMultiplier: float
     startingGold: int
     minGoldPerMinute: float
     battleBonuses: List[BattleBonus]
 
-@dataclass_json
+@dataclass(frozen=True)
+class MiscConfig:
+    sellMultiplier: float
+    startingGold: int
+    minGoldPerMinute: float
+    battleBonuses: Dict[ConfigId, BattleBonus]
+
+    @staticmethod
+    def fromMiscConfigData(miscConfigData: MiscConfigData):
+        return MiscConfig(
+            sellMultiplier = miscConfigData.sellMultiplier,
+            startingGold = miscConfigData.startingGold,
+            minGoldPerMinute = miscConfigData.minGoldPerMinute,
+            battleBonuses = idedListToDict(miscConfigData.battleBonuses)
+        )
+
+@attr.s(frozen=True, auto_attribs=True)
+class GameConfigData:
+    playfield: PlayfieldConfig
+    tiles: List[TileConfig]
+    towers: List[TowerConfig]
+    monsters: List[MonsterConfig]
+    misc: MiscConfigData
+
 @dataclass(frozen=True)
 class GameConfig:
     playfield: PlayfieldConfig
-    tiles: Tuple[TileConfig, ...]
-    towers: Tuple[TowerConfig, ...]
-    monsters: Tuple[MonsterConfig, ...]
+    tiles: Dict[ConfigId, TileConfig]
+    towers: Dict[ConfigId, TowerConfig]
+    monsters: Dict[ConfigId, MonsterConfig]
     misc: MiscConfig
+    gameConfigData: GameConfigData
+
+    @staticmethod
+    def fromGameConfigData(gameConfigData: GameConfigData):
+        return GameConfig(
+            playfield = gameConfigData.playfield,
+            tiles = idedListToDict(gameConfigData.tiles),
+            towers = idedListToDict(gameConfigData.towers),
+            monsters = idedListToDict(gameConfigData.monsters),
+            misc = MiscConfig.fromMiscConfigData(gameConfigData.misc),
+            gameConfigData = gameConfigData
+        )

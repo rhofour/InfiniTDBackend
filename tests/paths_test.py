@@ -1,7 +1,7 @@
 import unittest
 from random import Random
 
-from infinitdserver.game_config import CellPos
+from infinitdserver.game_config import CellPos, Row, Col
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
 from infinitdserver.paths import makePathMap, compressPath, PathMap, pathExists
 
@@ -11,8 +11,8 @@ def emptyBattleground(rows: int, cols: int):
 class TestGetRandomPath(unittest.TestCase):
     def test_diagonal2(self):
         battleground = emptyBattleground(2, 2)
-        start = CellPos(0, 0)
-        end = CellPos(1, 1)
+        start = CellPos(Row(0), Col(0))
+        end = CellPos(Row(1), Col(1))
         pathMap = makePathMap(battleground, start, end)
         self.assertIsNotNone(pathMap)
 
@@ -33,8 +33,8 @@ class TestGetRandomPath(unittest.TestCase):
 
     def test_diagonal5(self):
         battleground = emptyBattleground(5, 5)
-        start = CellPos(0, 0)
-        end = CellPos(4, 4)
+        start = CellPos(Row(0), Col(0))
+        end = CellPos(Row(4), Col(4))
         pathMap = makePathMap(battleground, start, end)
         self.assertIsNotNone(pathMap)
 
@@ -59,8 +59,8 @@ class TestGetRandomPath(unittest.TestCase):
         battleground.towers.towers[2][3] = BgTowerState(0)
         battleground.towers.towers[3][2] = BgTowerState(0)
         battleground.towers.towers[3][3] = BgTowerState(0)
-        start = CellPos(0, 0)
-        end = CellPos(4, 4)
+        start = CellPos(Row(0), Col(0))
+        end = CellPos(Row(4), Col(4))
         pathMap = makePathMap(battleground, start, end)
         self.assertIsNotNone(pathMap)
 
@@ -84,49 +84,49 @@ class TestPathExists(unittest.TestCase):
         battleground = emptyBattleground(2, 2)
         battleground.towers.towers[0][0] = BgTowerState(0)
 
-        self.assertFalse(pathExists(battleground, CellPos(0, 0), CellPos(1, 1)))
+        self.assertFalse(pathExists(battleground, CellPos(Row(0), Col(0)), CellPos(Row(1), Col(1))))
 
     def test_endBlocked(self):
         battleground = emptyBattleground(2, 2)
         battleground.towers.towers[1][1] = BgTowerState(0)
 
-        self.assertFalse(pathExists(battleground, CellPos(0, 0), CellPos(1, 1)))
+        self.assertFalse(pathExists(battleground, CellPos(Row(0), Col(0)), CellPos(Row(1), Col(1))))
 
     def test_noPath(self):
         battleground = emptyBattleground(2, 2)
         battleground.towers.towers[0][1] = BgTowerState(0)
         battleground.towers.towers[1][0] = BgTowerState(0)
 
-        self.assertFalse(pathExists(battleground, CellPos(0, 0), CellPos(1, 1)))
+        self.assertFalse(pathExists(battleground, CellPos(Row(0), Col(0)), CellPos(Row(1), Col(1))))
 
     def test_oneStepPath(self):
         battleground = emptyBattleground(2, 2)
 
-        self.assertTrue(pathExists(battleground, CellPos(0, 0), CellPos(1, 1)))
+        self.assertTrue(pathExists(battleground, CellPos(Row(0), Col(0)), CellPos(Row(1), Col(1))))
 
     def test_multiStepPath(self):
         battleground = emptyBattleground(2, 3)
         battleground.towers.towers[0][1] = BgTowerState(0)
 
-        self.assertTrue(pathExists(battleground, CellPos(0, 0), CellPos(0, 2)))
+        self.assertTrue(pathExists(battleground, CellPos(Row(0), Col(0)), CellPos(Row(0), Col(2))))
 
     def test_multiplePaths(self):
         battleground = emptyBattleground(3, 3)
         battleground.towers.towers[1][1] = BgTowerState(0)
 
-        self.assertTrue(pathExists(battleground, CellPos(0, 0), CellPos(2, 2)))
+        self.assertTrue(pathExists(battleground, CellPos(Row(0), Col(0)), CellPos(Row(2), Col(2))))
 
     def test_manyPaths(self):
         battleground = emptyBattleground(3, 3)
 
-        self.assertTrue(pathExists(battleground, CellPos(0, 0), CellPos(2, 2)))
+        self.assertTrue(pathExists(battleground, CellPos(Row(0), Col(0)), CellPos(Row(2), Col(2))))
 
 class TestMakePathMap(unittest.TestCase):
     def test_startBlocked(self):
         battleground = emptyBattleground(2, 2)
         battleground.towers.towers[0][0] = BgTowerState(0)
 
-        pathMap = makePathMap(battleground, CellPos(0, 0), CellPos(1, 1))
+        pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(1), Col(1)))
 
         self.assertIsNone(pathMap)
 
@@ -134,7 +134,7 @@ class TestMakePathMap(unittest.TestCase):
         battleground = emptyBattleground(2, 2)
         battleground.towers.towers[1][1] = BgTowerState(0)
 
-        pathMap = makePathMap(battleground, CellPos(0, 0), CellPos(1, 1))
+        pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(1), Col(1)))
 
         self.assertIsNone(pathMap)
 
@@ -143,14 +143,14 @@ class TestMakePathMap(unittest.TestCase):
         battleground.towers.towers[0][1] = BgTowerState(0)
         battleground.towers.towers[1][0] = BgTowerState(0)
 
-        pathMap = makePathMap(battleground, CellPos(0, 0), CellPos(1, 1))
+        pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(1), Col(1)))
 
         self.assertIsNone(pathMap)
 
     def test_oneStepPath(self):
         battleground = emptyBattleground(2, 2)
 
-        pathMap = makePathMap(battleground, CellPos(0, 0), CellPos(0, 1))
+        pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(0), Col(1)))
 
         expectedPathMap = PathMap(dists = [0, 1, -1, -1])
         self.assertEqual(pathMap, expectedPathMap)
@@ -159,7 +159,7 @@ class TestMakePathMap(unittest.TestCase):
         battleground = emptyBattleground(2, 3)
         battleground.towers.towers[0][1] = BgTowerState(0)
 
-        pathMap = makePathMap(battleground, CellPos(0, 0), CellPos(0, 2))
+        pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(0), Col(2)))
 
         expectedPathMap = PathMap(dists = [0, -1, 4, 1, 2, 3])
         self.assertEqual(pathMap, expectedPathMap)
@@ -168,7 +168,7 @@ class TestMakePathMap(unittest.TestCase):
         battleground = emptyBattleground(3, 3)
         battleground.towers.towers[1][1] = BgTowerState(0)
 
-        pathMap = makePathMap(battleground, CellPos(0, 0), CellPos(2, 2))
+        pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(2), Col(2)))
 
         expectedPathMap = PathMap(dists = [0, 1, 2, 1, -1, 3, 2, 3, 4])
         self.assertEqual(pathMap, expectedPathMap)
@@ -176,15 +176,15 @@ class TestMakePathMap(unittest.TestCase):
     def test_manyPaths(self):
         battleground = emptyBattleground(3, 3)
 
-        pathMap = makePathMap(battleground, CellPos(0, 0), CellPos(2, 2))
+        pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(2), Col(2)))
 
         expectedPathMap = PathMap(dists = [0, 1, 2, 1, 2, 3, 2, 3, 4])
         self.assertEqual(pathMap, expectedPathMap)
 
 class TestCompressPath(unittest.TestCase):
     def test_twoNodePaths(self):
-        path1 = [CellPos(0, 0), CellPos(0, 1)]
-        path2 = [CellPos(0, 0), CellPos(1, 0)]
+        path1 = [CellPos(Row(0), Col(0)), CellPos(Row(0), Col(1))]
+        path2 = [CellPos(Row(0), Col(0)), CellPos(Row(1), Col(0))]
 
         newPath1 = compressPath(path1)
         newPath2 = compressPath(path2)
@@ -193,18 +193,22 @@ class TestCompressPath(unittest.TestCase):
         self.assertListEqual(newPath2, path2)
 
     def test_singleChainPath(self):
-        path1 = [CellPos(0, 0), CellPos(0, 1), CellPos(0, 2)]
-        path2 = [CellPos(0, 0), CellPos(1, 0), CellPos(2, 0), CellPos(3, 0)]
+        path1 = [CellPos(Row(0), Col(0)), CellPos(Row(0), Col(1)), CellPos(Row(0), Col(2))]
+        path2 = [CellPos(Row(0), Col(0)), CellPos(Row(1), Col(0)), CellPos(Row(2), Col(0)),
+                CellPos(Row(3), Col(0))]
 
         newPath1 = compressPath(path1)
         newPath2 = compressPath(path2)
 
-        self.assertListEqual(newPath1, [CellPos(0, 0), CellPos(0, 2)])
-        self.assertListEqual(newPath2, [CellPos(0, 0), CellPos(3, 0)])
+        self.assertListEqual(newPath1, [CellPos(Row(0), Col(0)), CellPos(Row(0), Col(2))])
+        self.assertListEqual(newPath2, [CellPos(Row(0), Col(0)), CellPos(Row(3), Col(0))])
 
     def test_twoCorners(self):
-        path = [CellPos(0, 0), CellPos(0, 1), CellPos(0, 2), CellPos(1, 2), CellPos(1, 3)]
+        path = [CellPos(Row(0), Col(0)), CellPos(Row(0), Col(1)), CellPos(Row(0), Col(2)),
+                CellPos(Row(1), Col(2)), CellPos(Row(1), Col(3))]
 
         newPath = compressPath(path)
 
-        self.assertListEqual(newPath, [CellPos(0, 0), CellPos(0, 2), CellPos(1, 2), CellPos(1, 3)])
+        self.assertListEqual(newPath,
+                [CellPos(Row(0), Col(0)), CellPos(Row(0), Col(2)), CellPos(Row(1), Col(2)),
+                    CellPos(Row(1), Col(3))])

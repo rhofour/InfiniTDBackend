@@ -219,8 +219,8 @@ class Db:
             battleground = user.battleground
             if battleground is None: # This should be impossible since we know the user exists.
                 raise ValueError(f"Cannot find battleground for {user.name}")
-            events = self.battleComputer.computeBattle(battleground, user.wave)
-            battle = Battle(events = events, name = battleName)
+            battleCalcResults = self.battleComputer.computeBattle(battleground, user.wave)
+            battle = Battle(events = battleCalcResults.events, name = battleName)
             self.conn.execute(
                     "INSERT into battles (attacking_uid, defending_uid, battle_events) VALUES (:uid, :uid, :events);",
                     { "uid": user.uid, "events": battle.encodeEvents() }

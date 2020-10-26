@@ -132,7 +132,7 @@ class Game:
     def addToWave(self, user: MutableUser, monsterId: int):
         try:
             monsterConfig = self.gameConfig.monsters[monsterId]
-        except IndexError:
+        except KeyError:
             raise ValueError(f"Invalid monster ID {monsterId}")
 
         if user.inBattle:

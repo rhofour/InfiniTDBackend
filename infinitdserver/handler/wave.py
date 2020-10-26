@@ -28,7 +28,7 @@ class WaveHandler(BaseHandler):
         with self.getMutableUser(expectedName=name) as user:
             try:
                 self.game.addToWave(user, monsterId=monsterId)
-            except ValueError  as e:
+            except ValueError as e:
                 self.logWarn("Wave ValueError: " + repr(e), uid=user.uid)
                 self.set_status(400) # Bad request
                 self.write(str(e))
