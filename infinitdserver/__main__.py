@@ -85,9 +85,7 @@ async def main():
     app = make_app(game)
     app.listen(args.port)
     print(f"Listening on port {args.port}.")
-    loop = asyncio.get_running_loop()
-    gold_task = loop.create_task(updateGoldEveryMinute(game))
-    await asyncio.wait([gold_task])
+    await updateGoldEveryMinute(game)
 
 if __name__ == "__main__":
     asyncio.run(main())
