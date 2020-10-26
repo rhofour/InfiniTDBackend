@@ -70,7 +70,6 @@ class DeleteEvent:
 BattleEvent = Union[MoveEvent, DeleteEvent]
 
 def decodeEvent(eventObj: Dict, t) -> BattleEvent:
-    print(eventObj)
     if "eventType" not in eventObj:
         raise ValueError(f"Event object is missing event type: {eventObj}")
     if eventObj["eventType"] == EventType.MOVE.value:
