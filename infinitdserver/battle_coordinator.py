@@ -6,7 +6,7 @@ from typing import List, Dict, Union, Callable, Deque, Awaitable
 
 from dataclasses_json import dataclass_json
 
-from infinitdserver.battle import Battle, BattleComputer, BattleEvent
+from infinitdserver.battle import Battle, BattleComputer, BattleEvent, BattleResults
 from infinitdserver.sse import SseQueues
 from infinitdserver.logger import Logger
 
@@ -24,9 +24,9 @@ class StreamingBattle:
     name : str
     pastEvents: List[BattleEvent] = []
     futureEvents: Deque[BattleEvent]
-    updateFn: Callable[[Union[StartBattle, BattleEvent]], Awaitable[None]]
+    updateFn: Callable[[Union[StartBattle, BattleEvent, BattleResults]], Awaitable[None]]
 
-    def __init__(self, updateFn: Callable[[Union[StartBattle, BattleEvent]], Awaitable[None]]):
+    def __init__(self, updateFn: Callable[[Union[StartBattle, BattleEvent, BattleResults]], Awaitable[None]]):
         self.updateFn = updateFn
 
     async def start(self, battle: Battle):
@@ -65,7 +65,13 @@ class StreamingBattle:
             await self.updateFn(event)
             self.pastEvents.append(self.futureEvents.popleft())
 
-        await self.stop()
+        await self.sendResults(battle.results)
+
+    async def sendResults(self, results: BattleResults):
+        await self.updateFn(results)
+        self.startTime = -1.0
+        self.futureEvents = deque()
+        self.pastEvents = []
 
     async def stop(self):
         self.startTime = -1.0
