@@ -210,7 +210,7 @@ class Db:
             "WHERE attacking_uid = :uid AND defending_uid = :uid;",
             { "uid": user.uid }
         ).fetchone()
-        battleName = f"vs. {user.name} (live)"
+        battleName = f"vs. {user.name}"
         if res: # Battle exists
             self.logger.info(handler, requestId, f"Found battle for {user.name}")
             events = Battle.decodeEvents(res[0])

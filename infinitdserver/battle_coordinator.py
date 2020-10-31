@@ -1,8 +1,9 @@
 import asyncio
 from collections import deque
 from dataclasses import dataclass
+from enum import Enum, unique, auto
 import time
-from typing import List, Dict, Union, Callable, Deque, Awaitable
+from typing import List, Dict, Union, Callable, Deque, Awaitable, Optional
 
 from dataclasses_json import dataclass_json
 
@@ -10,23 +11,36 @@ from infinitdserver.battle import Battle, BattleComputer, BattleEvent, BattleRes
 from infinitdserver.sse import SseQueues
 from infinitdserver.logger import Logger
 
+@unique
+class BattleStatus(Enum):
+    PENDING = auto()
+    OFFLINE = auto()
+    LIVE = auto()
+
 @dataclass_json
 @dataclass(frozen=False)
-class StartBattle:
-    time: float
-    name: str
+class BattleMetadata:
+    status: BattleStatus
+    name: str = ""
+
+@dataclass_json
+@dataclass(frozen=False)
+class LiveBattleMetadata(BattleMetadata):
+    time: float = 0.0
+
+BattleUpdate = Union[BattleMetadata, BattleEvent, BattleResults]
 
 class StreamingBattle:
     """StreamingBattle handles streaming battle data out in "real time"
     to potentially multiple clients."""
     BUFFER_TIME_SECS: float = 0.1
     startTime: float = -1.0 # -1 signifies the battle hasn't started yet
-    name : str
+    name : str = ""
     pastEvents: List[BattleEvent] = []
     futureEvents: Deque[BattleEvent]
-    updateFn: Callable[[Union[StartBattle, BattleEvent, BattleResults]], Awaitable[None]]
+    updateFn: Callable[[BattleUpdate], Awaitable[None]]
 
-    def __init__(self, updateFn: Callable[[Union[StartBattle, BattleEvent, BattleResults]], Awaitable[None]]):
+    def __init__(self, updateFn: Callable[[BattleUpdate], Awaitable[None]]):
         self.updateFn = updateFn
 
     async def start(self, battle: Battle):
@@ -51,7 +65,7 @@ class StreamingBattle:
 
         # Start running
         self.startTime = time.time()
-        await self.updateFn(StartBattle(time = 0.0, name = battle.name))
+        await self.updateFn(LiveBattleMetadata(status = BattleStatus.LIVE, name = battle.name, time = 0.0))
 
         while self.futureEvents:
             elapsedTime = time.time() - self.startTime
@@ -77,15 +91,15 @@ class StreamingBattle:
         self.startTime = -1.0
         self.futureEvents = deque()
         self.pastEvents = []
-        await self.updateFn(StartBattle(time = -1.0, name = "")) # Send an update to halt the battle.
+        await self.updateFn(BattleMetadata(status = BattleStatus.PENDING, name = self.name)) # Send an update to halt the battle.
 
-    def join(self) -> List[Union[BattleEvent, StartBattle]]:
+    def join(self) -> List[Union[BattleEvent, BattleMetadata]]:
         """Send the new client all past events and the current time."""
         if self.startTime == -1.0:
-            return [StartBattle(time = -1.0, name = "")]
+            return [BattleMetadata(status = BattleStatus.PENDING, name = self.name)]
         else:
             battleTime = time.time() - self.startTime
-            return self.pastEvents + [StartBattle(time = battleTime, name = self.name)]
+            return self.pastEvents + [LiveBattleMetadata(status = BattleStatus.LIVE, time = battleTime, name = self.name)]
 
 class BattleCoordinator:
     battleComputer: BattleComputer
