@@ -198,3 +198,6 @@ class Game:
 
     def resetBattles(self):
         self._db.resetBattles()
+
+    def makeOrGetBattle(self, attacker, defender):
+        raise ValueError("Not implemented yet")

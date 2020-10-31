@@ -11,4 +11,3 @@ class RegisterHandler(BaseHandler):
             self.set_status(201); # CREATED
         else:
             self.set_status(412); # Precondition Failed (assume name is already used)
-

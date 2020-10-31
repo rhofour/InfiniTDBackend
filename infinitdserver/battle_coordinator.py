@@ -14,7 +14,7 @@ from infinitdserver.logger import Logger
 @unique
 class BattleStatus(Enum):
     PENDING = auto()
-    OFFLINE = auto()
+    FINISHED = auto()
     LIVE = auto()
 
 @dataclass_json
