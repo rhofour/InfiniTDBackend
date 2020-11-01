@@ -4,7 +4,8 @@ import sqlite3
 import json
 from typing import Optional, List, Callable, Awaitable
 
-from infinitdserver.battle import Battle, BattleComputer, BattleCalculationException
+from infinitdserver.battle import Battle
+from infinitdserver.battle_computer import BattleComputer, BattleCalculationException
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.user import User, UserSummary, FrozenUser, FrozenUserSummary, MutableUser

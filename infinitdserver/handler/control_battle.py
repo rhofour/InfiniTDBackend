@@ -1,4 +1,4 @@
-from infinitdserver.battle import BattleCalculationException
+from infinitdserver.battle_computer import BattleCalculationException
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.game import Game, UserInBattleException, UserNotInBattleException
 from infinitdserver.handler.base import BaseHandler

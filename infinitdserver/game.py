@@ -2,7 +2,8 @@ import asyncio
 from typing import List, Optional, Awaitable, Callable
 import math
 
-from infinitdserver.battle import Battle, BattleCalculationException
+from infinitdserver.battle import Battle
+from infinitdserver.battle_computer import BattleCalculationException
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.db import Db, MutableUserContext

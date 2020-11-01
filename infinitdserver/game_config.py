@@ -47,12 +47,18 @@ class TileConfig(IdentifiedImage):
     pass
 
 @attr.s(frozen=True, auto_attribs=True)
+class ProjectileConfig(IdentifiedImage):
+    size: int
+
+@attr.s(frozen=True, auto_attribs=True)
 class TowerConfig(IdentifiedImage):
     name: str
     cost: float
     firingRate: float
     range: float
     damage: float
+    firingSpeed: float
+    projectileId: ConfigId
 
 @attr.s(frozen=True, auto_attribs=True)
 class MonsterConfig(IdentifiedImage):
@@ -136,6 +142,7 @@ class GameConfigData:
     playfield: PlayfieldConfig
     tiles: List[TileConfig]
     towers: List[TowerConfig]
+    projectiles: List[ProjectileConfig]
     monsters: List[MonsterConfig]
     misc: MiscConfigData
 
@@ -144,6 +151,7 @@ class GameConfig:
     playfield: PlayfieldConfig
     tiles: Dict[ConfigId, TileConfig]
     towers: Dict[ConfigId, TowerConfig]
+    projectiles: Dict[ConfigId, ProjectileConfig]
     monsters: Dict[ConfigId, MonsterConfig]
     misc: MiscConfig
     gameConfigData: GameConfigData
@@ -154,6 +162,7 @@ class GameConfig:
             playfield = gameConfigData.playfield,
             tiles = idedListToDict(gameConfigData.tiles),
             towers = idedListToDict(gameConfigData.towers),
+            projectiles = idedListToDict(gameConfigData.projectiles),
             monsters = idedListToDict(gameConfigData.monsters),
             misc = MiscConfig.fromMiscConfigData(gameConfigData.misc),
             gameConfigData = gameConfigData

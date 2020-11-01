@@ -7,7 +7,8 @@ from enum import Enum, unique, auto
 
 from infinitdserver.game_config import GameConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.battle import Battle, BattleComputer, BattleEvent, MoveEvent, DeleteEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol, BattleResults
+from infinitdserver.battle import Battle, BattleEvent, MoveEvent, DeleteEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol, BattleResults
+from infinitdserver.battle_computer import BattleComputer
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
 

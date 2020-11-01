@@ -30,7 +30,10 @@ towers = [
         cost = 1,
         firingRate = 1.0,
         range = 10.0,
-        damage = 5.0),
+        damage = 5.0,
+        firingSpeed = 1.0,
+        projectileId = ConfigId(0),
+        ),
     TowerConfig(
         id = ConfigId(1),
         url = Url(""),
@@ -38,7 +41,10 @@ towers = [
         cost = 101,
         firingRate = 1.0,
         range = 10.0,
-        damage = 5.0),
+        damage = 5.0,
+        firingSpeed = 3.0,
+        projectileId = ConfigId(0),
+        ),
     TowerConfig(
         id = ConfigId(2),
         url = Url(""),
@@ -46,7 +52,17 @@ towers = [
         cost = 2,
         firingRate = 1.0,
         range = 10.0,
-        damage = 5.0),
+        damage = 5.0,
+        firingSpeed = 1.5,
+        projectileId = ConfigId(0),
+        ),
+    ]
+
+projectiles = [
+    ProjectileConfig(
+        id = ConfigId(0),
+        url = Url(""),
+        size = 16),
     ]
 
 monsters = [
@@ -80,6 +96,7 @@ gameConfigData = GameConfigData(
     playfield = playfieldConfig4row3col,
     tiles = [],
     towers = towers,
+    projectiles = projectiles,
     monsters = monsters,
     misc = MiscConfigData(
         sellMultiplier = 0.5,
@@ -92,6 +109,7 @@ gameConfig2row2colData = GameConfigData(
     playfield = playfieldConfig2row2col,
     tiles = [],
     towers = towers,
+    projectiles = projectiles,
     monsters = monsters,
     misc = MiscConfigData(
         sellMultiplier = 0.5,
