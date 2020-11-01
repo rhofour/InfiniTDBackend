@@ -12,7 +12,8 @@ class ControlBattleHandler(BaseHandler):
         with self.getMutableUser(expectedName=name) as user:
             # Attempt to start a battle
             try:
-                await self.game.startBattle(user=user, handler="ControlBattleHandler", requestId=self.requestId)
+                await self.game.startBattle(user = user,
+                        handler = self.__class__.__name__, requestId = self.requestId)
             except (BattleCalculationException) as e:
                 self.logError(f"Battle calculation error: {e}", uid=user.uid)
                 self.set_status(409) # Conflict

@@ -107,6 +107,12 @@ class Db:
             return Db.__extractUserFromRow(res)
         return None
 
+    def getUserByName(self, name: str) -> Optional[FrozenUser]:
+        res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE name = ?;", (name, )).fetchone()
+        if res:
+            return Db.__extractUserFromRow(res)
+        return None
+
     def getUnfrozenUserByUid(self, uid: str) -> Optional[User]:
         res = self.conn.execute(self.SELECT_USER_STATEMENT + " WHERE uid = ?;", (uid, )).fetchone()
         if res:
@@ -203,7 +209,7 @@ class Db:
         self.conn.commit()
         await self.__updateUserListeners([name])
 
-    def getOrMakeBattle(self, attackingUser: User, defendingUser: User, handler: str, requestId: int) -> Battle:
+    def getOrMakeBattle(self, attackingUser: UserSummary, defendingUser: User, handler: str, requestId: int) -> Battle:
         # Ensure this is called from within a transaction or with both users
         # inBattles. Otherwise, it's possible the defender's battleground or
         # the attacker's wave gets changed while the battle is being calculated.
@@ -237,7 +243,9 @@ class Db:
                         "events": battle.encodeEvents(), "results": battle.encodeResults()
                     }
             )
-            self.conn.commit()
+            # Don't end a transaction early.
+            if not self.conn.in_transaction:
+                self.conn.commit()
             return battle
 
     def clearInBattle(self):
