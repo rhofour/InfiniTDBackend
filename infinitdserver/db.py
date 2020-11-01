@@ -203,34 +203,38 @@ class Db:
         self.conn.commit()
         await self.__updateUserListeners([name])
 
-    def getOrMakeBattle(self, user: MutableUser, handler: str, requestId: int) -> Battle:
-        # Check if a battle already exists, if not generate it
+    def getOrMakeBattle(self, attackingUser: User, defendingUser: User, handler: str, requestId: int) -> Battle:
+        # Ensure this is called from within a transaction or with both users
+        # inBattles. Otherwise, it's possible the defender's battleground or
+        # the attacker's wave gets changed while the battle is being calculated.
+        assert (attackingUser.inBattle and defendingUser.inBattle) or self.conn.in_transaction
+        # Check if a battle already exists, if not generate it.
         res = self.conn.execute(
             "SELECT events, results FROM battles "
-            "WHERE attacking_uid = :uid AND defending_uid = :uid;",
-            { "uid": user.uid }
+            "WHERE attacking_uid = :attackingUid AND defending_uid = :defendingUid;",
+            { "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid }
         ).fetchone()
-        battleName = f"vs. {user.name}"
+        battleName = f"vs. {attackingUser.name}"
         if res: # Battle exists
-            self.logger.info(handler, requestId, f"Found battle for {user.name}")
+            self.logger.info(handler, requestId, f"Found battle: {defendingUser.name} vs {attackingUser.name}")
             events = Battle.decodeEvents(res[0])
             results = Battle.decodeResults(res[1])
             battle = Battle(events = events, name = battleName, results = results)
             return battle
         else: # Calculate a new battle
-            self.logger.info(handler, requestId, f"Calculating new battle for {user.name}")
-            battleground = user.battleground
+            self.logger.info(handler, requestId, f"Calculating new battle: {defendingUser.name} vs {attackingUser.name}")
+            battleground = defendingUser.battleground
             if battleground is None: # This should be impossible since we know the user exists.
-                raise ValueError(f"Cannot find battleground for {user.name}")
-            battleCalcResults = self.battleComputer.computeBattle(battleground, user.wave)
+                raise ValueError(f"Cannot find battleground for {defendingUser.name}")
+            battleCalcResults = self.battleComputer.computeBattle(battleground, attackingUser.wave)
             battle = Battle(events = battleCalcResults.events, name = battleName,
                     results = battleCalcResults.results)
             self.conn.execute(
                     "INSERT into battles (attacking_uid, defending_uid, events, results) "
-                    "VALUES (:uid, :uid, :events, :results);",
+                    "VALUES (:attackingUid, :defendingUid, :events, :results);",
                     {
-                        "uid": user.uid, "events": battle.encodeEvents(),
-                        "results": battle.encodeResults()
+                        "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid,
+                        "events": battle.encodeEvents(), "results": battle.encodeResults()
                     }
             )
             self.conn.commit()

@@ -113,8 +113,8 @@ class BattleResults:
 
 @attr.s(frozen=True, auto_attribs=True)
 class Battle:
-    events: List[BattleEvent]
     name: str
+    events: List[BattleEvent]
     results: BattleResults
 
     def encodeEvents(self) -> str:

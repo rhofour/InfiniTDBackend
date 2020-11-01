@@ -2,7 +2,7 @@ import asyncio
 from typing import List, Optional, Awaitable, Callable
 import math
 
-from infinitdserver.battle import BattleCalculationException
+from infinitdserver.battle import Battle, BattleCalculationException
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.db import Db, MutableUserContext
@@ -165,7 +165,7 @@ class Game:
         self._db.leaveTransaction()
 
         try:
-            battle = self._db.getOrMakeBattle(user, handler=handler, requestId=requestId)
+            battle = self._db.getOrMakeBattle(user.user, user.user, handler=handler, requestId=requestId)
         except BattleCalculationException as e:
             self.logger.error(handler, requestId,
                     f"Error calculating battle: {e}\nBattleground: {user.battleground}")
@@ -179,6 +179,9 @@ class Game:
         async def setUserNotInBattleCallback():
             await self._db.setUserNotInBattle(uid=user.uid, name=user.name)
         self.battleCoordinator.startBattle(user.name, battle, setUserNotInBattleCallback)
+
+    def getOrMakeRecordedBattle(self, attacker, defender) -> Battle:
+        raise ValueError("Not implemented yet")
 
     async def stopBattle(self, user: MutableUser):
         if not user.inBattle:
@@ -198,6 +201,3 @@ class Game:
 
     def resetBattles(self):
         self._db.resetBattles()
-
-    def makeOrGetBattle(self, attacker, defender):
-        raise ValueError("Not implemented yet")

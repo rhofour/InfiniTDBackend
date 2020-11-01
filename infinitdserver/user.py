@@ -25,15 +25,6 @@ class FrozenUserSummary(UserSummary):
 class User(UserSummary):
     battleground: BattlegroundState
 
-    def compareAsUserSummary(self, other: UserSummary):
-        print(f"original: {self}")
-        print(f"other   : {other}")
-        return (self.uid == other.uid and self.name == other.name and
-                self.gold == other.gold and
-                self.accumulatedGold == other.accumulatedGold and
-                self.goldPerMinute == other.goldPerMinute and
-                self.inBattle == other.inBattle and self.wave == other.wave)
-
 @attr.s(auto_attribs=True, frozen=True)
 class FrozenUser(User):
     pass
@@ -54,7 +45,6 @@ class MutableUser:
     @property
     def summaryModified(self):
         # It feels like there should be a better way to do this with super
-        #return not self._original_user.compareAsUserSummary(self._user)
         return not super(User, self._original_user).__eq__(self._user)
 
     @property
