@@ -2,11 +2,11 @@ from collections import deque
 from dataclasses import dataclass, asdict
 from random import Random
 import math
-from typing import List
+from typing import List, Optional, Deque
 
 from infinitdserver.battle import ObjectType, EventType, MoveEvent, DeleteEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId
+from infinitdserver.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId, MonstersDefeated
 from infinitdserver.paths import PathMap, makePathMap, compressPath
 
 TIME_PRECISION = 4 # Number of decimal places to use for times
@@ -15,7 +15,6 @@ class BattleCalculationException(Exception):
     def __init__(self, battleground: BattlegroundState, message: str):
         self.battleground_json = battleground.to_json()
         self.message = message
-
 
 @dataclass(frozen=False)
 class TowerState:
@@ -32,6 +31,29 @@ class MonsterState:
     health: float
     path: List[CellPos]
     targetInPath: int = 1
+
+def enemyPosAtTime(curTime: float, targetTime: float, enemy: MonsterState) -> Optional[FpCellPos]:
+    timeDelta = targetTime - curTime
+    if timeDelta < 0:
+        raise ValueError("Future times not supported.")
+
+    curPos = enemy.pos
+    curTargetIdx = enemy.targetInPath
+    curTarget = enemy.path[curTargetIdx]
+    timeToTarget = curPos.dist(curTarget) / enemy.config.speed
+
+    while timeDelta > timeToTarget:
+        # Move forward
+        curTime += timeToTarget
+        curPos = FpCellPos.fromCellPos(curTarget)
+        if curTargetIdx + 1 == len(enemy.path):
+            return None # Enemy will reach the end
+        curTargetIdx += 1
+        curTarget = enemy.path[curTargetIdx]
+        timeToTarget = curPos.dist(curTarget) / enemy.config.speed
+        timeDelta = targetTime - curTime
+
+    return curPos.interpolateTo(curTarget, timeDelta / timeToTarget)
 
 @dataclass(frozen=True)
 class BattleCalcResults:

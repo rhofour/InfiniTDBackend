@@ -1,6 +1,7 @@
 from enum import Enum, unique, auto
 import json
 from typing import NewType, Any, Union, Dict, List
+import math
 
 import attr
 import cattr
@@ -25,6 +26,17 @@ class FpCellPos:
 
     def __eq__(self, other):
         return math.isclose(self.row, other.row) and math.isclose(self.col, other.col)
+
+    def dist(self, other):
+        return math.sqrt(math.pow(self.row - other.row, 2) + math.pow(self.col - other.col, 2))
+
+    def interpolateTo(self, other, amount: float) -> Any:
+        if amount < 0 or amount > 1:
+            raise ValueError("amount must be between 0.0 and 1.0")
+
+        return FpCellPos(
+                FpRow(self.row * (1 - amount) + other.row * amount),
+                FpCol(self.col * (1 - amount) + other.col * amount))
 
 @unique
 class ObjectType(Enum):

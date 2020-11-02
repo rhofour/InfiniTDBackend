@@ -5,12 +5,82 @@ import attr
 import cattr
 from enum import Enum, unique, auto
 
-from infinitdserver.game_config import GameConfig
+from infinitdserver.game_config import GameConfig, CellPos, Row, Col, Url, MonsterConfig, ConfigId
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.battle import Battle, BattleEvent, MoveEvent, DeleteEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol, BattleResults
-from infinitdserver.battle_computer import BattleComputer
+from infinitdserver.battle_computer import BattleComputer, MonsterState, enemyPosAtTime
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
+
+class TestEnemyPosAtTime(unittest.TestCase):
+    def setUp(self):
+        self.enemy = MonsterState(
+            id = ConfigId(0),
+            pos = FpCellPos(FpRow(1.0), FpCol(0.0)),
+            path = [
+                CellPos(Row(0), Col(0)), CellPos(Row(2), Col(0)),
+                CellPos(Row(2), Col(3)), CellPos(Row(3), Col(3)),
+            ],
+            health = 5.0,
+            targetInPath = 1,
+            config = MonsterConfig(
+                id = ConfigId(0),
+                url = Url("fake_url"),
+                name = "Test Enemy",
+                health = 5.0,
+                speed = 0.5,
+                bounty = 10.0,
+                )
+            )
+
+    def test_sameTime(self):
+        expected = self.enemy.pos
+
+        res = enemyPosAtTime(curTime = 2.0, targetTime = 2.0, enemy = self.enemy)
+
+        self.assertEqual(res, expected)
+
+    def test_noNewTarget(self):
+        expected = FpCellPos(FpRow(1.5), FpCol(0.0))
+
+        res = enemyPosAtTime(curTime = 2.0, targetTime = 3.0, enemy = self.enemy)
+
+        self.assertEqual(res, expected)
+
+    def test_atTargetInPath(self):
+        expected = FpCellPos(FpRow(2.0), FpCol(0.0))
+
+        res = enemyPosAtTime(curTime = 2.0, targetTime = 4.0, enemy = self.enemy)
+
+        self.assertEqual(res, expected)
+
+    def test_atNextTargetInPath(self):
+        expected = FpCellPos(FpRow(2.0), FpCol(3.0))
+
+        res = enemyPosAtTime(curTime = 2.0, targetTime = 10.0, enemy = self.enemy)
+
+        self.assertEqual(res, expected)
+
+    def test_betweenFartherTargets(self):
+        expected = FpCellPos(FpRow(2.5), FpCol(3.0))
+
+        res = enemyPosAtTime(curTime = 2.0, targetTime = 11.0, enemy = self.enemy)
+
+        self.assertEqual(res, expected)
+
+    def test_exactlyAtEnd(self):
+        expected = FpCellPos(FpRow(3.0), FpCol(3.0))
+
+        res = enemyPosAtTime(curTime = 2.0, targetTime = 12.0, enemy = self.enemy)
+
+        self.assertEqual(res, expected)
+
+    def test_pastEnd(self):
+        expected = None
+
+        res = enemyPosAtTime(curTime = 2.0, targetTime = 100.0, enemy = self.enemy)
+
+        self.assertEqual(res, expected)
 
 class TestBattleComputerEvents(unittest.TestCase):
     def setUp(self):

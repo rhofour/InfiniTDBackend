@@ -1,6 +1,6 @@
 import cattr
 
-from infinitdserver.battle import BattleCalculationException
+from infinitdserver.battle_computer import BattleCalculationException
 from infinitdserver.game import Game
 from infinitdserver.handler.base import BaseHandler
 
