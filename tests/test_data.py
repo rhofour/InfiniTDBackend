@@ -31,7 +31,7 @@ towers = [
         firingRate = 1.0,
         range = 10.0,
         damage = 5.0,
-        firingSpeed = 1.0,
+        projectileSpeed = 1.0,
         projectileId = ConfigId(0),
         ),
     TowerConfig(
@@ -42,7 +42,7 @@ towers = [
         firingRate = 1.0,
         range = 10.0,
         damage = 5.0,
-        firingSpeed = 3.0,
+        projectileSpeed = 3.0,
         projectileId = ConfigId(0),
         ),
     TowerConfig(
@@ -53,7 +53,7 @@ towers = [
         firingRate = 1.0,
         range = 10.0,
         damage = 5.0,
-        firingSpeed = 1.5,
+        projectileSpeed = 1.5,
         projectileId = ConfigId(0),
         ),
     ]

@@ -2,7 +2,7 @@ from collections import deque
 from dataclasses import dataclass, asdict
 from random import Random
 import math
-from typing import List, Optional, Deque
+from typing import List, Optional, Deque, Tuple
 
 from infinitdserver.battle import ObjectType, EventType, MoveEvent, DeleteEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
@@ -54,6 +54,57 @@ def enemyPosAtTime(curTime: float, targetTime: float, enemy: MonsterState) -> Op
         timeDelta = targetTime - curTime
 
     return curPos.interpolateTo(curTarget, timeDelta / timeToTarget)
+
+# TODO: Figure out a more principled way of doing this.
+def getShotTarget(curTime: float, enemy: MonsterState, tower: TowerState, precision: float = 0.001) -> Optional[Tuple[FpCellPos, float]]:
+    """getShotTarget iteratively calculates where and when a shot from tower should land to hit enemy."""
+    towerPos = FpCellPos.fromCellPos(tower.pos)
+
+    def iterate(dist: float) -> Optional[Tuple[float, float]]:
+        timeToHit = dist / tower.config.projectileSpeed
+        targetPos = enemyPosAtTime(curTime, curTime + timeToHit, enemy)
+        if targetPos is None:
+            return None
+        newDist = towerPos.dist(targetPos)
+        return (newDist, targetPos)
+
+    prevDist = towerPos.dist(enemy.pos)
+    res = iterate(prevDist)
+    if res is None:
+        return None
+    (dist, targetPos) = res
+    delta = dist - prevDist
+
+    i = 0
+    while abs(delta) > precision:
+        prevDist = dist
+        prevDelta = delta
+
+        res = iterate(prevDist)
+        if res is None:
+            return None
+        (dist, targetPos) = res
+
+        # Compute the new delta
+        delta = dist - prevDist
+        if abs(delta) > abs(prevDelta):
+            return None # Enemy is outrunning the projectile
+        if (i > 0):
+            if (delta > 0 and prevDelta < 0) or (delta < 0 and prevDelta > 0):
+                # We're oscillating. Average this distance with the last.
+                dist = (dist + prevDist) / 2
+            else:
+                remainingIters = abs(delta) / abs(delta - prevDelta)
+                if remainingIters > 1:
+                    # Extrapolate
+                    dist = prevDist + (dist - prevDist) * remainingIters
+
+        i += 1
+        if i > 15:
+            raise Exception(f"getShotTarget reached {i} iterations")
+
+    timeToHit = dist / tower.config.projectileSpeed
+    return (targetPos, curTime + timeToHit)
 
 @dataclass(frozen=True)
 class BattleCalcResults:

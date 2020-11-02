@@ -1,14 +1,17 @@
 import unittest
 from typing import List, NewType
+from enum import Enum, unique, auto
 
 import attr
 import cattr
-from enum import Enum, unique, auto
+from hypothesis import given
+import hypothesis.strategies as st
 
-from infinitdserver.game_config import GameConfig, CellPos, Row, Col, Url, MonsterConfig, ConfigId
+
+from infinitdserver.game_config import GameConfig, CellPos, Row, Col, Url, MonsterConfig, ConfigId, TowerConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.battle import Battle, BattleEvent, MoveEvent, DeleteEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol, BattleResults
-from infinitdserver.battle_computer import BattleComputer, MonsterState, enemyPosAtTime
+from infinitdserver.battle_computer import BattleComputer, MonsterState, TowerState, enemyPosAtTime, getShotTarget
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
 
@@ -81,6 +84,59 @@ class TestEnemyPosAtTime(unittest.TestCase):
         res = enemyPosAtTime(curTime = 2.0, targetTime = 100.0, enemy = self.enemy)
 
         self.assertEqual(res, expected)
+
+class TestGetShotTarget(unittest.TestCase):
+    @given(
+            towerRow=st.integers(0, 10),
+            towerCol=st.integers(0, 10),
+            projectileSpeed=st.floats(0.01, 50.0),
+            enemySpeed=st.floats(0.01, 50.0))
+    def test_enemyWillBeAtTarget(self, towerRow: int, towerCol: int, projectileSpeed: float, enemySpeed: float):
+        enemy = MonsterState(
+            id = ConfigId(0),
+            pos = FpCellPos(FpRow(0.0), FpCol(enemySpeed)),
+            path = [
+                CellPos(Row(0), Col(0)), CellPos(Row(0), Col(9)),
+                CellPos(Row(9), Col(9)), CellPos(Row(9), Col(0)),
+                CellPos(Row(0), Col(0)),
+            ],
+            health = 5.0,
+            targetInPath = 1,
+            config = MonsterConfig(
+                id = ConfigId(0),
+                url = Url("fake_url"),
+                name = "Test Enemy",
+                health = 5.0,
+                speed = enemySpeed,
+                bounty = 10.0,
+                )
+            )
+        towerConfig = TowerConfig(
+            id = ConfigId(0),
+            url = Url("fake_url"),
+            name = "Test Tower",
+            cost = 1.0,
+            firingRate = 2.0,
+            range = 3.0,
+            damage = 4.0,
+            projectileSpeed = projectileSpeed,
+            projectileId = ConfigId(0),
+            )
+        tower = TowerState(
+            id = 0,
+            config = towerConfig,
+            pos = CellPos(Row(towerRow), Col(towerCol)),
+            lastFired = -100.0,
+        )
+
+        res = getShotTarget(1.0, enemy, tower)
+        if res:
+            (target, targetTime) = res
+            enemyPos= enemyPosAtTime(1.0, targetTime, enemy)
+            self.assertIsNotNone(enemyPos)
+            dist = enemyPos.dist(target) # pytype: disable=attribute-error
+            self.assertAlmostEqual(dist, 0.0, places=2)
+
 
 class TestBattleComputerEvents(unittest.TestCase):
     def setUp(self):

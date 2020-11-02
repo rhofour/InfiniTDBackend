@@ -6,3 +6,5 @@ data
 # Pytype stuff
 .pytype
 infintdserver/.pytype
+# Hypothesis DB
+.hypothesis

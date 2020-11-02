@@ -42,7 +42,7 @@
       "firingRate": 2.0,
       "range": 300.0,
       "damage": 5.0,
-      "firingSpeed": 2.0,
+      "projectileSpeed": 2.0,
       "projectileId": 0
     },
     {
@@ -53,7 +53,7 @@
       "firingRate": 2.5,
       "range": 500.0,
       "damage": 15.0,
-      "firingSpeed": 2.5,
+      "projectileSpeed": 2.5,
       "projectileId": 0
     }
   ],

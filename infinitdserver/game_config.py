@@ -57,7 +57,7 @@ class TowerConfig(IdentifiedImage):
     firingRate: float
     range: float
     damage: float
-    firingSpeed: float
+    projectileSpeed: float
     projectileId: ConfigId
 
 @attr.s(frozen=True, auto_attribs=True)
