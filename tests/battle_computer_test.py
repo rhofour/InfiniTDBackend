@@ -137,6 +137,132 @@ class TestGetShotTarget(unittest.TestCase):
             dist = enemyPos.dist(target) # pytype: disable=attribute-error
             self.assertAlmostEqual(dist, 0.0, places=2)
 
+    @given(
+            projectileSpeed=st.floats(0.01, 50.0),
+            enemySpeed=st.floats(0.01, 50.0))
+    def test_shotWillNeverReachFasterEnemy(self, projectileSpeed: float, enemySpeed: float):
+        enemy = MonsterState(
+            id = ConfigId(0),
+            pos = FpCellPos(FpRow(0.0), FpCol(enemySpeed)),
+            path = [
+                CellPos(Row(0), Col(0)), CellPos(Row(0), Col(9)),
+            ],
+            health = 5.0,
+            targetInPath = 1,
+            config = MonsterConfig(
+                id = ConfigId(0),
+                url = Url("fake_url"),
+                name = "Test Enemy",
+                health = 5.0,
+                speed = projectileSpeed + enemySpeed, # Always > projectile speed
+                bounty = 10.0,
+                )
+            )
+        towerConfig = TowerConfig(
+            id = ConfigId(0),
+            url = Url("fake_url"),
+            name = "Test Tower",
+            cost = 1.0,
+            firingRate = 2.0,
+            range = 3.0,
+            damage = 4.0,
+            projectileSpeed = projectileSpeed,
+            projectileId = ConfigId(0),
+            )
+        tower = TowerState(
+            id = 0,
+            config = towerConfig,
+            pos = CellPos(Row(0), Col(0)),
+            lastFired = -100.0,
+        )
+
+        res = getShotTarget(1.0, enemy, tower)
+        self.assertIsNone(res)
+
+    @given(
+            projectileSpeed=st.floats(1.0, 50.0),
+            enemySpeed=st.floats(0.01, 27.0))
+    def test_shotWillAlwaysReachSlowerEnemy(self, projectileSpeed: float, enemySpeed: float):
+        enemy = MonsterState(
+            id = ConfigId(0),
+            pos = FpCellPos(FpRow(0.0), FpCol(1.0)),
+            path = [
+                CellPos(Row(0), Col(0)), CellPos(Row(0), Col(9)),
+                CellPos(Row(9), Col(9)), CellPos(Row(9), Col(0)),
+            ],
+            health = 5.0,
+            targetInPath = 1,
+            config = MonsterConfig(
+                id = ConfigId(0),
+                url = Url("fake_url"),
+                name = "Test Enemy",
+                health = 5.0,
+                speed = enemySpeed,
+                bounty = 10.0,
+                )
+            )
+        towerConfig = TowerConfig(
+            id = ConfigId(0),
+            url = Url("fake_url"),
+            name = "Test Tower",
+            cost = 1.0,
+            firingRate = 2.0,
+            range = 3.0,
+            damage = 4.0,
+            projectileSpeed = projectileSpeed + enemySpeed, # Always > enemy speed
+            projectileId = ConfigId(0),
+            )
+        tower = TowerState(
+            id = 0,
+            config = towerConfig,
+            pos = CellPos(Row(0), Col(0)),
+            lastFired = -100.0,
+        )
+
+        res = getShotTarget(1.0, enemy, tower)
+        self.assertIsNotNone(res)
+
+    @given(
+            projectileSpeed=st.floats(0.01, 50.0),
+            enemySpeed=st.floats(0.01, 50.0))
+    def test_shotWillAlwaysReachOncomingEnemy(self, projectileSpeed: float, enemySpeed: float):
+        enemy = MonsterState(
+            id = ConfigId(0),
+            pos = FpCellPos(FpRow(0.0), FpCol(1.0)),
+            path = [
+                CellPos(Row(0), Col(0)), CellPos(Row(0), Col(9)),
+            ],
+            health = 5.0,
+            targetInPath = 1,
+            config = MonsterConfig(
+                id = ConfigId(0),
+                url = Url("fake_url"),
+                name = "Test Enemy",
+                health = 5.0,
+                speed = enemySpeed,
+                bounty = 10.0,
+                )
+            )
+        towerConfig = TowerConfig(
+            id = ConfigId(0),
+            url = Url("fake_url"),
+            name = "Test Tower",
+            cost = 1.0,
+            firingRate = 2.0,
+            range = 3.0,
+            damage = 4.0,
+            projectileSpeed = projectileSpeed,
+            projectileId = ConfigId(0),
+            )
+        tower = TowerState(
+            id = 0,
+            config = towerConfig,
+            pos = CellPos(Row(0), Col(9)),
+            lastFired = -100.0,
+        )
+
+        res = getShotTarget(1.0, enemy, tower)
+        self.assertIsNotNone(res)
 
 class TestBattleComputerEvents(unittest.TestCase):
     def setUp(self):
