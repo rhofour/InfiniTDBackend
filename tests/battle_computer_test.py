@@ -11,7 +11,7 @@ import hypothesis.strategies as st
 from infinitdserver.game_config import GameConfig, CellPos, Row, Col, Url, MonsterConfig, ConfigId, TowerConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.battle import Battle, BattleEvent, MoveEvent, DeleteEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol, BattleResults
-from infinitdserver.battle_computer import BattleComputer, MonsterState, TowerState, enemyPosAtTime, getShotTarget
+from infinitdserver.battle_computer import BattleComputer, MonsterState, TowerState, getShotTarget
 from infinitdserver.game_config import ConfigId, CellPos, Row, Col
 import test_data
 
@@ -39,53 +39,81 @@ class TestEnemyPosAtTime(unittest.TestCase):
     def test_sameTime(self):
         expected = self.enemy.pos
 
-        res = enemyPosAtTime(curTime = 2.0, targetTime = 2.0, enemy = self.enemy)
+        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 2.0)
 
         self.assertEqual(res, expected)
 
     def test_noNewTarget(self):
         expected = FpCellPos(FpRow(1.5), FpCol(0.0))
 
-        res = enemyPosAtTime(curTime = 2.0, targetTime = 3.0, enemy = self.enemy)
+        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 3.0)
 
         self.assertEqual(res, expected)
 
     def test_atTargetInPath(self):
         expected = FpCellPos(FpRow(2.0), FpCol(0.0))
 
-        res = enemyPosAtTime(curTime = 2.0, targetTime = 4.0, enemy = self.enemy)
+        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 4.0)
 
         self.assertEqual(res, expected)
 
     def test_atNextTargetInPath(self):
         expected = FpCellPos(FpRow(2.0), FpCol(3.0))
 
-        res = enemyPosAtTime(curTime = 2.0, targetTime = 10.0, enemy = self.enemy)
+        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 10.0)
 
         self.assertEqual(res, expected)
 
     def test_betweenFartherTargets(self):
         expected = FpCellPos(FpRow(2.5), FpCol(3.0))
 
-        res = enemyPosAtTime(curTime = 2.0, targetTime = 11.0, enemy = self.enemy)
+        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 11.0)
 
         self.assertEqual(res, expected)
 
     def test_exactlyAtEnd(self):
         expected = FpCellPos(FpRow(3.0), FpCol(3.0))
 
-        res = enemyPosAtTime(curTime = 2.0, targetTime = 12.0, enemy = self.enemy)
+        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 12.0)
 
         self.assertEqual(res, expected)
 
     def test_pastEnd(self):
         expected = None
 
-        res = enemyPosAtTime(curTime = 2.0, targetTime = 100.0, enemy = self.enemy)
+        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 100.0)
 
         self.assertEqual(res, expected)
 
-class TestGetShotTarget(unittest.TestCase):
+class TestEnemyTimeLeft(unittest.TestCase):
+    @given(
+            enemyStart=st.floats(0.0, 10.0),
+            enemySpeed=st.floats(0.01, 50.0))
+    def test_straightPath(self, enemyStart: float, enemySpeed: float):
+        enemy = MonsterState(
+            id = ConfigId(0),
+            pos = FpCellPos(FpRow(0.0), FpCol(enemyStart)),
+            path = [
+                CellPos(Row(0), Col(0)), CellPos(Row(0), Col(10)),
+            ],
+            health = 5.0,
+            targetInPath = 1,
+            config = MonsterConfig(
+                id = ConfigId(0),
+                url = Url("fake_url"),
+                name = "Test Enemy",
+                health = 5.0,
+                speed = enemySpeed,
+                bounty = 10.0,
+                )
+            )
+
+        res = enemy.timeLeft()
+
+        self.assertEqual(res, (10 - enemyStart) / enemySpeed)
+
+#class TestGetShotTarget(unittest.TestCase):
+class GetShotTarget():
     @given(
             towerRow=st.integers(0, 10),
             towerCol=st.integers(0, 10),
@@ -132,7 +160,7 @@ class TestGetShotTarget(unittest.TestCase):
         res = getShotTarget(1.0, enemy, tower)
         if res:
             (target, targetTime) = res
-            enemyPos= enemyPosAtTime(1.0, targetTime, enemy)
+            enemyPos= enemy.posAtTime(1.0, targetTime)
             self.assertIsNotNone(enemyPos)
             dist = enemyPos.dist(target) # pytype: disable=attribute-error
             self.assertAlmostEqual(dist, 0.0, places=2)

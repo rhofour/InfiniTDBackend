@@ -32,79 +32,60 @@ class MonsterState:
     path: List[CellPos]
     targetInPath: int = 1
 
-def enemyPosAtTime(curTime: float, targetTime: float, enemy: MonsterState) -> Optional[FpCellPos]:
-    timeDelta = targetTime - curTime
-    if timeDelta < 0:
-        raise ValueError("Future times not supported.")
-
-    curPos = enemy.pos
-    curTargetIdx = enemy.targetInPath
-    curTarget = enemy.path[curTargetIdx]
-    timeToTarget = curPos.dist(curTarget) / enemy.config.speed
-
-    while timeDelta > timeToTarget:
-        # Move forward
-        curTime += timeToTarget
-        curPos = FpCellPos.fromCellPos(curTarget)
-        if curTargetIdx + 1 == len(enemy.path):
-            return None # Enemy will reach the end
+    def timeLeft(self) -> float:
+        """timeLeft returns how many seconds until this enemy reaches their destination."""
+        curTargetIdx = self.targetInPath
+        curTarget = FpCellPos.fromCellPos(self.path[curTargetIdx])
+        timeLeft = self.pos.dist(curTarget) / self.config.speed
         curTargetIdx += 1
-        curTarget = enemy.path[curTargetIdx]
-        timeToTarget = curPos.dist(curTarget) / enemy.config.speed
+
+        while curTargetIdx < len(self.path):
+            nextTarget = FpCellPos.fromCellPos(self.path[curTargetIdx])
+            timeLeft += curTarget.dist(nextTarget) / self.config.speed
+            curTarget = nextTarget
+            curTargetIdx += 1
+
+        return timeLeft
+
+    def posAtTime(self, curTime: float, targetTime: float) -> Optional[FpCellPos]:
         timeDelta = targetTime - curTime
+        if timeDelta < 0:
+            raise ValueError("Future times not supported.")
 
-    return curPos.interpolateTo(curTarget, timeDelta / timeToTarget)
+        curPos = self.pos
+        curTargetIdx = self.targetInPath
+        curTarget = self.path[curTargetIdx]
+        timeToTarget = curPos.dist(curTarget) / self.config.speed
 
-# TODO: Figure out a more principled way of doing this.
+        while timeDelta > timeToTarget:
+            # Move forward
+            curTime += timeToTarget
+            curPos = FpCellPos.fromCellPos(curTarget)
+            if curTargetIdx + 1 == len(self.path):
+                return None # Enemy will reach the end
+            curTargetIdx += 1
+            curTarget = self.path[curTargetIdx]
+            timeToTarget = curPos.dist(curTarget) / self.config.speed
+            timeDelta = targetTime - curTime
+
+        return curPos.interpolateTo(curTarget, timeDelta / timeToTarget)
+
 def getShotTarget(curTime: float, enemy: MonsterState, tower: TowerState, precision: float = 0.001) -> Optional[Tuple[FpCellPos, float]]:
     """getShotTarget iteratively calculates where and when a shot from tower should land to hit enemy."""
     towerPos = FpCellPos.fromCellPos(tower.pos)
 
-    def iterate(dist: float) -> Optional[Tuple[float, float]]:
+    # Set this up as a root finding problem. We want to find distance x s.t.
+    # f(x) = 0. Then we can apply a root-finding method.
+    # See: https://en.wikipedia.org/wiki/Root-finding_algorithms
+    def f(dist: float) -> Optional[float]:
         timeToHit = dist / tower.config.projectileSpeed
-        targetPos = enemyPosAtTime(curTime, curTime + timeToHit, enemy)
+        targetPos = enemy.posAtTime(curTime, curTime + timeToHit)
         if targetPos is None:
             return None
         newDist = towerPos.dist(targetPos)
-        return (newDist, targetPos)
+        return newDist - dist
 
-    prevDist = towerPos.dist(enemy.pos)
-    res = iterate(prevDist)
-    if res is None:
-        return None
-    (dist, targetPos) = res
-    delta = dist - prevDist
-
-    i = 0
-    while abs(delta) > precision:
-        prevDist = dist
-        prevDelta = delta
-
-        res = iterate(prevDist)
-        if res is None:
-            return None
-        (dist, targetPos) = res
-
-        # Compute the new delta
-        delta = dist - prevDist
-        if abs(delta) > abs(prevDelta):
-            return None # Enemy is outrunning the projectile
-        if (i > 0):
-            if (delta > 0 and prevDelta < 0) or (delta < 0 and prevDelta > 0):
-                # We're oscillating. Average this distance with the last.
-                dist = (dist + prevDist) / 2
-            else:
-                remainingIters = abs(delta) / abs(delta - prevDelta)
-                if remainingIters > 1:
-                    # Extrapolate
-                    dist = prevDist + (dist - prevDist) * remainingIters
-
-        i += 1
-        if i > 15:
-            raise Exception(f"getShotTarget reached {i} iterations")
-
-    timeToHit = dist / tower.config.projectileSpeed
-    return (targetPos, curTime + timeToHit)
+    return None
 
 @dataclass(frozen=True)
 class BattleCalcResults:
