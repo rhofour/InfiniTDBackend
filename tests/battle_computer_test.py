@@ -39,49 +39,49 @@ class TestEnemyPosAtTime(unittest.TestCase):
     def test_sameTime(self):
         expected = self.enemy.pos
 
-        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 2.0)
+        res = self.enemy.posInFuture(0.0)
 
         self.assertEqual(res, expected)
 
     def test_noNewTarget(self):
         expected = FpCellPos(FpRow(1.5), FpCol(0.0))
 
-        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 3.0)
+        res = self.enemy.posInFuture(1.0)
 
         self.assertEqual(res, expected)
 
     def test_atTargetInPath(self):
         expected = FpCellPos(FpRow(2.0), FpCol(0.0))
 
-        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 4.0)
+        res = self.enemy.posInFuture(2.0)
 
         self.assertEqual(res, expected)
 
     def test_atNextTargetInPath(self):
         expected = FpCellPos(FpRow(2.0), FpCol(3.0))
 
-        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 10.0)
+        res = self.enemy.posInFuture(8.0)
 
         self.assertEqual(res, expected)
 
     def test_betweenFartherTargets(self):
         expected = FpCellPos(FpRow(2.5), FpCol(3.0))
 
-        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 11.0)
+        res = self.enemy.posInFuture(9.0)
 
         self.assertEqual(res, expected)
 
     def test_exactlyAtEnd(self):
         expected = FpCellPos(FpRow(3.0), FpCol(3.0))
 
-        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 12.0)
+        res = self.enemy.posInFuture(10.0)
 
         self.assertEqual(res, expected)
 
     def test_pastEnd(self):
         expected = None
 
-        res = self.enemy.posAtTime(curTime = 2.0, targetTime = 100.0)
+        res = self.enemy.posInFuture(11.0)
 
         self.assertEqual(res, expected)
 
@@ -157,10 +157,11 @@ class GetShotTarget():
             lastFired = -100.0,
         )
 
-        res = getShotTarget(1.0, enemy, tower)
+        res = getShotTarget(enemy, tower)
         if res:
-            (target, targetTime) = res
-            enemyPos= enemy.posAtTime(1.0, targetTime)
+            (target, timeToHit) = res
+            timeToHit = target.dist(FpCellPos.fromCellPos(tower.pos)) / tower.config.projectileSpeed
+            enemyPos = enemy.posInFuture(timeToHit)
             self.assertIsNotNone(enemyPos)
             dist = enemyPos.dist(target) # pytype: disable=attribute-error
             self.assertAlmostEqual(dist, 0.0, places=2)
@@ -204,7 +205,7 @@ class GetShotTarget():
             lastFired = -100.0,
         )
 
-        res = getShotTarget(1.0, enemy, tower)
+        res = getShotTarget(enemy, tower)
         self.assertIsNone(res)
 
     @given(
@@ -247,7 +248,7 @@ class GetShotTarget():
             lastFired = -100.0,
         )
 
-        res = getShotTarget(1.0, enemy, tower)
+        res = getShotTarget(enemy, tower)
         self.assertIsNotNone(res)
 
     @given(
@@ -289,7 +290,7 @@ class GetShotTarget():
             lastFired = -100.0,
         )
 
-        res = getShotTarget(1.0, enemy, tower)
+        res = getShotTarget(enemy, tower)
         self.assertIsNotNone(res)
 
 class TestBattleComputerEvents(unittest.TestCase):

@@ -47,8 +47,7 @@ class MonsterState:
 
         return timeLeft
 
-    def posAtTime(self, curTime: float, targetTime: float) -> Optional[FpCellPos]:
-        timeDelta = targetTime - curTime
+    def posInFuture(self, timeDelta: float) -> Optional[FpCellPos]:
         if timeDelta < 0:
             raise ValueError("Future times not supported.")
 
@@ -59,18 +58,17 @@ class MonsterState:
 
         while timeDelta > timeToTarget:
             # Move forward
-            curTime += timeToTarget
+            timeDelta -= timeToTarget
             curPos = FpCellPos.fromCellPos(curTarget)
             if curTargetIdx + 1 == len(self.path):
                 return None # Enemy will reach the end
             curTargetIdx += 1
             curTarget = self.path[curTargetIdx]
             timeToTarget = curPos.dist(curTarget) / self.config.speed
-            timeDelta = targetTime - curTime
 
         return curPos.interpolateTo(curTarget, timeDelta / timeToTarget)
 
-def getShotTarget(curTime: float, enemy: MonsterState, tower: TowerState, precision: float = 0.001) -> Optional[Tuple[FpCellPos, float]]:
+def getShotTarget(enemy: MonsterState, tower: TowerState, precision: float = 0.001) -> Optional[Tuple[FpCellPos, float]]:
     """getShotTarget iteratively calculates where and when a shot from tower should land to hit enemy."""
     towerPos = FpCellPos.fromCellPos(tower.pos)
 
@@ -79,7 +77,7 @@ def getShotTarget(curTime: float, enemy: MonsterState, tower: TowerState, precis
     # See: https://en.wikipedia.org/wiki/Root-finding_algorithms
     def f(dist: float) -> Optional[float]:
         timeToHit = dist / tower.config.projectileSpeed
-        targetPos = enemy.posAtTime(curTime, curTime + timeToHit)
+        targetPos = enemy.posInFuture(timeToHit)
         if targetPos is None:
             return None
         newDist = towerPos.dist(targetPos)
