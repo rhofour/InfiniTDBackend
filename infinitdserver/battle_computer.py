@@ -68,23 +68,6 @@ class MonsterState:
 
         return curPos.interpolateTo(curTarget, timeDelta / timeToTarget)
 
-def getShotTarget(enemy: MonsterState, tower: TowerState, precision: float = 0.001) -> Optional[Tuple[FpCellPos, float]]:
-    """getShotTarget iteratively calculates where and when a shot from tower should land to hit enemy."""
-    towerPos = FpCellPos.fromCellPos(tower.pos)
-
-    # Set this up as a root finding problem. We want to find distance x s.t.
-    # f(x) = 0. Then we can apply a root-finding method.
-    # See: https://en.wikipedia.org/wiki/Root-finding_algorithms
-    def f(dist: float) -> Optional[float]:
-        timeToHit = dist / tower.config.projectileSpeed
-        targetPos = enemy.posInFuture(timeToHit)
-        if targetPos is None:
-            return None
-        newDist = towerPos.dist(targetPos)
-        return newDist - dist
-
-    return None
-
 @dataclass(frozen=True)
 class BattleCalcResults:
     events: List[BattleEvent]
