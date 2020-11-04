@@ -32,42 +32,6 @@ class MonsterState:
     path: List[CellPos]
     targetInPath: int = 1
 
-    def timeLeft(self) -> float:
-        """timeLeft returns how many seconds until this enemy reaches their destination."""
-        curTargetIdx = self.targetInPath
-        curTarget = FpCellPos.fromCellPos(self.path[curTargetIdx])
-        timeLeft = self.pos.dist(curTarget) / self.config.speed
-        curTargetIdx += 1
-
-        while curTargetIdx < len(self.path):
-            nextTarget = FpCellPos.fromCellPos(self.path[curTargetIdx])
-            timeLeft += curTarget.dist(nextTarget) / self.config.speed
-            curTarget = nextTarget
-            curTargetIdx += 1
-
-        return timeLeft
-
-    def posInFuture(self, timeDelta: float) -> Optional[FpCellPos]:
-        if timeDelta < 0:
-            raise ValueError("Future times not supported.")
-
-        curPos = self.pos
-        curTargetIdx = self.targetInPath
-        curTarget = self.path[curTargetIdx]
-        timeToTarget = curPos.dist(curTarget) / self.config.speed
-
-        while timeDelta > timeToTarget:
-            # Move forward
-            timeDelta -= timeToTarget
-            curPos = FpCellPos.fromCellPos(curTarget)
-            if curTargetIdx + 1 == len(self.path):
-                return None # Enemy will reach the end
-            curTargetIdx += 1
-            curTarget = self.path[curTargetIdx]
-            timeToTarget = curPos.dist(curTarget) / self.config.speed
-
-        return curPos.interpolateTo(curTarget, timeDelta / timeToTarget)
-
 @dataclass(frozen=True)
 class BattleCalcResults:
     events: List[BattleEvent]
