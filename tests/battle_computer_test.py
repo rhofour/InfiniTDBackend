@@ -56,15 +56,6 @@ class TestBattleComputerEvents(unittest.TestCase):
         battleground.towers.towers[2][2] = BgTowerState(TowerId(1))
         expectedEvents: List[BattleEvent] = [
             MoveEvent(
-                objType = ObjectType.MONSTER,
-                id = 0,
-                configId = ConfigId(0),
-                startPos = FpCellPos(FpRow(0), FpCol(0)),
-                destPos = FpCellPos(FpRow(5), FpCol(0)),
-                startTime = 0.0,
-                endTime = 2.5,
-            ),
-            MoveEvent(
                 objType = ObjectType.PROJECTILE,
                 id = 1,
                 configId = ConfigId(0),
@@ -73,10 +64,19 @@ class TestBattleComputerEvents(unittest.TestCase):
                 startTime = 0.0,
                 endTime = 1.0,
             ),
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(0), FpCol(0)),
+                destPos = FpCellPos(FpRow(5), FpCol(0)),
+                startTime = 0.0,
+                endTime = 2.5,
+            ),
             DamageEvent(
                 id = 0,
                 startTime = 1.0,
-                health = -10.0,
+                health = -5.0,
             ),
             DeleteEvent(
                 objType = ObjectType.PROJECTILE,
@@ -87,6 +87,108 @@ class TestBattleComputerEvents(unittest.TestCase):
                 objType = ObjectType.MONSTER,
                 id = 0,
                 startTime = 1.0,
+            ),
+        ]
+
+        results = battleComputer.computeBattle(battleground, [ConfigId(0)])
+
+        self.assertListEqual(expectedEvents, results.events)
+
+    def test_oneMonsterTwoShots(self):
+        battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
+        battleground = BattlegroundState.empty(test_data.gameConfig)
+        battleground.towers.towers[2][0] = BgTowerState(TowerId(0))
+        # Fences to fix the path of the enemy
+        battleground.towers.towers[0][1] = BgTowerState(TowerId(2))
+        battleground.towers.towers[4][1] = BgTowerState(TowerId(2))
+        expectedEvents: List[BattleEvent] = [
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(0.0), FpCol(0.0)),
+                destPos = FpCellPos(FpRow(1.0), FpCol(0.0)),
+                startTime = 0.0,
+                endTime = 0.5,
+            ),
+            MoveEvent(
+                objType = ObjectType.PROJECTILE,
+                id = 1,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(2.0), FpCol(0.0)),
+                destPos = FpCellPos(FpRow(1.0), FpCol(0.0)),
+                startTime = 0.0,
+                endTime = 0.5,
+            ),
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(1.0), FpCol(0.0)),
+                destPos = FpCellPos(FpRow(1.0), FpCol(1.0)),
+                startTime = 0.5,
+                endTime = 1.0,
+            ),
+            DamageEvent(
+                id = 0,
+                startTime = 0.5,
+                health = 5.0,
+            ),
+            DeleteEvent(
+                objType = ObjectType.PROJECTILE,
+                id = 1,
+                startTime = 0.5,
+            ),
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(1.0), FpCol(1.0)),
+                destPos = FpCellPos(FpRow(3.0), FpCol(1.0)),
+                startTime = 1.0,
+                endTime = 2.0,
+            ),
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(3.0), FpCol(1.0)),
+                destPos = FpCellPos(FpRow(3.0), FpCol(0.0)),
+                startTime = 2.0,
+                endTime = 2.5,
+            ),
+            MoveEvent(
+                objType = ObjectType.PROJECTILE,
+                id = 2,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(2.0), FpCol(0.0)),
+                destPos = FpCellPos(FpRow(3.0), FpCol(0.0)),
+                startTime = 2.0,
+                endTime = 2.5,
+            ),
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(3.0), FpCol(0.0)),
+                destPos = FpCellPos(FpRow(5.0), FpCol(0.0)),
+                startTime = 2.5,
+                endTime = 3.5,
+            ),
+            DamageEvent(
+                id = 0,
+                startTime = 2.5,
+                health = 0.0,
+            ),
+            DeleteEvent(
+                objType = ObjectType.PROJECTILE,
+                id = 2,
+                startTime = 2.5,
+            ),
+            DeleteEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                startTime = 2.5,
             ),
         ]
 

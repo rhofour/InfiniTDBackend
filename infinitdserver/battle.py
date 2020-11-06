@@ -39,7 +39,7 @@ class FpCellPos:
                 FpCol(self.col * (1 - amount) + other.col * amount))
 
     def prettify(self, precision: int):
-        return FpCellPos(FpRow(round(self.row, precision)), FpCol(round(self.col, precision)))
+        return FpCellPos(FpRow(round(float(self.row), precision)), FpCol(round(float(self.col), precision)))
 
 @unique
 class ObjectType(Enum):

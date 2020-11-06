@@ -307,7 +307,12 @@ class BattleComputer:
             'DamageEvent': 1,
             'DeleteEvent': 2,
         }
+        def eventToSortKeys(event: BattleEvent):
+            try:
+                return (event.startTime, eventOrdering[event.__class__.__name__], event.endTime)
+            except AttributeError:
+                return (event.startTime, eventOrdering[event.__class__.__name__], -1)
         return BattleCalcResults(
-                events = sorted(events, key=lambda ev: (ev.startTime, eventOrdering[ev.__class__.__name__])),
+                events = sorted(events, key=eventToSortKeys),
                 results = battleResults,
             )
