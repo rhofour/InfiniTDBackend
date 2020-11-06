@@ -179,7 +179,7 @@ class BattleComputer:
                             monster.pos = FpCellPos(FpRow(dest.row - remainingDist), FpCol(dest.col))
                         timeToNewDest = abs(newDest.row - monster.pos.row) / monster.config.speed
 
-                    endTime = newTime + timeToNewDest
+                    endTime = gameTime + timeToNewDest
                     newEvent = MoveEvent(
                         objType = ObjectType.MONSTER,
                         id = monster.id,
