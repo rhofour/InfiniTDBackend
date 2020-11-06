@@ -209,11 +209,6 @@ class TestBattleComputerEvents(unittest.TestCase):
                 startTime = 0.5,
                 endTime = 1.0,
             ),
-            DeleteEvent(
-                objType = ObjectType.MONSTER,
-                id = 0,
-                startTime = 1.0,
-            ),
             MoveEvent(
                 objType = ObjectType.MONSTER,
                 id = 1,
@@ -222,6 +217,11 @@ class TestBattleComputerEvents(unittest.TestCase):
                 destPos = FpCellPos(FpRow(0), FpCol(0)),
                 startTime = 1.0,
                 endTime = 1.5,
+            ),
+            DeleteEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                startTime = 1.0,
             ),
             DeleteEvent(
                 objType = ObjectType.MONSTER,
