@@ -1,10 +1,10 @@
 from infinitdserver.game_config import *
 
-playfieldConfig4row3col = PlayfieldConfig(
-    numRows = 4,
+playfieldConfig6row3col = PlayfieldConfig(
+    numRows = 6,
     numCols = 3,
     monsterEnter = CellPos(Row(0), Col(0)),
-    monsterExit = CellPos(Row(3), Col(0)),
+    monsterExit = CellPos(Row(5), Col(0)),
     backgroundId = 0,
     pathId = 0,
     pathStartId = 0,
@@ -93,7 +93,7 @@ battleBonuses = [
     ]
 
 gameConfigData = GameConfigData(
-    playfield = playfieldConfig4row3col,
+    playfield = playfieldConfig6row3col,
     tiles = [],
     towers = towers,
     projectiles = projectiles,

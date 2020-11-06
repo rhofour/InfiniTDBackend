@@ -69,7 +69,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
     def test_outOfBounds(self):
         with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/build/bob/4/2", method="POST", body='{"towerId": 0}')
+            resp = self.fetch("/build/bob/6/2", method="POST", body='{"towerId": 0}')
             resp2 = self.fetch("/build/bob/3/3", method="POST", body='{"towerId": 0}')
         battleground = self.game.getBattleground("bob")
 
