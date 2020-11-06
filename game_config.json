@@ -58,9 +58,11 @@
     }
   ],
   "projectiles": [
-    "id": 0,
-    "url": "static/CrappyBullet.png",
-    "size": 32
+    {
+      "id": 0,
+      "url": "static/CrappyBullet.png",
+      "size": 32
+    }
   ],
   "monsters": [
     {

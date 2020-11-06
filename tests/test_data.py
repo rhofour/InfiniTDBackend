@@ -40,9 +40,9 @@ towers = [
         name = "Expensive Tower",
         cost = 101,
         firingRate = 1.0,
-        range = 10.0,
-        damage = 5.0,
-        projectileSpeed = 3.0,
+        range = 2.0,
+        damage = 15.0,
+        projectileSpeed = 2.0,
         projectileId = ConfigId(0),
         ),
     TowerConfig(

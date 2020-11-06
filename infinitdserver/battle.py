@@ -38,6 +38,9 @@ class FpCellPos:
                 FpRow(self.row * (1 - amount) + other.row * amount),
                 FpCol(self.col * (1 - amount) + other.col * amount))
 
+    def prettify(self, precision: int):
+        return FpCellPos(FpRow(round(self.row, precision)), FpCol(round(self.col, precision)))
+
 @unique
 class ObjectType(Enum):
     MONSTER = auto()
@@ -47,6 +50,7 @@ class ObjectType(Enum):
 class EventType(Enum):
     MOVE = auto()
     DELETE = auto()
+    DAMAGE = auto()
 
 @attr.s(frozen=True, auto_attribs=True)
 class MoveEvent:
@@ -59,6 +63,17 @@ class MoveEvent:
     endTime: float # When this movement ends
     eventType: EventType = EventType.MOVE
 
+    def prettify(self, precision):
+        return MoveEvent(
+            objType = self.objType,
+            id = self.id,
+            configId = self.configId,
+            startPos = self.startPos.prettify(precision),
+            destPos = self.destPos.prettify(precision),
+            startTime = round(self.startTime, precision),
+            endTime = round(self.endTime, precision)
+        )
+
 @attr.s(frozen=True, auto_attribs=True)
 class DeleteEvent:
     objType: ObjectType
@@ -66,7 +81,28 @@ class DeleteEvent:
     startTime: float
     eventType: EventType = EventType.DELETE
 
-BattleEvent = Union[MoveEvent, DeleteEvent]
+    def prettify(self, precision):
+        return DeleteEvent(
+            objType = self.objType,
+            id = self.id,
+            startTime = round(self.startTime, precision),
+        )
+
+@attr.s(frozen=True, auto_attribs=True)
+class DamageEvent:
+    id: int
+    startTime: float
+    health: float
+    eventType: EventType = EventType.DAMAGE
+
+    def prettify(self, precision):
+        return DamageEvent(
+            id = self.id,
+            startTime = round(self.startTime, precision),
+            health = self.health,
+        )
+
+BattleEvent = Union[MoveEvent, DeleteEvent, DamageEvent]
 
 def decodeEvent(eventObj: Dict, t) -> BattleEvent:
     if "eventType" not in eventObj:
