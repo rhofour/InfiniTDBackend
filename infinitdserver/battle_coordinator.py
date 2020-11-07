@@ -50,7 +50,7 @@ class StreamingBattle:
         await self.updateFn(update)
         self.sentUpdates += 1
 
-    async def start(self, battle: Battle, requestId: int = -1):
+    async def start(self, battle: Battle, resultsCallback: Callable[[BattleResults], Awaitable[None]], requestId: int = -1):
         if not battle.events:
             return # Do nothing if events is empty
         self.logger.info("BattleCoordinator", requestId, f"Starting battle {battle.name} with {len(battle.events)} events")
@@ -94,21 +94,25 @@ class StreamingBattle:
             await self.sendUpdate(event)
             self.pastEvents.append(self.futureEvents.popleft())
 
-        if (self.sentUpdates != len(battle.events) + 2): # Two extra for the metadata
+        # Prevent new listeners from getting all the events now that the battle
+        # is over.
+        self.startTime = -1.0
+
+        expectedBattleUpdates = len(battle.events) + 2 # Two extra for the metadata
+        if (self.sentUpdates > expectedBattleUpdates):
             self.logger.error("BattleCoordinator", requestId,
                     f"Battle had {len(battle.events)} events, but sent {self.sentUpdates} updates.")
-        await self.sendResults(battle.results)
-
-    async def sendResults(self, results: BattleResults):
-        await self.updateFn(results)
-        self.startTime = -1.0
-        self.futureEvents = deque()
-        self.pastEvents = []
+        elif (self.sentUpdates == expectedBattleUpdates):
+            # This means the battle ran all the way out.
+            await resultsCallback(battle.results)
+            await self.updateFn(battle.results)
+        else:
+            # Stop the battle without sending results.
+            await self.sendUpdate(BattleMetadata(status = BattleStatus.PENDING, name = battle.name))
 
     async def stop(self):
         self.startTime = -1.0
         self.futureEvents = deque()
-        self.pastEvents = []
         await self.updateFn(BattleMetadata(status = BattleStatus.PENDING, name = self.name)) # Send an update to halt the battle.
 
     def join(self) -> List[Union[BattleEvent, BattleMetadata]]:
@@ -133,15 +137,23 @@ class BattleCoordinator:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         return self.battles[name]
 
-    def startBattle(self, name: str, battle: Battle, callback: Callable[[], Awaitable[None]],
-            handler: str = "BattleCoordinator", requestId = -1):
+    def startBattle(self, name: str, battle: Battle, resultsCallback: Callable[[BattleResults], Awaitable[None]],
+            endCallback: Callable[[], Awaitable[None]], handler: str = "BattleCoordinator", requestId = -1):
+        """startBattle triggers the start of a live-streamed battle.
+
+        Arguments:
+        name: str -- The name of the battle.
+        battle: Battle -- The battle to stream.
+        resultsCallback: Callable[[BattleResults], Awaitable[None]] -- A callback to handle the results of a completed battle.
+        endCallback: Callable[[], Awaitable[None]] -- A callback called whenever a battle ends whether it's completed or not.
+        """
         if name not in self.battles:
             self.logger.info(handler, requestId, f"Coordinator is making a new StreamingBattle for {name}")
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         self.logger.info(handler, requestId, f"Coordinator is starting a StreamingBattle for {name}")
         async def startBattleThenCallCallback():
-            await self.battles[name].start(battle, requestId)
-            await callback()
+            await self.battles[name].start(battle, resultsCallback = resultsCallback, requestId = requestId)
+            await endCallback()
         loop = asyncio.get_running_loop()
         loop.create_task(startBattleThenCallCallback())
 

@@ -2,7 +2,7 @@ import asyncio
 from typing import List, Optional, Awaitable, Callable
 import math
 
-from infinitdserver.battle import Battle
+from infinitdserver.battle import Battle, BattleResults
 from infinitdserver.battle_computer import BattleCalculationException
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
 from infinitdserver.battle_coordinator import BattleCoordinator
@@ -177,7 +177,30 @@ class Game:
         self._db.enterTransaction()
         async def setUserNotInBattleCallback():
             await self._db.setUserNotInBattle(uid=user.uid, name=user.name)
-        self.battleCoordinator.startBattle(user.name, battle, setUserNotInBattleCallback, handler = handler, requestId = requestId)
+        async def updateWithBattleResults(results: BattleResults):
+            awaitables = []
+            userContext = self._db.getMutableUserContext(user.uid, lambda x: awaitables.append(x))
+            if userContext is None:
+                raise ValueError(f"UID {user.uid} doesn't correspond to a user.")
+            with userContext as futureUser:
+                # Ensure user is in a battle when this is called.
+                if not futureUser.inBattle:
+                    raise ValueError(f"User {user.name} isn't in a battle.")
+                if results.timeSecs <= 0:
+                    raise ValueError(f"Battle results has non-positive time: {results.timeSecs}.")
+
+                # Calculate new gold per minute
+                minutes = max(1.0, results.timeSecs / 60.0)
+                goldPerMinute = round(results.reward / minutes, ndigits = 1)
+
+                futureUser.addGold(goldPerMinute)
+                futureUser.goldPerMinute = goldPerMinute
+
+            await asyncio.wait(awaitables)
+        self.battleCoordinator.startBattle(user.name, battle,
+                resultsCallback = updateWithBattleResults,
+                endCallback = setUserNotInBattleCallback,
+                handler = handler, requestId = requestId)
 
     def getOrMakeRecordedBattle(self, attackerName: str, defenderName: str, handler: str, requestId: int) -> Battle:
         self._db.enterTransaction()

@@ -55,6 +55,10 @@ class MutableUser:
         self.battleground = self.originalBattleground
         self._originalBattleground = None
 
+    def addGold(self, gold):
+        self.gold += gold
+        self.accumulatedGold += gold
+
     def __getattr__(self, name):
         if name == "user": # Make user property read-only
             return self._user
@@ -63,6 +67,5 @@ class MutableUser:
     def __setattr__(self, name, value):
         try:
             setattr(self._user, name, value)
-            #super(MutableUser, self).__setattr__(name, value)
         except AttributeError as e:
             raise e

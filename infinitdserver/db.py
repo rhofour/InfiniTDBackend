@@ -1,10 +1,11 @@
 import asyncio
+from contextlib import contextmanager
 import math
 import sqlite3
 import json
 from typing import Optional, List, Callable, Awaitable
 
-from infinitdserver.battle import Battle
+from infinitdserver.battle import Battle, BattleResults
 from infinitdserver.battle_computer import BattleComputer, BattleCalculationException
 from infinitdserver.battle_coordinator import BattleCoordinator
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
@@ -308,6 +309,14 @@ class Db:
     def leaveTransaction(self):
         assert self.conn.in_transaction is True
         self.conn.commit()
+
+    @contextmanager
+    def transactionContext(self):
+        self.enterTransaction()
+        try:
+            yield
+        finally:
+            self.exitTransaction()
 
     def getMutableUserContext(self, uid: str, addAwaitable) -> Optional['MutableUserContext']:
         user = self.getUnfrozenUserByUid(uid)
