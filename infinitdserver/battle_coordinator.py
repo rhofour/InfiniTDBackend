@@ -40,23 +40,34 @@ class StreamingBattle:
     pastEvents: List[BattleEvent] = []
     futureEvents: Deque[BattleEvent]
     updateFn: Callable[[BattleUpdate], Awaitable[None]]
+    sentUpdates : int = 0
 
     def __init__(self, updateFn: Callable[[BattleUpdate], Awaitable[None]]):
         self.updateFn = updateFn
+        self.logger = Logger.getDefault()
 
-    async def start(self, battle: Battle):
+    async def sendUpdate(self, update: BattleUpdate):
+        await self.updateFn(update)
+        self.sentUpdates += 1
+
+    async def start(self, battle: Battle, requestId: int = -1):
         if not battle.events:
             return # Do nothing if events is empty
+        self.logger.info("BattleCoordinator", requestId, f"Starting battle {battle.name} with {len(battle.events)} events")
         self.futureEvents = deque(battle.events)
         self.pastEvents = []
         self.name = battle.name
+        self.sentUpdates = 0
+
+        # Let the client know a new battle is coming.
+        await self.sendUpdate(BattleMetadata(status = BattleStatus.PENDING, name = battle.name))
 
         # Send all events occurring in the buffer window
         numInitialEvents = 0
         for event in self.futureEvents:
             if event.startTime > self.BUFFER_TIME_SECS:
                 break
-            await self.updateFn(event)
+            await self.sendUpdate(event)
             numInitialEvents += 1
 
         # Move the initial events from futureEvents to the pastEvents
@@ -66,20 +77,26 @@ class StreamingBattle:
 
         # Start running
         self.startTime = time.time()
-        await self.updateFn(LiveBattleMetadata(status = BattleStatus.LIVE, name = battle.name, time = 0.0))
+        await self.sendUpdate(LiveBattleMetadata(status = BattleStatus.LIVE, name = battle.name, time = 0.0))
 
         while self.futureEvents:
             elapsedTime = time.time() - self.startTime
             event: BattleEvent = self.futureEvents[0]
             timeToEvent = event.startTime - elapsedTime
+            if timeToEvent < 0:
+                # We've fallen behind which should never happen.
+                self.logger.error("BattleCoordinator", requestId, f"Found negative timeToEvent: {timeToEvent}")
             if timeToEvent > self.BUFFER_TIME_SECS:
                 await asyncio.sleep(timeToEvent - self.BUFFER_TIME_SECS + 0.0001)
                 continue
 
             # Send the event
-            await self.updateFn(event)
+            await self.sendUpdate(event)
             self.pastEvents.append(self.futureEvents.popleft())
 
+        if (self.sentUpdates != len(battle.events) + 2): # Two extra for the metadata
+            self.logger.error("BattleCoordinator", requestId,
+                    f"Battle had {len(battle.events)} events, but sent {self.sentUpdates} updates.")
         await self.sendResults(battle.results)
 
     async def sendResults(self, results: BattleResults):
@@ -123,7 +140,7 @@ class BattleCoordinator:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         self.logger.info(handler, requestId, f"Coordinator is starting a StreamingBattle for {name}")
         async def startBattleThenCallCallback():
-            await self.battles[name].start(battle)
+            await self.battles[name].start(battle, requestId)
             await callback()
         loop = asyncio.get_running_loop()
         loop.create_task(startBattleThenCallCallback())

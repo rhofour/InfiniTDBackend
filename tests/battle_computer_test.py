@@ -50,7 +50,7 @@ class TestBattleComputerEvents(unittest.TestCase):
 
         self.assertListEqual(expectedEvents, results.events)
         expectedBattleResults = BattleResults(
-            monstersDefeated = {0: (0, 1)},
+            monstersDefeated = {ConfigId(0): (0, 1)},
             bonuses = [ConfigId(0)],
             reward = 1,
             timeSecs = 2.51
@@ -101,7 +101,7 @@ class TestBattleComputerEvents(unittest.TestCase):
 
         self.assertListEqual(expectedEvents, results.events)
         expectedBattleResults = BattleResults(
-            monstersDefeated = {0: (1, 1)},
+            monstersDefeated = {ConfigId(0): (1, 1)},
             bonuses = [ConfigId(0), ConfigId(1)],
             reward = 22,
             timeSecs = 1.0
@@ -185,7 +185,7 @@ class TestBattleComputerEvents(unittest.TestCase):
 
         self.assertListEqual(expectedEvents, results.events)
         expectedBattleResults = BattleResults(
-            monstersDefeated = {0: (1, 1), 2: (1, 1)},
+            monstersDefeated = {ConfigId(0): (1, 1), 2: (1, 1)},
             bonuses = [ConfigId(0), ConfigId(1)],
             reward = 32,
             timeSecs = 2.49
@@ -294,7 +294,7 @@ class TestBattleComputerEvents(unittest.TestCase):
 
         self.assertListEqual(expectedEvents, results.events)
         expectedBattleResults = BattleResults(
-            monstersDefeated = {0: (1, 1)},
+            monstersDefeated = {ConfigId(0): (1, 1)},
             bonuses = [ConfigId(0), ConfigId(1)],
             reward = 22,
             timeSecs = 2.5

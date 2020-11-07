@@ -179,7 +179,7 @@ class Game:
         self._db.enterTransaction()
         async def setUserNotInBattleCallback():
             await self._db.setUserNotInBattle(uid=user.uid, name=user.name)
-        self.battleCoordinator.startBattle(user.name, battle, setUserNotInBattleCallback)
+        self.battleCoordinator.startBattle(user.name, battle, setUserNotInBattleCallback, handler = handler, requestId = requestId)
 
     def getOrMakeRecordedBattle(self, attackerName: str, defenderName: str, handler: str, requestId: int) -> Battle:
         self._db.enterTransaction()

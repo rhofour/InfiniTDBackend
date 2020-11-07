@@ -62,7 +62,7 @@ class BattleComputer:
                     TowerState(
                         id = nextId,
                         config = config,
-                        pos = FpCellPos(float(row), float(col)),
+                        pos = FpCellPos(FpRow(row), FpCol(col)),
                         lastFired = -(1 / config.firingRate) if config.firingRate > 0 else -1,
                     )
                 )
@@ -253,7 +253,6 @@ class BattleComputer:
                 if target:
                     dist = target.pos.dist(tower.pos)
                     shotDuration = dist / tower.config.projectileSpeed
-                    print(f"target: {target} dist: {dist} shotDuration: {shotDuration}")
 
                     # Round here so tiny FP errors don't lead to a battle calculation exception.
                     tower.lastFired = round(gameTime - shotDuration, EVENT_PRECISION)
@@ -289,16 +288,13 @@ class BattleComputer:
                     if target.health <= 0:
                         prevMonstersDefeatedState = monstersDefeated[target.config.id]
                         monstersDefeated[target.config.id] = (prevMonstersDefeatedState[0] + 1, prevMonstersDefeatedState[1])
-                        print(f"target: {target} new monstersDefeated: {monstersDefeated}")
                         deleteTargetEvent = DeleteEvent(
                             objType = ObjectType.MONSTER,
                             id = target.id,
                             startTime = gameTime,
                         )
                         events.append(deleteTargetEvent)
-                        print(f"Removing {target}")
                         spawnedMonsters.remove(target)
-                        print(f"Spawned monsters: {spawnedMonsters}")
                     nextId += 1
 
             ticks += 1
@@ -316,7 +312,7 @@ class BattleComputer:
         }
         def eventToSortKeys(event: BattleEvent):
             try:
-                return (event.startTime, eventOrdering[event.__class__.__name__], event.endTime)
+                return (event.startTime, eventOrdering[event.__class__.__name__], event.endTime) # pytype: disable=attribute-error
             except AttributeError:
                 return (event.startTime, eventOrdering[event.__class__.__name__], -1)
         return BattleCalcResults(
