@@ -36,6 +36,7 @@ class PlayfieldConfig:
     pathId: int
     pathStartId: int
     pathEndId: int
+    tileSize: int
 
 @attr.s(frozen=True, auto_attribs=True)
 class IdentifiedImage:

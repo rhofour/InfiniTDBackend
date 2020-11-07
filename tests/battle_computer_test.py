@@ -108,6 +108,90 @@ class TestBattleComputerEvents(unittest.TestCase):
         )
         self.assertEqual(expectedBattleResults, results.results)
 
+    def test_twoMonsterTwoShots(self):
+        battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
+        battleground = BattlegroundState.empty(test_data.gameConfig)
+        battleground.towers.towers[2][2] = BgTowerState(TowerId(1))
+        expectedEvents: List[BattleEvent] = [
+            MoveEvent(
+                objType = ObjectType.PROJECTILE,
+                id = 2,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(2.0), FpCol(2.0)),
+                destPos = FpCellPos(FpRow(2.0), FpCol(0.0)),
+                startTime = 0.0,
+                endTime = 1.0,
+            ),
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(0.0), FpCol(0.0)),
+                destPos = FpCellPos(FpRow(5.0), FpCol(0.0)),
+                startTime = 0.0,
+                endTime = 2.5,
+            ),
+            MoveEvent(
+                objType = ObjectType.MONSTER,
+                id = 1,
+                configId = ConfigId(2),
+                startPos = FpCellPos(FpRow(0.0), FpCol(0.0)),
+                destPos = FpCellPos(FpRow(5.0), FpCol(0.0)),
+                startTime = 0.5,
+                endTime = 5.5,
+            ),
+            DamageEvent(
+                id = 0,
+                startTime = 1.0,
+                health = -5.0,
+            ),
+            DeleteEvent(
+                objType = ObjectType.PROJECTILE,
+                id = 2,
+                startTime = 1.0,
+            ),
+            DeleteEvent(
+                objType = ObjectType.MONSTER,
+                id = 0,
+                startTime = 1.0,
+            ),
+            MoveEvent(
+                objType = ObjectType.PROJECTILE,
+                id = 3,
+                configId = ConfigId(0),
+                startPos = FpCellPos(FpRow(2.0), FpCol(2.0)),
+                destPos = FpCellPos(FpRow(1.99), FpCol(0.0)),
+                startTime = 1.49,
+                endTime = 2.49,
+            ),
+            DamageEvent(
+                id = 1,
+                startTime = 2.49,
+                health = 0.0,
+            ),
+            DeleteEvent(
+                objType = ObjectType.PROJECTILE,
+                id = 3,
+                startTime = 2.49,
+            ),
+            DeleteEvent(
+                objType = ObjectType.MONSTER,
+                id = 1,
+                startTime = 2.49,
+            ),
+        ]
+
+        results = battleComputer.computeBattle(battleground, [ConfigId(0), ConfigId(2)])
+
+        self.assertListEqual(expectedEvents, results.events)
+        expectedBattleResults = BattleResults(
+            monstersDefeated = {0: (1, 1), 2: (1, 1)},
+            bonuses = [ConfigId(0), ConfigId(1)],
+            reward = 32,
+            timeSecs = 2.49
+        )
+        self.assertEqual(expectedBattleResults, results.results)
+
     def test_oneMonsterTwoShots(self):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
         battleground = BattlegroundState.empty(test_data.gameConfig)

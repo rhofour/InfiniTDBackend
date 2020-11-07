@@ -13,7 +13,8 @@
     "backgroundId": 0,
     "pathId": 1,
     "pathStartId": 2,
-    "pathEndId": 3
+    "pathEndId": 3,
+    "tileSize": 128
   },
   "tiles": [
     {

@@ -69,7 +69,8 @@ class BattleComputer:
                 nextId += 1
         return towerStates
 
-    def selectTarget(self, tower: TowerState, enemies: Sequence[MonsterState]) -> Optional[MonsterState]:
+    @staticmethod
+    def selectTarget(tower: TowerState, enemies: Sequence[MonsterState]) -> Optional[MonsterState]:
         farthestEnemy = None
 
         if tower.firingRadius <= 0:
@@ -248,10 +249,11 @@ class BattleComputer:
                     tower.firingRadius = round(max(0, min(tower.config.range, timeSinceAbleToFire * tower.config.projectileSpeed)), EVENT_PRECISION)
 
                 # Fire at the farthest enemy within our firing radius.
-                target = self.selectTarget(tower, spawnedMonsters)
+                target = BattleComputer.selectTarget(tower, spawnedMonsters)
                 if target:
                     dist = target.pos.dist(tower.pos)
                     shotDuration = dist / tower.config.projectileSpeed
+                    print(f"target: {target} dist: {dist} shotDuration: {shotDuration}")
 
                     # Round here so tiny FP errors don't lead to a battle calculation exception.
                     tower.lastFired = round(gameTime - shotDuration, EVENT_PRECISION)
@@ -287,13 +289,16 @@ class BattleComputer:
                     if target.health <= 0:
                         prevMonstersDefeatedState = monstersDefeated[target.config.id]
                         monstersDefeated[target.config.id] = (prevMonstersDefeatedState[0] + 1, prevMonstersDefeatedState[1])
+                        print(f"target: {target} new monstersDefeated: {monstersDefeated}")
                         deleteTargetEvent = DeleteEvent(
                             objType = ObjectType.MONSTER,
                             id = target.id,
                             startTime = gameTime,
                         )
                         events.append(deleteTargetEvent)
-                        spawnedMonsters.remove(monster)
+                        print(f"Removing {target}")
+                        spawnedMonsters.remove(target)
+                        print(f"Spawned monsters: {spawnedMonsters}")
                     nextId += 1
 
             ticks += 1

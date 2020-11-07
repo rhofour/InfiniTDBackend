@@ -9,6 +9,7 @@ playfieldConfig6row3col = PlayfieldConfig(
     pathId = 0,
     pathStartId = 0,
     pathEndId = 0,
+    tileSize = 128,
     )
 
 playfieldConfig2row2col = PlayfieldConfig(
@@ -20,6 +21,7 @@ playfieldConfig2row2col = PlayfieldConfig(
     pathId = 0,
     pathStartId = 0,
     pathEndId = 0,
+    tileSize = 128,
     )
 
 towers = [
@@ -78,8 +80,15 @@ monsters = [
             url = Url(""),
             name = "Test Enemy 1",
             health = 8.0,
-            speed = 3.5,
+            speed = 3.0,
             bounty = 20.0),
+        MonsterConfig(
+            id = ConfigId(2),
+            url = Url(""),
+            name = "Test Enemy 2",
+            health = 15.0,
+            speed = 1.0,
+            bounty = 5.0),
     ]
 
 battleBonuses = [
