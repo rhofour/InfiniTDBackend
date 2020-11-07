@@ -70,7 +70,7 @@
       "id": 0,
       "url": "static/GraySlime.png",
       "name": "Lame Slime",
-      "health": 10.0,
+      "health": 15.0,
       "speed": 2.0,
       "bounty": 1.0
     },
@@ -78,7 +78,7 @@
       "id": 1,
       "url": "static/GreenSlime.png",
       "name": "Green Slime",
-      "health": 50.0,
+      "health": 150.0,
       "speed": 2.0,
       "bounty": 6.0
     },
@@ -86,7 +86,7 @@
       "id": 2,
       "url": "static/YellowSlime.png",
       "name": "Yellow Slime",
-      "health": 15.0,
+      "health": 25.0,
       "speed": 5.0,
       "bounty": 5.0
     }
@@ -108,7 +108,7 @@
         "name": "Perfect",
         "bonusType": 2,
         "bonusAmount": 1.5,
-        "conditions": [ { "percentDefeated": 1.0 } ]
+        "conditions": [ { "percentDefeated": 100.0 } ]
       }
     ]
   }
