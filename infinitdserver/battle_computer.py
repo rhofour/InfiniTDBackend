@@ -12,7 +12,7 @@ from infinitdserver.paths import PathMap, makePathMap, compressPath
 EVENT_PRECISION = 4 # Number of decimal places to use for events
 
 class BattleCalculationException(Exception):
-    def __init__(self, battleground: BattlegroundState, message: str):
+    def __init__(self, battleground: BattlegroundState, wave: List[ConfigId], message: str):
         self.battleground_json = battleground.to_json()
         self.message = message
 
@@ -124,7 +124,7 @@ class BattleComputer:
                     initialDist = abs(monster.pos.row - dest.row)
                     movingHorizontally = False
                 else:
-                    raise BattleCalculationException(battleground,
+                    raise BattleCalculationException(battleground, wave,
                             f"Monster {monster.id} isn't lined up with destination. Monster {monster.pos} Dest {dest}")
 
                 # Remaining dist is how far the enemy can move after reaching
@@ -169,7 +169,7 @@ class BattleComputer:
                     elif dest.col == float(newDest.col): # Moving vertically
                         movingHorizontally = False
                     else:
-                        raise BattleCalculationException(battleground,
+                        raise BattleCalculationException(battleground, wave,
                                 f"Monster {monster.id} isn't lined up with new destination. Monster {monster.pos} NewDest {dest}")
                     if movingHorizontally:
                         if newDest.col > dest.col:
@@ -257,7 +257,7 @@ class BattleComputer:
                     # Round here so tiny FP errors don't lead to a battle calculation exception.
                     tower.lastFired = round(gameTime - shotDuration, EVENT_PRECISION)
                     if (tower.lastFired < 0):
-                        raise BattleCalculationException(battleground,
+                        raise BattleCalculationException(battleground, wave,
                                 f"Calculated tower firing time < 0: {tower.lastFired}\nDist: {dist} Duration: {shotDuration} Game time: {gameTime}")
 
                     target.health -= tower.config.damage

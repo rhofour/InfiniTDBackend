@@ -168,8 +168,6 @@ class Game:
         try:
             battle = self._db.getOrMakeBattle(user.user, user.user, handler=handler, requestId=requestId)
         except BattleCalculationException as e:
-            self.logger.error(handler, requestId,
-                    f"Error calculating battle: {e}\nBattleground: {user.battleground}")
             self._db.enterTransaction()
             user.inBattle = False
             raise e
