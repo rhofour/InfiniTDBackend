@@ -40,7 +40,7 @@
       "url": "static/CrappyTowerSmall.png",
       "name": "Boring Tower",
       "cost": 1.0,
-      "firingRate": 2.0,
+      "firingRate": 1.0,
       "range": 300.0,
       "damage": 5.0,
       "projectileSpeed": 2.0,
@@ -51,9 +51,9 @@
       "url": "static/CrappyTower.png",
       "name": "Better Tower",
       "cost": 5.0,
-      "firingRate": 2.5,
-      "range": 500.0,
-      "damage": 15.0,
+      "firingRate": 1.5,
+      "range": 400.0,
+      "damage": 10.0,
       "projectileSpeed": 2.5,
       "projectileId": 0
     }
