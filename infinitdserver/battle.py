@@ -111,6 +111,8 @@ def decodeEvent(eventObj: Dict, t) -> BattleEvent:
         return cattr.structure(eventObj, MoveEvent)
     if eventObj["eventType"] == EventType.DELETE.value:
         return cattr.structure(eventObj, DeleteEvent)
+    if eventObj["eventType"] == EventType.DAMAGE.value:
+        return cattr.structure(eventObj, DamageEvent)
     raise ValueError(f"Unknown event type: {eventObj['eventType']}")
 
 cattr.register_structure_hook(BattleEvent, decodeEvent)

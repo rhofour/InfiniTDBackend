@@ -21,7 +21,7 @@ class TowerState:
     id: int
     config: TowerConfig
     pos: FpCellPos
-    lastFired: float = -math.inf
+    lastFired: float
     firingRadius: float = -1 # How far a projectile could have travelled at this point
 
 @dataclass(frozen=False)
@@ -57,11 +57,13 @@ class BattleComputer:
             for (col, maybeTower) in enumerate(towersCol):
                 if maybeTower is None:
                     continue
+                config = self.gameConfig.towers[maybeTower.id]
                 towerStates.append(
                     TowerState(
                         id = nextId,
-                        config = self.gameConfig.towers[maybeTower.id],
+                        config = config,
                         pos = FpCellPos(float(row), float(col)),
+                        lastFired = -(1 / config.firingRate) if config.firingRate > 0 else -1,
                     )
                 )
                 nextId += 1
@@ -74,7 +76,7 @@ class BattleComputer:
             return None
 
         for enemy in enemies:
-            if enemy.pos.dist(tower.pos) <= tower.firingRadius:
+            if round(enemy.pos.dist(tower.pos), EVENT_PRECISION) <= tower.firingRadius:
                 if farthestEnemy is None or enemy.distTraveled > farthestEnemy.distTraveled:
                     farthestEnemy = enemy
 
@@ -89,6 +91,7 @@ class BattleComputer:
         unspawnedMonsters = wave[::-1] # Reverse so we can pop off elements efficiently
         spawnedMonsters: Deque[MonsterState] = deque()
         gameTime = 0.0
+        ticks = 0
         rand = Random(self.startingSeed)
         monstersDefeated: MonstersDefeated = {}
         towers = self.getInitialTowerStates(battleground)
@@ -105,6 +108,7 @@ class BattleComputer:
 
         spawnPoint = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
         while unspawnedMonsters or spawnedMonsters:
+            gameTime = ticks * self.gameTickSecs
             # Update existing monster positions
             spawnOpen = True
             finishedMonsters = []
@@ -238,14 +242,10 @@ class BattleComputer:
 
             # Handle towers
             for tower in towers:
-                # Check if a tower can fire again
-                if tower.firingRadius == -1 and tower.config.firingRate > 0 and tower.lastFired + (1.0 / tower.config.firingRate) < gameTime:
-                    tower.firingRadius = 0
-
-                # Expand firing radius if it's not already at its maximum.
-                if tower.firingRadius >= 0 and tower.firingRadius < tower.config.range:
-                    tower.firingRadius = min(tower.config.range,
-                            tower.firingRadius + (tower.config.projectileSpeed * self.gameTickSecs))
+                # Update firing radius
+                if tower.config.firingRate > 0:
+                    timeSinceAbleToFire = gameTime - (tower.lastFired + (1.0 / tower.config.firingRate))
+                    tower.firingRadius = round(max(0, min(tower.config.range, timeSinceAbleToFire * tower.config.projectileSpeed)), EVENT_PRECISION)
 
                 # Fire at the farthest enemy within our firing radius.
                 target = self.selectTarget(tower, spawnedMonsters)
@@ -253,11 +253,11 @@ class BattleComputer:
                     dist = target.pos.dist(tower.pos)
                     shotDuration = dist / tower.config.projectileSpeed
 
-                    tower.lastFired = gameTime - shotDuration
+                    # Round here so tiny FP errors don't lead to a battle calculation exception.
+                    tower.lastFired = round(gameTime - shotDuration, EVENT_PRECISION)
                     if (tower.lastFired < 0):
                         raise BattleCalculationException(battleground,
                                 f"Calculated tower firing time < 0: {tower.lastFired}\nDist: {dist} Duration: {shotDuration} Game time: {gameTime}")
-                    tower.firingRadius = -1
 
                     target.health -= tower.config.damage
 
@@ -285,6 +285,8 @@ class BattleComputer:
                     )
                     events.append(damageEvent)
                     if target.health <= 0:
+                        prevMonstersDefeatedState = monstersDefeated[target.config.id]
+                        monstersDefeated[target.config.id] = (prevMonstersDefeatedState[0] + 1, prevMonstersDefeatedState[1])
                         deleteTargetEvent = DeleteEvent(
                             objType = ObjectType.MONSTER,
                             id = target.id,
@@ -294,11 +296,11 @@ class BattleComputer:
                         spawnedMonsters.remove(monster)
                     nextId += 1
 
-            gameTime += self.gameTickSecs
+            ticks += 1
 
         # Calculate bonuses using monstersDefeated
         battleResults = BattleResults.fromMonstersDefeated(
-                monstersDefeated, self.gameConfig, gameTime)
+                monstersDefeated, self.gameConfig, round(gameTime, EVENT_PRECISION))
         # Round the times in events
         events = [event.prettify(EVENT_PRECISION) for event in events]
         # Sort the events

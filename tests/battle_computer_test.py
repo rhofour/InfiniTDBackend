@@ -49,6 +49,13 @@ class TestBattleComputerEvents(unittest.TestCase):
         results = battleComputer.computeBattle(battleground, [ConfigId(0)])
 
         self.assertListEqual(expectedEvents, results.events)
+        expectedBattleResults = BattleResults(
+            monstersDefeated = {0: (0, 1)},
+            bonuses = [ConfigId(0)],
+            reward = 1,
+            timeSecs = 2.51
+        )
+        self.assertEqual(expectedBattleResults, results.results)
 
     def test_oneMonsterOneShot(self):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
@@ -93,6 +100,13 @@ class TestBattleComputerEvents(unittest.TestCase):
         results = battleComputer.computeBattle(battleground, [ConfigId(0)])
 
         self.assertListEqual(expectedEvents, results.events)
+        expectedBattleResults = BattleResults(
+            monstersDefeated = {0: (1, 1)},
+            bonuses = [ConfigId(0), ConfigId(1)],
+            reward = 22,
+            timeSecs = 1.0
+        )
+        self.assertEqual(expectedBattleResults, results.results)
 
     def test_oneMonsterTwoShots(self):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)
@@ -195,6 +209,13 @@ class TestBattleComputerEvents(unittest.TestCase):
         results = battleComputer.computeBattle(battleground, [ConfigId(0)])
 
         self.assertListEqual(expectedEvents, results.events)
+        expectedBattleResults = BattleResults(
+            monstersDefeated = {0: (1, 1)},
+            bonuses = [ConfigId(0), ConfigId(1)],
+            reward = 22,
+            timeSecs = 2.5
+        )
+        self.assertEqual(expectedBattleResults, results.results)
 
     def test_twoMonsterNoTowers(self):
         battleComputer = BattleComputer(gameConfig = test_data.gameConfig)

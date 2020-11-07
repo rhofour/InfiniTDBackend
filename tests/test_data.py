@@ -90,6 +90,13 @@ battleBonuses = [
             bonusAmount = 1,
             conditions = [ BonusCondition(percentDefeated = 0.0) ],
         ),
+        BattleBonus(
+            id = ConfigId(1),
+            name = "Perfection",
+            bonusType = BonusType.MULTIPLICATIVE,
+            bonusAmount = 2.0,
+            conditions = [ BonusCondition(percentDefeated = 1.0) ],
+        ),
     ]
 
 gameConfigData = GameConfigData(
