@@ -104,7 +104,7 @@
         "conditions": [ { "percentDefeated": 0.0 } ]
       },
       {
-        "id": 0,
+        "id": 1,
         "name": "Perfect",
         "bonusType": 2,
         "bonusAmount": 1.5,

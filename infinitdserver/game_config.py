@@ -112,6 +112,8 @@ class BattleBonus:
 def idedListToDict(xs):
     d = {}
     for x in xs:
+        if x.id in d:
+            raise ValueError(f"Found duplicated id {x.id}")
         d[x.id] = x
     return d
 
