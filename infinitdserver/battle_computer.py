@@ -31,6 +31,7 @@ class MonsterState:
     pos: FpCellPos
     health: float
     path: List[CellPos]
+    spawnedAt: float
     targetInPath: int = 1
     distTraveled: float = 0.0
 
@@ -70,14 +71,18 @@ class BattleComputer:
         return towerStates
 
     @staticmethod
-    def selectTarget(tower: TowerState, enemies: Sequence[MonsterState]) -> Optional[MonsterState]:
+    def selectTarget(tower: TowerState, enemies: Sequence[MonsterState], gameTime: float) -> Optional[MonsterState]:
         farthestEnemy = None
 
         if tower.firingRadius <= 0:
             return None
 
         for enemy in enemies:
-            if round(enemy.pos.dist(tower.pos), EVENT_PRECISION) <= tower.firingRadius:
+            dist = round(enemy.pos.dist(tower.pos), EVENT_PRECISION)
+            if dist <= tower.firingRadius:
+                timeToHit = dist / tower.config.projectileSpeed
+                if gameTime - timeToHit < enemy.spawnedAt:
+                    continue # Don't allow targetting enemies before they've spawned.
                 if farthestEnemy is None or enemy.distTraveled > farthestEnemy.distTraveled:
                     farthestEnemy = enemy
 
@@ -213,7 +218,8 @@ class BattleComputer:
                         config = monsterConfig,
                         pos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter),
                         health = monsterConfig.health,
-                        path = path)
+                        path = path,
+                        spawnedAt = gameTime)
                 nextId += 1
                 spawnedMonsters.append(newMonster)
 
@@ -249,7 +255,7 @@ class BattleComputer:
                     tower.firingRadius = round(max(0, min(tower.config.range, timeSinceAbleToFire * tower.config.projectileSpeed)), EVENT_PRECISION)
 
                 # Fire at the farthest enemy within our firing radius.
-                target = BattleComputer.selectTarget(tower, spawnedMonsters)
+                target = BattleComputer.selectTarget(tower, spawnedMonsters, gameTime)
                 if target:
                     dist = target.pos.dist(tower.pos)
                     shotDuration = dist / tower.config.projectileSpeed
