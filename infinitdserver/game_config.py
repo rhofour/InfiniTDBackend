@@ -67,6 +67,7 @@ class MonsterConfig(IdentifiedImage):
     health: float
     speed: float
     bounty: float
+    size: float
 
 MonstersDefeated = Dict[ConfigId, Tuple[int, int]]
 
