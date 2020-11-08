@@ -97,7 +97,7 @@
   "misc": {
     "sellMultiplier": 0.8,
     "startingGold": 10,
-    "minGoldPerMinute": 1.0,
+    "minGoldPerMinute": 0.0,
     "battleBonuses": [
       {
         "id": 0,
