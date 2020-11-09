@@ -98,7 +98,7 @@ class StreamingBattle:
         # is over.
         self.startTime = -1.0
 
-        expectedBattleUpdates = len(battle.events) + 2 # Two extra for the metadata
+        expectedBattleUpdates = len(battle.events) + 2 # Two extra for pending and live metadata events
         if (self.sentUpdates > expectedBattleUpdates):
             self.logger.error("BattleCoordinator", requestId,
                     f"Battle had {len(battle.events)} events, but sent {self.sentUpdates} updates.")

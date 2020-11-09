@@ -41,7 +41,7 @@
       "name": "Boring Tower",
       "cost": 1.0,
       "firingRate": 1.0,
-      "range": 300.0,
+      "range": 3.0,
       "damage": 5.0,
       "projectileSpeed": 2.0,
       "projectileId": 0
@@ -52,7 +52,7 @@
       "name": "Better Tower",
       "cost": 5.0,
       "firingRate": 1.5,
-      "range": 400.0,
+      "range": 4.0,
       "damage": 10.0,
       "projectileSpeed": 2.5,
       "projectileId": 0
