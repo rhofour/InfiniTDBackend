@@ -74,21 +74,27 @@ monsters = [
             name = "Test Enemy 0",
             health = 10.0,
             speed = 2.0,
-            bounty = 10.0),
+            bounty = 10.0,
+            size = 128,
+        ),
         MonsterConfig(
             id = ConfigId(1),
             url = Url(""),
             name = "Test Enemy 1",
             health = 8.0,
             speed = 3.0,
-            bounty = 20.0),
+            bounty = 20.0,
+            size = 128,
+        ),
         MonsterConfig(
             id = ConfigId(2),
             url = Url(""),
             name = "Test Enemy 2",
             health = 15.0,
             speed = 1.0,
-            bounty = 5.0),
+            bounty = 5.0,
+            size = 128,
+        ),
     ]
 
 battleBonuses = [

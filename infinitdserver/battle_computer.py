@@ -45,11 +45,13 @@ class BattleComputer:
     startingSeed: int
     gameConfig: GameConfig
     gameTickSecs: float # Period of the gameplay clock
+    debug: bool
 
-    def __init__(self, gameConfig: GameConfig, seed: int = 42, gameTickSecs: float = 0.01):
+    def __init__(self, gameConfig: GameConfig, seed: int = 42, gameTickSecs: float = 0.01, debug = False):
         self.gameConfig = gameConfig
         self.startingSeed = seed
         self.gameTickSecs = gameTickSecs
+        self.debug = debug
 
     def getInitialTowerStates(self, battleground: BattlegroundState) -> List[TowerState]:
         nextId = 0
@@ -321,7 +323,26 @@ class BattleComputer:
                 return (event.startTime, eventOrdering[event.__class__.__name__], event.endTime) # pytype: disable=attribute-error
             except AttributeError:
                 return (event.startTime, eventOrdering[event.__class__.__name__], -1)
+        sortedEvents = sorted(events, key=eventToSortKeys)
+
+        if self.debug:
+            deletedIds = set()
+            deletedEventIndex = {}
+
+            for (i, event) in enumerate(sortedEvents):
+                if event.eventType == EventType.DELETE:
+                    if event.id in deletedIds:
+                        raise BattleCalculationException(battleground, wave,
+                            f"Duplicate event to delete {event.id}, previous event at index {deletedEventIndex[event.id]}: {event}")
+                    deletedIds.add(event.id)
+                    deletedEventIndex[event.id] = i
+                else:
+                    if event.id in deletedIds:
+                        raise BattleCalculationException(battleground, wave,
+                            f"Received an event with ID {event.id}, but {event.id} was deleted earlier in event at index "
+                            "{deletedEventIndex[event.id]}: {event}")
+
         return BattleCalcResults(
-                events = sorted(events, key=eventToSortKeys),
+                events = sortedEvents,
                 results = battleResults,
             )

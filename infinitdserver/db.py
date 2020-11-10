@@ -27,9 +27,11 @@ class Db:
     bgQueues: SseQueues
     battleComputer: BattleComputer
     battleCoordinator: BattleCoordinator
+    debug: bool
 
     def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues,
             battleCoordinator: BattleCoordinator, dbPath=None, debug=False):
+        self.debug = debug
         if dbPath is None:
             dbPath = self.DEFAULT_DB_PATH
         self.conn = sqlite3.connect(dbPath, isolation_level=None)
@@ -40,7 +42,7 @@ class Db:
         self.gameConfig = gameConfig
         self.userQueues = userQueues
         self.bgQueues = bgQueues
-        self.battleComputer = BattleComputer(gameConfig = gameConfig)
+        self.battleComputer = BattleComputer(gameConfig = gameConfig, debug = debug)
         self.battleCoordinator = battleCoordinator
         self.logger = Logger.getDefault()
 
