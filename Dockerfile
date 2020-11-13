@@ -10,4 +10,4 @@ RUN pipenv install --deploy
 COPY . ${PROJECT_DIR}
 
 EXPOSE 8794/tcp
-CMD ["pipenv", "run", "python", "-u", "-m", "infinitdserver", "--verbosity=2", "--reset-battles"]
+CMD ["pipenv", "run", "python", "-u", "-m", "infinitdserver", "--verbosity=2", "--reset-battles", "--debug"]
