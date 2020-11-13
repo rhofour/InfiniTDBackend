@@ -1,6 +1,17 @@
 import sqlite3
 from time import strftime
-from typing import Optional
+from typing import Optional, List
+
+import attr
+
+@attr.s(auto_attribs=True, frozen=True)
+class LogEntry:
+    time: str
+    uid: str
+    requestId: int
+    handler: str
+    msg: str
+    verbosity: int
 
 class Logger:
     defaultInstance = None
@@ -37,6 +48,24 @@ class Logger:
         );""")
         self.conn.commit()
 
+    def getLogs(self) -> List[LogEntry]:
+        res = self.conn.execute("""
+        SELECT time, uid, requestId, handler, msg, verbosity
+        FROM logs
+        ORDER BY time DESC
+        LIMIT 100
+        """)
+        def extractLogEntry(row) -> LogEntry:
+            return LogEntry(
+                    time = row[0],
+                    uid = row[1],
+                    requestId = row[2],
+                    handler = row[3],
+                    msg = row[4],
+                    verbosity = row[5],
+                )
+        return [ extractLogEntry(r) for r in res ]
+
     def error(self, handler: str, requestId: int, msg: str, uid: Optional[str] = None):
         self._log(handler, requestId, msg, verbosity=1, uid=uid)
 
@@ -52,7 +81,7 @@ class Logger:
             print(f"{timeStr} {handler} {requestId}: {msg}")
         self.conn.execute(
                 "INSERT INTO logs (time, uid, requestId, handler, msg, verbosity) "
-                "VALUES (date('now'), :uid, :requestId, :handler, :msg, :verbosity);",
+                "VALUES (datetime('now'), :uid, :requestId, :handler, :msg, :verbosity);",
                 {
                     "uid": uid if uid else "NULL",
                     "requestId": requestId,

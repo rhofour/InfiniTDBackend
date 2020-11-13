@@ -28,6 +28,7 @@ from infinitdserver.handler.wave import WaveHandler
 from infinitdserver.handler.control_battle import ControlBattleHandler
 from infinitdserver.handler.battle_stream import BattleStreamHandler
 from infinitdserver.handler.recorded_battle import RecordedBattleHandler
+from infinitdserver.handler.debug_logs import DebugLogsHandler
 
 async def updateGoldEveryMinute(game: Game):
     oneMinute = timedelta(minutes=1)
@@ -44,13 +45,13 @@ async def updateGoldEveryMinute(game: Game):
         else:
             logger.warn("updateGoldEveryMinute", -1, f"updateGoldEveryMinute is running {-waitTime} behind.")
 
-def make_app(game):
+def make_app(game, debug):
     cred = credentials.Certificate("./data/privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "../static"),
     }
-    return tornado.web.Application([
+    prod_handlers = [
         (r"/users", UsersHandler, dict(game=game)),
         (r"/user/(.*)", UserHandler, dict(game=game)),
         (r"/userStream/(.*)", UserStreamHandler, dict(game=game)),
@@ -64,7 +65,11 @@ def make_app(game):
         (r"/battleStream/(.*)", BattleStreamHandler, dict(game=game)),
         (r"/controlBattle/(.*)", ControlBattleHandler, dict(game=game)),
         (r"/battle/(.*)/(.*)", RecordedBattleHandler, dict(game=game)),
-    ], **settings)
+    ]
+    debug_handlers = [
+        (r"/debug/logs", DebugLogsHandler, dict(game=game)),
+    ]
+    return tornado.web.Application(prod_handlers + debug_handlers, **settings)
 
 async def main():
     parser = argparse.ArgumentParser(description="Backend server for InfiniTD.")
@@ -78,15 +83,17 @@ async def main():
         gameConfigData = cattr.structure(json.loads(gameConfigFile.read()), GameConfigData)
         #gameConfigData = GameConfigData.from_json(gameConfigFile.read())
         gameConfig = GameConfig.fromGameConfigData(gameConfigData)
-    Logger.setDefault(Logger("data/logs.db", printVerbosity=args.verbosity, debug=args.debug))
+    logger = Logger("data/logs.db", printVerbosity=args.verbosity, debug=args.debug)
+    Logger.setDefault(logger)
+    logger.info("startup", -1, f"Starting with options {args}.")
     game = Game(gameConfig, debug=args.debug)
     # Make sure no one is stuck in a battle.
     game.clearInBattle()
     if args.reset_battles:
         game.resetBattles()
-    app = make_app(game)
+    app = make_app(game, args.debug)
     app.listen(args.port)
-    print(f"Listening on port {args.port}.")
+    logger.info("startup", -1, f"Listening on port {args.port}.")
     await updateGoldEveryMinute(game)
 
 if __name__ == "__main__":
