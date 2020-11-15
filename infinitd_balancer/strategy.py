@@ -10,6 +10,10 @@ from infinitdserver.battle_computer import BattleComputer
 
 class TowerPlacingStrategy(metaclass=abc.ABCMeta):
     "A TowerPlacingStrategy determines where to place new towers."
+    gameConfig: GameConfig
+
+    def __init__(self, gameConfig: GameConfig):
+        self.gameConfig = gameConfig
 
     @abc.abstractmethod
     def nextPlace(self, battleground: BattlegroundState) -> Optional[CellPos]:
@@ -29,12 +33,14 @@ class TowerSelectionStrategy(metaclass=abc.ABCMeta):
 class WaveSelectionStrategy(metaclass=abc.ABCMeta):
     "A WaveSelectionStrategy selects a wave based on a battleground."
     gameConfig: GameConfig
+    battleComputer: BattleComputer
 
-    def __init__(self, gameConfig: GameConfig, battleComputer: BattleComputer):
+    def __init__(self, gameConfig: GameConfig):
         self.gameConfig = gameConfig
+        self.battleComputer = BattleComputer(gameConfig, True)
 
     @abc.abstractmethod
-    def nextWave(self, battleground: BattlegroundState) -> Optional[List[ConfigId]]:
+    def nextWave(self, battleground: BattlegroundState) -> List[ConfigId]:
         pass
 
 @dataclass
@@ -53,7 +59,7 @@ class GameState:
 
 class FullStrategy:
     gameConfig: GameConfig
-    placingStrat: TowerPlacingStrategy
+    placingStrategy: TowerPlacingStrategy
     towerSelectionStrategy: TowerSelectionStrategy
     waveSelectionStrategy: WaveSelectionStrategy
     battleComputer: BattleComputer
@@ -63,9 +69,11 @@ class FullStrategy:
             placingStrategy: TowerPlacingStrategy,
             towerSelectionStrategy: TowerSelectionStrategy,
             waveSelectionStrategy: WaveSelectionStrategy):
+        self.gameConfig = gameConfig
         self.placingStrategy = placingStrategy
         self.towerSelectionStrategy = towerSelectionStrategy
         self.waveSelectionStrategy = waveSelectionStrategy
+        self.battleComputer = BattleComputer(gameConfig)
 
     def evaluateUntil(self, targetGold: int) -> List[GameState]:
         "evaluateUntil returns how many minutes until targetGold is accumulated."
@@ -86,7 +94,7 @@ class FullStrategy:
             return round(results.reward / minutes, ndigits = 1)
 
         while curState.accumulatedGold < targetGold:
-            nextTowerLoc = self.placingStrat.nextPlace(curState.battleground)
+            nextTowerLoc = self.placingStrategy.nextPlace(curState.battleground)
             if nextTowerLoc is None:
                 break
 
@@ -128,7 +136,6 @@ class FullStrategy:
 
             remainingGold = targetGold - curState.accumulatedGold
             minutesAtEnd = math.ceil(float(remainingGold) / curState.goldPerMinute)
-            print(f"Waited {minutesAtEnd}m to get remaining {remainingGold} gold.")
             curState.totalMinutes += minutesAtEnd
 
         history.append(curState)
