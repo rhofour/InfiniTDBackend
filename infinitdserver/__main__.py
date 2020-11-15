@@ -81,7 +81,6 @@ async def main():
 
     with open('game_config.json') as gameConfigFile:
         gameConfigData = cattr.structure(json.loads(gameConfigFile.read()), GameConfigData)
-        #gameConfigData = GameConfigData.from_json(gameConfigFile.read())
         gameConfig = GameConfig.fromGameConfigData(gameConfigData)
     logger = Logger("data/logs.db", printVerbosity=args.verbosity, debug=args.debug)
     Logger.setDefault(logger)

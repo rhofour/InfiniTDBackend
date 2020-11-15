@@ -11,9 +11,9 @@ from infinitdserver.game_config import ConfigId
 class UserSummary:
     uid: str
     name: str
-    gold: int
-    accumulatedGold: int
-    goldPerMinute: int
+    gold: float
+    accumulatedGold: float
+    goldPerMinute: float
     inBattle: bool
     wave: List[ConfigId]
 
