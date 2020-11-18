@@ -82,7 +82,7 @@ class FullStrategy:
                 self.gameConfig.misc.minGoldPerMinute,
                 BattlegroundState.empty(self.gameConfig)
             )
-        history: List[GameState] = [deepcopy(curState)]
+        history: List[GameState] = []
 
         def updateBattle(battleground) -> float:
             "updateBattle takes a battleground and gets a new goldPerMinute value."
@@ -107,13 +107,15 @@ class FullStrategy:
 
             # TODO: If this is an existing tower and next tower is different
             # then sell this.
-            prevTowerId = curState.battleground.towers.towers[nextTowerLoc.col][nextTowerLoc.row]
+            prevTowerId = curState.battleground.towers.towers[nextTowerLoc.row][nextTowerLoc.col]
             if prevTowerId:
                 raise Exception(f"nextTowerLoc is already occupied by {prevTowerId}")
 
             if curState.currentGold < nextTowerCost:
                 # Select a wave for the current battleground
                 curState.goldPerMinute = updateBattle(curState.battleground)
+                # Update history every time we calculate a new battle
+                history.append(deepcopy(curState))
 
                 # Wait some number of minutes
                 waitedMins = math.ceil((nextTowerCost - curState.currentGold) /
@@ -121,12 +123,11 @@ class FullStrategy:
                 curState.totalMinutes += waitedMins
                 curState.accumulatedGold += waitedMins * curState.goldPerMinute
                 curState.currentGold += waitedMins * curState.goldPerMinute
-                # Update history every time we calculate a new battle
-                history.append(deepcopy(curState))
 
             # Buy the new tower and loop again
             curState.currentGold -= nextTowerCost
-            curState.battleground.towers.towers[nextTowerLoc.col][nextTowerLoc.row] = nextTowerId
+            curState.battleground.towers.towers[nextTowerLoc.row][nextTowerLoc.col] = BgTowerState(
+                    id = nextTowerId)
 
         if curState.accumulatedGold < targetGold:
             # Update the battle one last time
@@ -137,6 +138,8 @@ class FullStrategy:
             remainingGold = targetGold - curState.accumulatedGold
             minutesAtEnd = math.ceil(float(remainingGold) / curState.goldPerMinute)
             curState.totalMinutes += minutesAtEnd
+            curState.accumulatedGold += minutesAtEnd * curState.goldPerMinute
+            curState.currentGold += minutesAtEnd * curState.goldPerMinute
 
         history.append(curState)
         return history
