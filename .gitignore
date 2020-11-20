@@ -8,3 +8,5 @@ data
 infintdserver/.pytype
 # Hypothesis DB
 .hypothesis
+# Don't store the balancing results
+balancing_results.json

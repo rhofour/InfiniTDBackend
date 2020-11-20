@@ -27,8 +27,12 @@ class FpCellPos:
     def __eq__(self, other):
         return math.isclose(self.row, other.row) and math.isclose(self.col, other.col)
 
+    def distSq(self, other):
+        return ((((self.row - other.row) * (self.row - other.row))) +
+            ((self.col - other.col) * (self.col - other.col)))
+
     def dist(self, other):
-        return math.sqrt(math.pow(self.row - other.row, 2) + math.pow(self.col - other.col, 2))
+        return math.sqrt(self.distSq(other))
 
     def interpolateTo(self, other, amount: float) -> Any:
         if amount < 0 or amount > 1:
@@ -123,6 +127,17 @@ class BattleResults:
     bonuses: List[ConfigId]
     reward: float
     timeSecs: float
+
+    def allMonstersDefeated(self) -> bool:
+        for (numSent, numDefeated) in self.monstersDefeated.values():
+            if numSent != numDefeated:
+                return False
+        return True
+
+    @property
+    def goldPerMinute(self) -> float:
+        minutes = max(1., self.timeSecs / 60.0)
+        return round(self.reward / minutes, ndigits = 1)
 
     @staticmethod
     def fromMonstersDefeated(monstersDefeated: MonstersDefeated, gameConfig: GameConfig, timeSecs: float) -> Any:

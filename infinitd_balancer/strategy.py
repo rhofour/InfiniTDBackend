@@ -1,11 +1,15 @@
 import abc
 from copy import deepcopy
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import math
 from typing import Tuple, List, Optional
 
+import cattr
+from dataclasses_json import dataclass_json, config, config
+
 from infinitdserver.game_config import GameConfig, CellPos, ConfigId, TowerConfig, MonsterConfig
 from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
+from infinitdserver.battle import BattleResults
 from infinitdserver.battle_computer import BattleComputer
 
 class TowerPlacingStrategy(metaclass=abc.ABCMeta):
@@ -44,18 +48,26 @@ class WaveSelectionStrategy(metaclass=abc.ABCMeta):
         pass
 
 @dataclass
+@dataclass_json
 class GameState:
     accumulatedGold: float
     currentGold: float
-    goldPerMinute: float
+    battleResults: BattleResults = field(
+        metadata = config(
+            encoder=cattr.unstructure,
+            decoder=lambda x: cattr.structure(x, BattleResults),
+        )
+    )
     battleground: BattlegroundState
+    wave: List[ConfigId]
     totalMinutes: int = 0
 
-    def __init__(self, startingGold, goldPerMinute, battleground):
+    def __init__(self, startingGold, battleResults, battleground, wave):
         self.accumulatedGold = startingGold
         self.currentGold = startingGold
-        self.goldPerMinute = goldPerMinute
+        self.battleResults = battleResults
         self.battleground = battleground
+        self.wave = wave
 
 class FullStrategy:
     gameConfig: GameConfig
@@ -73,25 +85,27 @@ class FullStrategy:
         self.placingStrategy = placingStrategy
         self.towerSelectionStrategy = towerSelectionStrategy
         self.waveSelectionStrategy = waveSelectionStrategy
-        self.battleComputer = BattleComputer(gameConfig)
+        # Run at slightly lower precision to speed up the balancing
+        self.battleComputer = BattleComputer(gameConfig, gameTickSecs=0.02)
 
     def evaluateUntil(self, targetGold: int) -> List[GameState]:
         "evaluateUntil returns how many minutes until targetGold is accumulated."
+        # fakeResults that always result in getting minGoldPerMinute.
+        fakeResults = BattleResults({}, [], self.gameConfig.misc.minGoldPerMinute, 60.)
         curState: GameState = GameState(
                 self.gameConfig.misc.startingGold,
-                self.gameConfig.misc.minGoldPerMinute,
-                BattlegroundState.empty(self.gameConfig)
+                fakeResults,
+                BattlegroundState.empty(self.gameConfig),
+                [],
             )
         history: List[GameState] = []
 
-        def updateBattle(battleground) -> float:
-            "updateBattle takes a battleground and gets a new goldPerMinute value."
+        def updateBattle(battleground) -> Tuple[List[ConfigId], BattleResults]:
+            "updateBattle takes a battleground and gets a new wave and battle."
             wave = self.waveSelectionStrategy.nextWave(battleground)
             battleCalcResults = self.battleComputer.computeBattle(battleground, wave)
             results = battleCalcResults.results
-            # Be sure to keep this in sync with the game
-            minutes = max(1.0, results.timeSecs / 60.0)
-            return round(results.reward / minutes, ndigits = 1)
+            return (wave, results)
 
         while curState.accumulatedGold < targetGold:
             nextTowerLoc = self.placingStrategy.nextPlace(curState.battleground)
@@ -113,16 +127,16 @@ class FullStrategy:
 
             if curState.currentGold < nextTowerCost:
                 # Select a wave for the current battleground
-                curState.goldPerMinute = updateBattle(curState.battleground)
+                curState.wave, curState.battleResults = updateBattle(curState.battleground)
                 # Update history every time we calculate a new battle
                 history.append(deepcopy(curState))
 
                 # Wait some number of minutes
                 waitedMins = math.ceil((nextTowerCost - curState.currentGold) /
-                        curState.goldPerMinute)
+                        curState.battleResults.goldPerMinute)
                 curState.totalMinutes += waitedMins
-                curState.accumulatedGold += waitedMins * curState.goldPerMinute
-                curState.currentGold += waitedMins * curState.goldPerMinute
+                curState.accumulatedGold += waitedMins * curState.battleResults.goldPerMinute
+                curState.currentGold += waitedMins * curState.battleResults.goldPerMinute
 
             # Buy the new tower and loop again
             curState.currentGold -= nextTowerCost
@@ -131,15 +145,15 @@ class FullStrategy:
 
         if curState.accumulatedGold < targetGold:
             # Update the battle one last time
-            curState.goldPerMinute = updateBattle(curState.battleground)
+            curState.wave, curState.battleResults = updateBattle(curState.battleground)
             # Update history every time we calculate a new battle
             history.append(deepcopy(curState))
 
             remainingGold = targetGold - curState.accumulatedGold
-            minutesAtEnd = math.ceil(float(remainingGold) / curState.goldPerMinute)
+            minutesAtEnd = math.ceil(float(remainingGold) / curState.battleResults.goldPerMinute)
             curState.totalMinutes += minutesAtEnd
-            curState.accumulatedGold += minutesAtEnd * curState.goldPerMinute
-            curState.currentGold += minutesAtEnd * curState.goldPerMinute
+            curState.accumulatedGold += minutesAtEnd * curState.battleResults.goldPerMinute
+            curState.currentGold += minutesAtEnd * curState.battleResults.goldPerMinute
 
         history.append(curState)
         return history

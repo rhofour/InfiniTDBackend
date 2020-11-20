@@ -189,12 +189,8 @@ class Game:
                 if results.timeSecs <= 0:
                     raise ValueError(f"Battle results has non-positive time: {results.timeSecs}.")
 
-                # Calculate new gold per minute
-                minutes = max(1.0, results.timeSecs / 60.0)
-                goldPerMinute = round(results.reward / minutes, ndigits = 1)
-
-                futureUser.addGold(goldPerMinute)
-                futureUser.goldPerMinute = goldPerMinute
+                futureUser.addGold(results.goldPerMinute)
+                futureUser.goldPerMinute = results.goldPerMinute
 
             await asyncio.wait(awaitables)
         self.battleCoordinator.startBattle(user.name, battle,
