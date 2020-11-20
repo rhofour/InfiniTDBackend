@@ -23,6 +23,7 @@ class TowerState:
     pos: FpCellPos
     lastFired: float
     firingRadius: float = -1 # How far a projectile could have travelled at this point
+    firingRadiusSq: float = -1
 
 @dataclass(frozen=False)
 class MonsterState:
@@ -74,19 +75,23 @@ class BattleComputer:
 
     @staticmethod
     def selectTarget(tower: TowerState, enemies: Sequence[MonsterState], gameTime: float) -> Optional[MonsterState]:
-        farthestEnemy = None
 
         if tower.firingRadius <= 0:
             return None
 
+        farthestEnemy = None
+
         for enemy in enemies:
-            dist = round(enemy.pos.dist(tower.pos), EVENT_PRECISION)
-            if dist <= tower.firingRadius:
+            if farthestEnemy is not None and enemy.distTraveled < farthestEnemy.distTraveled:
+                continue
+
+            distSq = enemy.pos.distSq(tower.pos)
+            if distSq <= tower.firingRadiusSq:
+                dist = math.sqrt(distSq)
                 timeToHit = dist / tower.config.projectileSpeed
                 if gameTime - timeToHit < enemy.spawnedAt:
                     continue # Don't allow targetting enemies before they've spawned.
-                if farthestEnemy is None or enemy.distTraveled > farthestEnemy.distTraveled:
-                    farthestEnemy = enemy
+                farthestEnemy = enemy
 
         return farthestEnemy
 
@@ -254,7 +259,8 @@ class BattleComputer:
                 # Update firing radius
                 if tower.config.firingRate > 0:
                     timeSinceAbleToFire = gameTime - (tower.lastFired + (1.0 / tower.config.firingRate))
-                    tower.firingRadius = round(max(0, min(tower.config.range, timeSinceAbleToFire * tower.config.projectileSpeed)), EVENT_PRECISION)
+                    tower.firingRadius = max(0, min(tower.config.range, timeSinceAbleToFire * tower.config.projectileSpeed))
+                    tower.firingRadiusSq = tower.firingRadius * tower.firingRadius
 
                 # Fire at the farthest enemy within our firing radius.
                 target = BattleComputer.selectTarget(tower, spawnedMonsters, gameTime)
