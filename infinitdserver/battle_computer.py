@@ -1,8 +1,7 @@
-from collections import deque
 from dataclasses import dataclass, asdict
 from random import Random
 import math
-from typing import List, Optional, Deque, Tuple, Sequence
+from typing import List, Optional, Tuple, Sequence
 
 from infinitdserver.battle import ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol
 from infinitdserver.battleground_state import BattlegroundState, BgTowerState
@@ -74,26 +73,24 @@ class BattleComputer:
         return towerStates
 
     @staticmethod
-    def selectTarget(tower: TowerState, enemies: Sequence[MonsterState], gameTime: float) -> Optional[MonsterState]:
+    def selectTarget(tower: TowerState, enemies: Sequence[MonsterState], gameTime: float
+            ) -> Optional[Tuple[MonsterState, float]]:
 
         if tower.firingRadius <= 0:
             return None
 
-        farthestEnemy = None
-
         for enemy in enemies:
-            if farthestEnemy is not None and enemy.distTraveled < farthestEnemy.distTraveled:
-                continue
-
             distSq = enemy.pos.distSq(tower.pos)
             if distSq <= tower.firingRadiusSq:
                 dist = math.sqrt(distSq)
                 timeToHit = dist / tower.config.projectileSpeed
                 if gameTime - timeToHit < enemy.spawnedAt:
                     continue # Don't allow targetting enemies before they've spawned.
-                farthestEnemy = enemy
+                # Assumes enemies are sorted by decreasing distTraveled so we
+                # can return the first one we can hit.
+                return (enemy, dist)
 
-        return farthestEnemy
+        return None
 
     # Note: This code assumes enemies always move at a constant speed. It will
     # need to change to handle effects that may alter enemy speed (or
@@ -102,7 +99,7 @@ class BattleComputer:
         events: List[BattleEvent] = []
         nextId = 0
         unspawnedMonsters = wave[::-1] # Reverse so we can pop off elements efficiently
-        spawnedMonsters: Deque[MonsterState] = deque()
+        spawnedMonsters: List[MonsterState] = []
         gameTime = 0.0
         ticks = 0
         rand = Random(self.startingSeed)
@@ -254,6 +251,10 @@ class BattleComputer:
             for monster in finishedMonsters:
                 spawnedMonsters.remove(monster)
 
+            # Sort monsters by distance traveled to make target selection
+            # easier.
+            spawnedMonsters = sorted(spawnedMonsters, key=lambda x: x.distTraveled, reverse=True)
+
             # Handle towers
             for tower in towers:
                 # Update firing radius
@@ -265,8 +266,8 @@ class BattleComputer:
                 # Fire at the farthest enemy within our firing radius.
                 target = BattleComputer.selectTarget(tower, spawnedMonsters, gameTime)
                 if target:
-                    dist = target.pos.dist(tower.pos)
-                    shotDuration = dist / tower.config.projectileSpeed
+                    targetEnemy, targetDist = target
+                    shotDuration = targetDist / tower.config.projectileSpeed
 
                     # Round here so tiny FP errors don't lead to a battle calculation exception.
                     tower.lastFired = round(gameTime - shotDuration, EVENT_PRECISION)
@@ -274,7 +275,7 @@ class BattleComputer:
                         raise BattleCalculationException(battleground, wave,
                                 f"Calculated tower firing time < 0: {tower.lastFired}\nDist: {dist} Duration: {shotDuration} Game time: {gameTime}")
 
-                    target.health -= tower.config.damage
+                    targetEnemy.health -= tower.config.damage
 
                     # Build and send the events
                     projectileMove = MoveEvent(
@@ -282,7 +283,7 @@ class BattleComputer:
                         id = nextId,
                         configId = tower.config.projectileId,
                         startPos = tower.pos,
-                        destPos = target.pos,
+                        destPos = targetEnemy.pos,
                         startTime = tower.lastFired,
                         endTime = gameTime,
                     )
@@ -294,21 +295,21 @@ class BattleComputer:
                     )
                     events.append(projectileDelete)
                     damageEvent = DamageEvent(
-                        id = target.id,
+                        id = targetEnemy.id,
                         startTime = gameTime,
-                        health = target.health,
+                        health = targetEnemy.health,
                     )
                     events.append(damageEvent)
-                    if target.health <= 0:
-                        prevMonstersDefeatedState = monstersDefeated[target.config.id]
-                        monstersDefeated[target.config.id] = (prevMonstersDefeatedState[0] + 1, prevMonstersDefeatedState[1])
+                    if targetEnemy.health <= 0:
+                        prevMonstersDefeatedState = monstersDefeated[targetEnemy.config.id]
+                        monstersDefeated[targetEnemy.config.id] = (prevMonstersDefeatedState[0] + 1, prevMonstersDefeatedState[1])
                         deleteTargetEvent = DeleteEvent(
                             objType = ObjectType.MONSTER,
-                            id = target.id,
+                            id = targetEnemy.id,
                             startTime = gameTime,
                         )
                         events.append(deleteTargetEvent)
-                        spawnedMonsters.remove(target)
+                        spawnedMonsters.remove(targetEnemy)
                     nextId += 1
 
             ticks += 1
