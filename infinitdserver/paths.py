@@ -9,6 +9,16 @@ from infinitdserver.battleground_state import BattlegroundState
 class PathMap:
     dists: List[int]
 
+    def readableStr(self, numCols: int):
+        if len(self.dists) % numCols != 0:
+            raise ValueError(f"PathMap has {len(self.dists)} items which doesn't cleanly divide "
+                    f"into {numCols} columns.")
+        rows = len(self.dists) / numCols
+        outStr = ""
+        for row in range(rows):
+            outStr += f"{self.dists[row * numCols : (row+1) * numCols]}"
+        return outStr
+
     def getRandomPath(self, numCols: int, rand: Optional[Random] = None) -> List[CellPos]:
         if rand is None:
             rand = Random()
@@ -38,6 +48,8 @@ class PathMap:
             possibleNeighbors = [neighbor
                     for neighbor in getNeighbors(currentPos)
                     if self.dists[neighbor] == currentDist + 1]
+        if len(path) < 2:
+            raise Exception(f"Path has length {len(path)} from PathMap: {self.readableStr(numCols)}")
         return path
 
 def compressPath(path: List[CellPos]) -> List[CellPos]:
