@@ -32,6 +32,7 @@ class PlayfieldConfig:
     numCols: int
     monsterEnter: CellPos
     monsterExit: CellPos
+    # Playfield tile details.
     backgroundId: int
     pathId: int
     pathStartId: int

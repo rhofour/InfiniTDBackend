@@ -10,3 +10,5 @@ infintdserver/.pytype
 .hypothesis
 # Don't store the balancing results
 balancing_results.json
+# Don't store compiled Cython stuff
+*.cython*
