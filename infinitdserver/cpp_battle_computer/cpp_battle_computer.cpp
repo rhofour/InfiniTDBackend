@@ -1,5 +1,7 @@
 #include "cpp_battle_computer.h"
 
+#include <iostream>
+
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 
@@ -16,7 +18,7 @@ CppBattleComputer::CppBattleComputer(std::string jsonText) {
       GetParseError_En(d.GetParseError()) << endl;
     throw d.GetParseError();
   }
-  cout << "Got JSON: " << jsonText << endl;
+  this->gameConfig = GameConfig(d);
 }
 
 void CppBattleComputer::ComputeBattle(int seed) {
