@@ -1,5 +1,5 @@
-from infinitdserver.game import Game
-from infinitdserver.handler.base import BaseHandler
+from infinitd_server.game import Game
+from infinitd_server.handler.base import BaseHandler
 
 class RegisterHandler(BaseHandler):
     game: Game # See https://github.com/google/pytype/issues/652

@@ -4,11 +4,11 @@ import os
 
 from aiounittest import AsyncTestCase
 
-from infinitdserver.db import Db
-from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.battle_coordinator import BattleCoordinator
-from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig, MiscConfig
-from infinitdserver.sse import SseQueues
+from infinitd_server.db import Db
+from infinitd_server.battleground_state import BattlegroundState, BgTowerState
+from infinitd_server.battle_coordinator import BattleCoordinator
+from infinitd_server.game_config import PlayfieldConfig, CellPos, Row, Col, TowerConfig, GameConfig, MiscConfig
+from infinitd_server.sse import SseQueues
 
 import test_data
 

@@ -5,15 +5,15 @@ import sqlite3
 import json
 from typing import Optional, List, Callable, Awaitable
 
-from infinitdserver.battle import Battle, BattleResults
-from infinitdserver.battle_computer import BattleComputer, BattleCalculationException
-from infinitdserver.battle_coordinator import BattleCoordinator
-from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.user import User, UserSummary, FrozenUser, FrozenUserSummary, MutableUser
-from infinitdserver.game_config import GameConfig
-from infinitdserver.sse import SseQueues
-from infinitdserver.paths import pathExists
-from infinitdserver.logger import Logger
+from infinitd_server.battle import Battle, BattleResults
+from infinitd_server.battle_computer import BattleComputer, BattleCalculationException
+from infinitd_server.battle_coordinator import BattleCoordinator
+from infinitd_server.battleground_state import BattlegroundState, BgTowerState
+from infinitd_server.user import User, UserSummary, FrozenUser, FrozenUserSummary, MutableUser
+from infinitd_server.game_config import GameConfig
+from infinitd_server.sse import SseQueues
+from infinitd_server.paths import pathExists
+from infinitd_server.logger import Logger
 
 class Db:
     DEFAULT_DB_PATH = "data/data.db"

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from random import Random
 from typing import List, Set, Optional
 
-from infinitdserver.game_config import CellPos, Row, Col
-from infinitdserver.battleground_state import BattlegroundState
+from infinitd_server.game_config import CellPos, Row, Col
+from infinitd_server.battleground_state import BattlegroundState
 
 @dataclass(frozen=True)
 class PathMap:

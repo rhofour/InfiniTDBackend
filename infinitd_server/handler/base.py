@@ -6,9 +6,9 @@ import firebase_admin.auth
 import tornado.web
 from tornado.ioloop import IOLoop
 
-from infinitdserver.game import Game, UserMatchingError
-from infinitdserver.db import MutableUserContext
-from infinitdserver.logger import Logger
+from infinitd_server.game import Game, UserMatchingError
+from infinitd_server.db import MutableUserContext
+from infinitd_server.logger import Logger
 
 class BaseHandler(tornado.web.RequestHandler):
     logger: Logger

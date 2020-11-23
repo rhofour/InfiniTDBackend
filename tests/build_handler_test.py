@@ -5,13 +5,13 @@ import os
 
 import tornado.testing
 
-from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.battle_coordinator import BattleCoordinator
-from infinitdserver.game import Game
-from infinitdserver.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig, TowerConfig, MiscConfig
-from infinitdserver.handler.build import BuildHandler
-from infinitdserver.sse import SseQueues
-from infinitdserver.logger import Logger, MockLogger
+from infinitd_server.battleground_state import BattlegroundState, BgTowerState
+from infinitd_server.battle_coordinator import BattleCoordinator
+from infinitd_server.game import Game
+from infinitd_server.game_config import PlayfieldConfig, CellPos, Row, Col, GameConfig, TowerConfig, MiscConfig
+from infinitd_server.handler.build import BuildHandler
+from infinitd_server.sse import SseQueues
+from infinitd_server.logger import Logger, MockLogger
 import test_data
 
 class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
@@ -34,7 +34,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         os.remove(self.dbPath)
 
     def test_successfulBuild(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/build/bob/0/1", method="POST", body='{"towerId": 0}')
         battleground = self.game.getBattleground("bob")
@@ -58,7 +58,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(resp.code, 400)
 
     def test_wrongUser(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/build/phil/1/1", method="POST", body='{"towerId": 0}')
         battleground = self.game.getBattleground("bob")
@@ -67,7 +67,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
 
     def test_outOfBounds(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/build/bob/6/2", method="POST", body='{"towerId": 0}')
             resp2 = self.fetch("/build/bob/3/3", method="POST", body='{"towerId": 0}')
@@ -78,7 +78,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
 
     def test_insufficientGold(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/build/bob/1/2", method="POST", body='{"towerId": 1}')
         battleground = self.game.getBattleground("bob")
@@ -87,7 +87,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
 
     def test_alreadyExists(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             # This should succeed
             resp = self.fetch("/build/bob/2/1", method="POST", body='{"towerId": 0}')

@@ -3,9 +3,9 @@ import json
 import tornado
 import tornado.escape
 
-from infinitdserver.game import Game, UserInBattleException, UserHasInsufficientGoldException
-from infinitdserver.game_config import GameConfig
-from infinitdserver.handler.base import BaseHandler
+from infinitd_server.game import Game, UserInBattleException, UserHasInsufficientGoldException
+from infinitd_server.game_config import GameConfig
+from infinitd_server.handler.base import BaseHandler
 
 class WaveHandler(BaseHandler):
     game: Game # See https://github.com/google/pytype/issues/652

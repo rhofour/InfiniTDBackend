@@ -4,7 +4,7 @@ from typing import NewType, List, Optional, Dict, Any
 
 from dataclasses_json import dataclass_json
 
-from infinitdserver.game_config import GameConfig
+from infinitd_server.game_config import GameConfig
 
 TowerId = NewType('TowerId', int)
 

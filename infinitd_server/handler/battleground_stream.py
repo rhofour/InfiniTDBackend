@@ -1,5 +1,5 @@
-from infinitdserver.game import Game
-from infinitdserver.handler.sse import SseStreamHandler
+from infinitd_server.game import Game
+from infinitd_server.handler.sse import SseStreamHandler
 
 class BattlegroundStreamHandler(SseStreamHandler):
     game: Game # See https://github.com/google/pytype/issues/652

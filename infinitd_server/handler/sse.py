@@ -5,9 +5,9 @@ from dataclasses_json import DataClassJsonMixin
 from tornado.iostream import StreamClosedError
 import cattr
 
-from infinitdserver.sse import SseQueues
-from infinitdserver.game import Game
-from infinitdserver.handler.base import BaseHandler
+from infinitd_server.sse import SseQueues
+from infinitd_server.game import Game
+from infinitd_server.handler.base import BaseHandler
 
 class SseStreamHandler(BaseHandler, metaclass=abc.ABCMeta):
     "A base handler for implementing Server-Sent Events."

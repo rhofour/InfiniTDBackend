@@ -1,7 +1,7 @@
-from infinitdserver.battle_computer import BattleCalculationException
-from infinitdserver.battle_coordinator import BattleCoordinator
-from infinitdserver.game import Game, UserInBattleException, UserNotInBattleException
-from infinitdserver.handler.base import BaseHandler
+from infinitd_server.battle_computer import BattleCalculationException
+from infinitd_server.battle_coordinator import BattleCoordinator
+from infinitd_server.game import Game, UserInBattleException, UserNotInBattleException
+from infinitd_server.handler.base import BaseHandler
 
 class ControlBattleHandler(BaseHandler):
     game: Game # See https://github.com/google/pytype/issues/652

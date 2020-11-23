@@ -2,16 +2,16 @@ import asyncio
 from typing import List, Optional, Awaitable, Callable
 import math
 
-from infinitdserver.battle import Battle, BattleResults
-from infinitdserver.battle_computer import BattleCalculationException
-from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.battle_coordinator import BattleCoordinator
-from infinitdserver.db import Db, MutableUserContext
-from infinitdserver.game_config import GameConfig
-from infinitdserver.logger import Logger
-from infinitdserver.sse import SseQueues
-from infinitdserver.user import User, FrozenUser, FrozenUserSummary, MutableUser
-from infinitdserver.paths import pathExists
+from infinitd_server.battle import Battle, BattleResults
+from infinitd_server.battle_computer import BattleCalculationException
+from infinitd_server.battleground_state import BattlegroundState, BgTowerState
+from infinitd_server.battle_coordinator import BattleCoordinator
+from infinitd_server.db import Db, MutableUserContext
+from infinitd_server.game_config import GameConfig
+from infinitd_server.logger import Logger
+from infinitd_server.sse import SseQueues
+from infinitd_server.user import User, FrozenUser, FrozenUserSummary, MutableUser
+from infinitd_server.paths import pathExists
 
 class UserInBattleException(Exception):
     pass

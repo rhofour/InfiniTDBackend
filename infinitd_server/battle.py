@@ -6,7 +6,7 @@ import math
 import attr
 import cattr
 
-from infinitdserver.game_config import GameConfig, ConfigId, CellPos, MonsterConfig, ConfigId, BattleBonus, MonstersDefeated, BattleBonus, BonusCondition
+from infinitd_server.game_config import GameConfig, ConfigId, CellPos, MonsterConfig, ConfigId, BattleBonus, MonstersDefeated, BattleBonus, BonusCondition
 
 FpRow = NewType('FpRow', float)
 cattr.register_structure_hook(FpRow, lambda d, _: FpRow(d))

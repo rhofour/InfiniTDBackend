@@ -7,10 +7,10 @@ from typing import List, Dict, Union, Callable, Deque, Awaitable, Optional
 
 from dataclasses_json import dataclass_json
 
-from infinitdserver.battle import Battle, BattleEvent, BattleResults
-from infinitdserver.battle_computer import BattleComputer
-from infinitdserver.sse import SseQueues
-from infinitdserver.logger import Logger
+from infinitd_server.battle import Battle, BattleEvent, BattleResults
+from infinitd_server.battle_computer import BattleComputer
+from infinitd_server.sse import SseQueues
+from infinitd_server.logger import Logger
 
 @unique
 class BattleStatus(Enum):

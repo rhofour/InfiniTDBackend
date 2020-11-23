@@ -7,10 +7,10 @@ from typing import Tuple, List, Optional
 import cattr
 from dataclasses_json import dataclass_json, config, config
 
-from infinitdserver.game_config import GameConfig, CellPos, ConfigId, TowerConfig, MonsterConfig
-from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
-from infinitdserver.battle import BattleResults
-from infinitdserver.battle_computer import BattleComputer
+from infinitd_server.game_config import GameConfig, CellPos, ConfigId, TowerConfig, MonsterConfig
+from infinitd_server.battleground_state import BattlegroundState, BgTowersState, BgTowerState
+from infinitd_server.battle import BattleResults
+from infinitd_server.battle_computer import BattleComputer
 
 class TowerPlacingStrategy(metaclass=abc.ABCMeta):
     "A TowerPlacingStrategy determines where to place new towers."

@@ -1,8 +1,8 @@
 import cattr
 
-from infinitdserver.battle_computer import BattleCalculationException
-from infinitdserver.game import Game
-from infinitdserver.handler.base import BaseHandler
+from infinitd_server.battle_computer import BattleCalculationException
+from infinitd_server.game import Game
+from infinitd_server.handler.base import BaseHandler
 
 class RecordedBattleHandler(BaseHandler):
     game: Game # See https://github.com/google/pytype/issues/652

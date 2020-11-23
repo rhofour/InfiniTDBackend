@@ -3,10 +3,10 @@ from random import Random
 import math
 from typing import List, Optional, Tuple, Sequence
 
-from infinitdserver.battle import ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol
-from infinitdserver.battleground_state import BattlegroundState, BgTowerState
-from infinitdserver.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId, MonstersDefeated
-from infinitdserver.paths import PathMap, makePathMap, compressPath
+from infinitd_server.battle import ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol
+from infinitd_server.battleground_state import BattlegroundState, BgTowerState
+from infinitd_server.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId, MonstersDefeated
+from infinitd_server.paths import PathMap, makePathMap, compressPath
 
 EVENT_PRECISION = 4 # Number of decimal places to use for events
 

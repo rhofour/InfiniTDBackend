@@ -1,4 +1,4 @@
-from infinitdserver.game_config import *
+from infinitd_server.game_config import *
 
 playfieldConfig6row3col = PlayfieldConfig(
     numRows = 6,

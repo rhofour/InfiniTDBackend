@@ -4,8 +4,8 @@ from copy import deepcopy
 
 import attr
 
-from infinitdserver.battleground_state import BattlegroundState
-from infinitdserver.game_config import ConfigId
+from infinitd_server.battleground_state import BattlegroundState
+from infinitd_server.game_config import ConfigId
 
 @attr.s(auto_attribs=True, eq=True)
 class UserSummary:

@@ -1,9 +1,9 @@
 import unittest
 from random import Random
 
-from infinitdserver.game_config import CellPos, Row, Col
-from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
-from infinitdserver.paths import makePathMap, compressPath, PathMap, pathExists
+from infinitd_server.game_config import CellPos, Row, Col
+from infinitd_server.battleground_state import BattlegroundState, BgTowersState, BgTowerState
+from infinitd_server.paths import makePathMap, compressPath, PathMap, pathExists
 
 def emptyBattleground(rows: int, cols: int):
     return BattlegroundState(towers = BgTowersState([[None for c in range(cols)] for r in range(rows)]))

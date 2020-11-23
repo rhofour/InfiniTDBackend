@@ -2,8 +2,8 @@ import json
 
 import cattr
 
-from infinitdserver.game import Game
-from infinitdserver.handler.base import BaseHandler
+from infinitd_server.game import Game
+from infinitd_server.handler.base import BaseHandler
 
 class GameConfigHandler(BaseHandler):
     game: Game

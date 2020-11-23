@@ -1,6 +1,6 @@
 import unittest
 
-from infinitdserver.game_config import BonusType, BonusCondition, BattleBonus, ConfigId
+from infinitd_server.game_config import BonusType, BonusCondition, BattleBonus, ConfigId
 
 class TestBattleBonus(unittest.TestCase):
     def setUp(self):

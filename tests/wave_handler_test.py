@@ -5,12 +5,12 @@ import os
 
 import tornado.testing
 
-from infinitdserver.battle_coordinator import BattleCoordinator
-from infinitdserver.game import Game
-from infinitdserver.game_config import MonsterConfig
-from infinitdserver.handler.wave import WaveHandler
-from infinitdserver.sse import SseQueues
-from infinitdserver.logger import Logger, MockLogger
+from infinitd_server.battle_coordinator import BattleCoordinator
+from infinitd_server.game import Game
+from infinitd_server.game_config import MonsterConfig
+from infinitd_server.handler.wave import WaveHandler
+from infinitd_server.sse import SseQueues
+from infinitd_server.logger import Logger, MockLogger
 import test_data
 
 class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
@@ -30,7 +30,7 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
         os.remove(self.dbPath)
 
     def test_wrongUser(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/wave/phil", method="POST", body='{"monsterId": 0}')
 
@@ -47,14 +47,14 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(resp.code, 400)
 
     def test_unknownMonster(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/wave/bob", method="POST", body='{"monsterId": 10}')
 
         self.assertEqual(resp.code, 400)
 
     def test_successfulPost(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/wave/bob", method="POST", body='{"monsterId": 0}')
         user = self.game.getUserSummaryByName("bob")
@@ -83,14 +83,14 @@ class TestWaveHandlerDelete(tornado.testing.AsyncHTTPTestCase):
         os.remove(self.dbPath)
 
     def test_wrongUser(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/wave/phil", method="DELETE")
 
         self.assertEqual(resp.code, 403)
 
     def test_successfulDelete(self):
-        with unittest.mock.patch('infinitdserver.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/wave/bob", method="DELETE")
         user = self.game.getUserSummaryByName("bob")

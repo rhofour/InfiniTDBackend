@@ -11,12 +11,12 @@ from hypothesis import given, assume
 import hypothesis.strategies as st
 
 
-from infinitdserver.game_config import GameConfig, GameConfigData, CellPos, Row, Col, Url, MonsterConfig, ConfigId, TowerConfig
-from infinitdserver.battleground_state import BattlegroundState, BgTowerState, TowerId
-from infinitdserver.battle import Battle, BattleEvent, MoveEvent, DeleteEvent, DamageEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol, BattleResults
-from infinitdserver.battle_computer import BattleComputer, MonsterState, TowerState
-from infinitdserver.game_config import ConfigId, CellPos, Row, Col
-from infinitdserver.paths import pathExists
+from infinitd_server.game_config import GameConfig, GameConfigData, CellPos, Row, Col, Url, MonsterConfig, ConfigId, TowerConfig
+from infinitd_server.battleground_state import BattlegroundState, BgTowerState, TowerId
+from infinitd_server.battle import Battle, BattleEvent, MoveEvent, DeleteEvent, DamageEvent, ObjectType, EventType, FpCellPos, FpRow, FpCol, BattleResults
+from infinitd_server.battle_computer import BattleComputer, MonsterState, TowerState
+from infinitd_server.game_config import ConfigId, CellPos, Row, Col
+from infinitd_server.paths import pathExists
 import test_data
 
 EPSILON = 0.0001

@@ -8,9 +8,9 @@ from pathlib import Path
 import cattr
 from dataclasses_json import dataclass_json, DataClassJsonMixin
 
-from infinitdserver.game_config import GameConfig, GameConfigData, CellPos, ConfigId, Row, Col
-from infinitdserver.battle import BattleResults
-from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
+from infinitd_server.game_config import GameConfig, GameConfigData, CellPos, ConfigId, Row, Col
+from infinitd_server.battle import BattleResults
+from infinitd_server.battleground_state import BattlegroundState, BgTowersState, BgTowerState
 
 from infinitd_balancer.strategy import TowerPlacingStrategy, TowerSelectionStrategy, WaveSelectionStrategy, FullStrategy, GameState
 

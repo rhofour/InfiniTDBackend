@@ -10,25 +10,25 @@ import tornado.web
 import firebase_admin
 from firebase_admin import credentials
 
-from infinitdserver.game import Game
-from infinitdserver.game_config import GameConfig, GameConfigData
-from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
-from infinitdserver.logger import Logger
+from infinitd_server.game import Game
+from infinitd_server.game_config import GameConfig, GameConfigData
+from infinitd_server.battleground_state import BattlegroundState, BgTowersState, BgTowerState
+from infinitd_server.logger import Logger
 
-from infinitdserver.handler.user import UserHandler
-from infinitdserver.handler.users import UsersHandler
-from infinitdserver.handler.this_user import ThisUserHandler
-from infinitdserver.handler.register import RegisterHandler
-from infinitdserver.handler.game_config import GameConfigHandler
-from infinitdserver.handler.battleground_stream import BattlegroundStreamHandler
-from infinitdserver.handler.user_stream import UserStreamHandler
-from infinitdserver.handler.build import BuildHandler
-from infinitdserver.handler.sell import SellHandler
-from infinitdserver.handler.wave import WaveHandler
-from infinitdserver.handler.control_battle import ControlBattleHandler
-from infinitdserver.handler.battle_stream import BattleStreamHandler
-from infinitdserver.handler.recorded_battle import RecordedBattleHandler
-from infinitdserver.handler.debug_logs import DebugLogsHandler
+from infinitd_server.handler.user import UserHandler
+from infinitd_server.handler.users import UsersHandler
+from infinitd_server.handler.this_user import ThisUserHandler
+from infinitd_server.handler.register import RegisterHandler
+from infinitd_server.handler.game_config import GameConfigHandler
+from infinitd_server.handler.battleground_stream import BattlegroundStreamHandler
+from infinitd_server.handler.user_stream import UserStreamHandler
+from infinitd_server.handler.build import BuildHandler
+from infinitd_server.handler.sell import SellHandler
+from infinitd_server.handler.wave import WaveHandler
+from infinitd_server.handler.control_battle import ControlBattleHandler
+from infinitd_server.handler.battle_stream import BattleStreamHandler
+from infinitd_server.handler.recorded_battle import RecordedBattleHandler
+from infinitd_server.handler.debug_logs import DebugLogsHandler
 
 async def updateGoldEveryMinute(game: Game):
     oneMinute = timedelta(minutes=1)

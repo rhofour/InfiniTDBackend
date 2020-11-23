@@ -2,8 +2,8 @@ import json
 
 import tornado
 
-from infinitdserver.game import Game, UserInBattleException, UserHasInsufficientGoldException
-from infinitdserver.handler.base import BaseHandler
+from infinitd_server.game import Game, UserInBattleException, UserHasInsufficientGoldException
+from infinitd_server.handler.base import BaseHandler
 
 class SellHandler(BaseHandler):
     game: Game # See https://github.com/google/pytype/issues/652

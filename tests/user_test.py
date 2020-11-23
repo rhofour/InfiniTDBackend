@@ -1,8 +1,8 @@
 import unittest
 
-from infinitdserver.battleground_state import BattlegroundState, BgTowersState, BgTowerState
-from infinitdserver.game_config import ConfigId
-from infinitdserver.user import MutableUser, User
+from infinitd_server.battleground_state import BattlegroundState, BgTowersState, BgTowerState
+from infinitd_server.game_config import ConfigId
+from infinitd_server.user import MutableUser, User
 
 class TestMutableUser(unittest.TestCase):
     def setUp(self):
