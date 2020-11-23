@@ -30,30 +30,29 @@ class FrozenUser(User):
     pass
 
 class MutableUser:
-    _original_user: User
+    _originalUser: User
     _user: User
 
     # Should only be made from MutableUserContext.
     def __init__(self, user: User):
-        super(MutableUser, self).__setattr__('_original_user', deepcopy(user))
+        super(MutableUser, self).__setattr__('_originalUser', deepcopy(user))
         super(MutableUser, self).__setattr__('_user', deepcopy(user))
 
     @property
     def battlegroundModified(self):
-        return self._original_user.battleground != self._user.battleground
+        return self._originalUser.battleground != self._user.battleground
 
     @property
     def summaryModified(self):
         # It feels like there should be a better way to do this with super
-        return not super(User, self._original_user).__eq__(self._user)
+        return not super(User, self._originalUser).__eq__(self._user)
 
     @property
     def waveModified(self):
-        return self._original_user.wave != self._user.wave
+        return self._originalUser.wave != self._user.wave
 
     def resetBattleground(self):
-        self.battleground = self.originalBattleground
-        self._originalBattleground = None
+        self.battleground = self._originalUser.battleground
 
     def addGold(self, gold):
         self.gold += gold
