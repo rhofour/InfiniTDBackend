@@ -19,7 +19,7 @@ cdef class BattleComputer:
   cdef CppBattleComputer cpp_battle_computer
 
   def __init__(self, jsonStr):
-      self.cpp_battle_computer = CppBattleComputer(jsonStr.encode("UTF-8"))
+    self.cpp_battle_computer = CppBattleComputer(jsonStr.encode("UTF-8"))
 
-  def ComputeBattle(self, int seed):
+  def computeBattle(self, battleground, wave, int seed):
     self.cpp_battle_computer.ComputeBattle(seed)

@@ -2,11 +2,15 @@ from dataclasses import dataclass, asdict
 from random import Random
 import math
 from typing import List, Optional, Tuple, Sequence
+import json
+
+import cattr
 
 from infinitd_server.battle import ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol
 from infinitd_server.battleground_state import BattlegroundState, BgTowerState
 from infinitd_server.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId, MonstersDefeated
 from infinitd_server.paths import PathMap, makePathMap, compressPath
+from infinitd_server.cpp_battle_computer.battle_computer import BattleComputer as CppBattleComputer
 
 EVENT_PRECISION = 4 # Number of decimal places to use for events
 
@@ -46,12 +50,16 @@ class BattleComputer:
     gameConfig: GameConfig
     gameTickSecs: float # Period of the gameplay clock
     debug: bool
+    cppBattleComputer: CppBattleComputer
 
     def __init__(self, gameConfig: GameConfig, seed: int = 42, gameTickSecs: float = 0.01, debug = False):
         self.gameConfig = gameConfig
         self.startingSeed = seed
         self.gameTickSecs = gameTickSecs
         self.debug = debug
+        jsonText = json.dumps(cattr.unstructure(gameConfig.gameConfigData))
+        self.cppBattleComputer = CppBattleComputer(jsonText)
+        print(f"Made BattleComputer with seed {self.startingSeed}")
 
     def getInitialTowerStates(self, battleground: BattlegroundState) -> List[TowerState]:
         nextId = 0
@@ -96,6 +104,8 @@ class BattleComputer:
     # need to change to handle effects that may alter enemy speed (or
     # potentially stun them).
     def computeBattle(self, battleground: BattlegroundState, wave: List[ConfigId]) -> BattleCalcResults:
+        self.cppBattleComputer.computeBattle(battleground, wave, self.startingSeed)
+
         events: List[BattleEvent] = []
         nextId = 0
         unspawnedMonsters = wave[::-1] # Reverse so we can pop off elements efficiently

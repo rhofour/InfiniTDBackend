@@ -41,7 +41,7 @@ class WaveSelectionStrategy(metaclass=abc.ABCMeta):
 
     def __init__(self, gameConfig: GameConfig):
         self.gameConfig = gameConfig
-        self.battleComputer = BattleComputer(gameConfig, True)
+        self.battleComputer = BattleComputer(gameConfig, debug=True)
 
     @abc.abstractmethod
     def nextWave(self, battleground: BattlegroundState) -> List[ConfigId]:
@@ -86,7 +86,7 @@ class FullStrategy:
         self.towerSelectionStrategy = towerSelectionStrategy
         self.waveSelectionStrategy = waveSelectionStrategy
         # Run at slightly lower precision to speed up the balancing
-        self.battleComputer = BattleComputer(gameConfig, gameTickSecs=0.02)
+        self.battleComputer = BattleComputer(gameConfig, gameTickSecs=0.02, debug=True)
 
     def evaluateUntil(self, targetGold: int) -> List[GameState]:
         "evaluateUntil returns how many minutes until targetGold is accumulated."

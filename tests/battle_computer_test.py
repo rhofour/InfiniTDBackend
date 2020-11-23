@@ -1,6 +1,6 @@
 import unittest
 from collections import defaultdict
-from typing import List, NewType
+from typing import List, Tuple, Dict
 from enum import Enum, unique, auto
 from pathlib import Path
 import json
@@ -394,6 +394,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         activeIds = set()
         # Map every projectile fired to the tower it fired from.
         projFiredFrom: Dict[FpCellPos, List[MoveEvent]] = defaultdict(list)
+        # pytype: disable=attribute-error
         for event in results.events:
             if event.eventType == EventType.MOVE:
                 activeIds.add(event.id)
@@ -401,6 +402,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                     projFiredFrom[event.startPos].append(event)
             if event.eventType == EventType.DELETE:
                 activeIds.discard(event.id)
+        # pytype: enable=attribute-error
         self.assertFalse(activeIds)
 
         for (firedFrom, events) in projFiredFrom.items():
@@ -414,6 +416,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
 
             lastFired = -1000.0
             for event in events:
+                # pytype: disable=attribute-error
                 # Ensure tower isn't firing faster than its fire rate.
                 timeBetweenFirings = event.startTime - lastFired
                 self.assertGreaterEqual(
@@ -431,6 +434,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
 
                 # Check that projectile config ID matches.
                 self.assertEqual(towerConfig.projectileId, event.configId)
+                # pytype: enable=attribute-error
 
 class TestBattleEventEncodingAndDecoding(unittest.TestCase):
     def setUp(self):
