@@ -9,5 +9,8 @@ RUN pipenv install --deploy
 
 COPY . ${PROJECT_DIR}
 
+# Compile the Cython modules.
+RUN pipenv run python setup.py build_ext --inplace
+
 EXPOSE 8794/tcp
 CMD ["pipenv", "run", "python", "-u", "-m", "infinitd_server", "--verbosity=2", "--reset-battles", "--debug"]

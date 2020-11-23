@@ -7,7 +7,7 @@ from io import open
 
 from setuptools import find_packages, setup
 
-with open('infinitdserver/__init__.py', 'r') as f:
+with open('infinitd_server/__init__.py', 'r') as f:
     for line in f:
         if line.startswith('__version__'):
             version = line.strip().split('=')[1].strip(' \'"')
@@ -51,6 +51,16 @@ kwargs = {
 
 #################### BEGIN USER OVERRIDES ####################
 # Add your customizations in this section.
+from distutils.extension import Extension
+
+from Cython.Build import cythonize
+kwargs['ext_modules']=cythonize([
+    Extension(
+        "infinitd_server.cpp_battle_computer.battle_computer",
+        ["infinitd_server/cpp_battle_computer/battle_computer.pyx"],
+    )],
+    compiler_directives={'language_level': 3},
+)
 
 ###################### END USER OVERRIDES ####################
 

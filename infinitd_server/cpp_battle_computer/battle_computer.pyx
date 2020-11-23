@@ -1,5 +1,5 @@
 # distutils: language = c++
-# distutils: include_dirs = ./rapidjson/include
+# distutils: include_dirs = ./infinitd_server/cpp_battle_computer/rapidjson/include
 
 from libcpp.string cimport string
 

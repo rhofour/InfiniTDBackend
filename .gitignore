@@ -12,4 +12,5 @@ infintdserver/.pytype
 balancing_results.json
 # Don't store compiled Cython stuff
 *.cpython*
-infinitd_server/cpp_battle_computer/build/*
+build
+infinitd_server/cpp_battle_computer/battle_computer.cpp

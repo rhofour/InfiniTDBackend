@@ -1,3 +1,7 @@
+# Podman vs. Docker
+I personally use podman, but I believe you can simply replace podman with docker
+and everything will work as expected.
+
 # Build
 podman build -t infinitd-backend .
 
