@@ -19,3 +19,10 @@ podman rm temp
 
 # Run
 podman run --mount type=volume,source=backend-data,target=/InfiniTDServer/data -p 8794:8794 -d infinitd-backend
+
+# Inspect DB / Logs
+This will drop you in an SQLite terminal:
+podman run --mount type=volume,source=backend-data,target=/InfiniTDServer/data --rm -it keinos/sqlite3
+
+Then simply open the database with:
+.open InfiniTDServer/data/data.db
