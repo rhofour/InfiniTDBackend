@@ -65,6 +65,9 @@ class Game:
     def getUserSummaryByUid(self, uid: str) -> Optional[FrozenUserSummary]:
         return self._db.getUserSummaryByUid(uid)
 
+    def getUserByName(self, name: str) -> Optional[User]:
+        return self._db.getUserByName(name)
+
     def getUserByUid(self, uid: str) -> Optional[User]:
         return self._db.getUserByUid(uid)
 

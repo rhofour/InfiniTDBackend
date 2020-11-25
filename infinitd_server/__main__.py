@@ -29,6 +29,7 @@ from infinitd_server.handler.control_battle import ControlBattleHandler
 from infinitd_server.handler.battle_stream import BattleStreamHandler
 from infinitd_server.handler.recorded_battle import RecordedBattleHandler
 from infinitd_server.handler.debug_logs import DebugLogsHandler
+from infinitd_server.handler.debug_battle_input import DebugBattleInputHandler
 
 async def updateGoldEveryMinute(game: Game):
     oneMinute = timedelta(minutes=1)
@@ -68,6 +69,7 @@ def make_app(game, debug):
     ]
     debug_handlers = [
         (r"/debug/logs", DebugLogsHandler, dict(game=game)),
+        (r"/debug/battleInput/(.*)/(.*)", DebugBattleInputHandler, dict(game=game)),
     ]
     return tornado.web.Application(prod_handlers + debug_handlers, **settings)
 
