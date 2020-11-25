@@ -51,8 +51,8 @@ class MutableUser:
     def waveModified(self):
         return self._originalUser.wave != self._user.wave
 
-    def resetBattleground(self):
-        self.battleground = self._originalUser.battleground
+    def reset(self):
+        super(MutableUser, self).__setattr__('_user', deepcopy(self._originalUser))
 
     def addGold(self, gold):
         self.gold += gold

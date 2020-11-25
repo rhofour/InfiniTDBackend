@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 import unittest.mock
 import tempfile
@@ -99,3 +100,22 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         expectedBg = BattlegroundState.empty(self.gameConfig)
         expectedBg.towers.towers[2][1] = BgTowerState(0)
         self.assertEqual(battleground, expectedBg)
+
+    def test_blocksPath(self):
+        def waitOnAwaitable(x):
+            asyncio.get_event_loop().run_until_complete(x)
+        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+            user.battleground.towers.towers[1][0] = BgTowerState(0)
+            expectedBattleground = user.battleground
+            expectedGold = user.gold
+
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch("/build/bob/0/1", method="POST", body='{"towerId": 0}')
+        battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 409)
+        self.assertEqual(battleground, expectedBattleground)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.gold, expectedGold) # pytype: disable=attribute-error

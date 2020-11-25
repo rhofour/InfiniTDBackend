@@ -111,7 +111,7 @@ class Game:
         # Check if there is still a path from start to exit.
         blocked = not pathExists(user.battleground, self.gameConfig.playfield.monsterEnter, self.gameConfig.playfield.monsterExit)
         if blocked:
-            user.resetBattleground() # Prevent us from writing back the changed battleground
+            user.reset() # Prevent us from writing back the changed user.
             raise ValueError(f"Building at {row}, {col} would block the path.")
 
     def sellTower(self, user: MutableUser, row: int, col: int):
