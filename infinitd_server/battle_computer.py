@@ -226,7 +226,8 @@ class BattleComputer:
                     monsterConfig = self.gameConfig.monsters[monsterConfigId]
                 except KeyError:
                     raise ValueError(f"Unknown monster ID: {monsterConfigId}")
-                path = compressPath(pathMap.getRandomPath(self.gameConfig.playfield.numCols, rand))
+                path = compressPath(pathMap.getRandomPath(
+                    self.gameConfig.playfield.monsterEnter, rand))
                 newMonster = MonsterState(
                         id = nextId,
                         config = monsterConfig,

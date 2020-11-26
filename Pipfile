@@ -4,6 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+readline = "*"
 
 [packages]
 tornado = "*"
@@ -17,6 +18,7 @@ attrs = "*"
 cattrs = "*"
 hypothesis = "*"
 cython = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.8"

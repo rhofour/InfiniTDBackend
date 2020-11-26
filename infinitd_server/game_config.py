@@ -22,9 +22,16 @@ class CellPos:
     def toNumber(self, numCols: int) -> int:
         return self.row * numCols + self.col;
 
+    def toTuple(self) -> Tuple[int, int]:
+        return (self.row, self.col)
+
     @staticmethod
     def fromNumber(number: int, numCols: int):
         return CellPos(Row(number // numCols), Col(number % numCols))
+
+    @staticmethod
+    def fromTuple(t: Tuple[int, int]):
+        return CellPos(Row(t[0]), Col(t[1]))
 
 @attr.s(frozen=True, auto_attribs=True)
 class PlayfieldConfig:

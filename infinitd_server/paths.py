@@ -1,49 +1,40 @@
 from dataclasses import dataclass
 from random import Random
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Tuple
+
+import numpy as np
 
 from infinitd_server.game_config import CellPos, Row, Col
 from infinitd_server.battleground_state import BattlegroundState
 
 @dataclass(frozen=True)
 class PathMap:
-    dists: List[int]
+    dists: np.ndarray
 
-    def readableStr(self, numCols: int):
-        if len(self.dists) % numCols != 0:
-            raise ValueError(f"PathMap has {len(self.dists)} items which doesn't cleanly divide "
-                    f"into {numCols} columns.")
-        rows = len(self.dists) / numCols
-        outStr = ""
-        for row in range(rows):
-            outStr += f"{self.dists[row * numCols : (row+1) * numCols]}"
-        return outStr
-
-    def getRandomPath(self, numCols: int, rand: Optional[Random] = None) -> List[CellPos]:
+    def getRandomPath(self, start: CellPos,
+            rand: Optional[Random] = None) -> List[CellPos]:
         if rand is None:
             rand = Random()
-        numRows = len(self.dists) / numCols
-        def getNeighbors(elem: int) -> List[int]:
-            col = elem % numCols
-            row = elem // numCols
+        numRows, numCols = self.dists.shape
+        def getNeighbors(elem: Tuple[int, int]) -> List[Tuple[int, int]]:
+            row, col = elem
             neighbors = []
             if col > 0:
-                neighbors.append(elem - 1)
+                neighbors.append((row, col - 1))
             if col < numCols - 1:
-                neighbors.append(elem + 1)
+                neighbors.append((row, col + 1))
             if row > 0:
-                neighbors.append(elem - numCols)
+                neighbors.append((row - 1, col))
             if row < numRows - 1:
-                neighbors.append(elem + numCols)
+                neighbors.append((row + 1, col))
             return neighbors
 
         path = []
         currentDist = -1
-        start = self.dists.index(0)
-        possibleNeighbors = [start]
+        possibleNeighbors = [start.toTuple()]
         while possibleNeighbors:
             currentPos = rand.choice(possibleNeighbors)
-            path.append(CellPos.fromNumber(currentPos, numCols))
+            path.append(CellPos.fromTuple(currentPos))
             currentDist += 1
             possibleNeighbors = [neighbor
                     for neighbor in getNeighbors(currentPos)
@@ -71,7 +62,7 @@ def pathExists(battleground: BattlegroundState, start: CellPos, end: CellPos) ->
     # This would likely be faster if implemented as A* instead.
     numCols = len(battleground.towers.towers[0])
     distMap = makeDistMap(battleground, start, end)
-    return distMap.dists[end.toNumber(numCols)] >= 0
+    return distMap.dists[end.toTuple()] >= 0
 
 def makeDistMap(battleground: BattlegroundState, start: CellPos, end: CellPos) -> PathMap:
     """makeDistMap calculates the distance of every point from the start, stopping if it finds the end.
@@ -82,39 +73,36 @@ def makeDistMap(battleground: BattlegroundState, start: CellPos, end: CellPos) -
     numRows = len(battleground.towers.towers)
 
     # distance from the start with -1 being unknown and -2 being impassable
-    dists = [-1] * (numCols * numRows)
-    i = 0
+    dists = np.full((numRows, numCols), -1)
     for (row, rowTowers) in enumerate(battleground.towers.towers):
         for (col, tower) in enumerate(rowTowers):
             if tower is not None:
-                dists[i] = -2
-            i += 1
+                dists[row, col] = -2
 
-    startNumber = start.toNumber(numCols)
-    if dists[startNumber] != -1:
+    startTuple = start.toTuple()
+    if dists[startTuple] != -1:
         return PathMap(dists = dists)
-    endNumber = end.toNumber(numCols)
-    if dists[endNumber] != -1:
+    endTuple = end.toTuple()
+    if dists[endTuple] != -1:
         return PathMap(dists = dists)
 
-    def getNeighbors(elem: int) -> List[int]:
-        col = elem % numCols
-        row = elem // numCols
+    def getNeighbors(elem: Tuple[int, int]) -> List[Tuple[int, int]]:
+        row, col = elem
         neighbors = []
         if col > 0:
-            neighbors.append(elem - 1)
+            neighbors.append((row, col - 1))
         if col < numCols - 1:
-            neighbors.append(elem + 1)
+            neighbors.append((row, col + 1))
         if row > 0:
-            neighbors.append(elem - numCols)
+            neighbors.append((row - 1, col))
         if row < numRows - 1:
-            neighbors.append(elem + numCols)
+            neighbors.append((row + 1, col))
         return neighbors
 
-    frontier = [startNumber]
+    frontier = [startTuple]
     dist = 0
-    dists[startNumber] = 0
-    while dists[endNumber] == -1 and frontier:
+    dists[startTuple] = 0
+    while dists[endTuple] == -1 and frontier:
         nextFrontier = []
         for frontierElem in frontier:
             assert dists[frontierElem] == dist
@@ -133,16 +121,15 @@ def makePathMap(battleground: BattlegroundState, start: CellPos, end: CellPos) -
     numRows = len(battleground.towers.towers)
 
     startDistMap = makeDistMap(battleground, start, end)
-    shortestPathLength = startDistMap.dists[end.toNumber(numCols)]
+    shortestPathLength = startDistMap.dists[end.toTuple()]
     if shortestPathLength < 0: # No path exists
         return None
     endDistMap = makeDistMap(battleground, end, start)
-    assert shortestPathLength == endDistMap.dists[start.toNumber(numCols)]
+    assert shortestPathLength == endDistMap.dists[start.toTuple()]
 
     # Every element on a shortest path will have:
     # startDistMap[i] + endDistMap[i] == shortestPathLength
-    dists = [-1] * (numCols * numRows)
-    for i in range(numCols * numRows):
-        if startDistMap.dists[i] + endDistMap.dists[i] == shortestPathLength:
-            dists[i] = startDistMap.dists[i]
+    dists = np.where(
+            startDistMap.dists + endDistMap.dists == shortestPathLength,
+            startDistMap.dists, -1)
     return PathMap(dists = dists)

@@ -1,6 +1,8 @@
 import unittest
 from random import Random
 
+import numpy as np
+
 from infinitd_server.game_config import CellPos, Row, Col
 from infinitd_server.battleground_state import BattlegroundState, BgTowersState, BgTowerState
 from infinitd_server.paths import makePathMap, compressPath, PathMap, pathExists
@@ -18,7 +20,8 @@ class TestGetRandomPath(unittest.TestCase):
 
         for i in range(10):
             with self.subTest(seed=i):
-                path = pathMap.getRandomPath(2, Random(i)) # pytype: disable=attribute-error
+                path = pathMap.getRandomPath(
+                        start, Random(i)) # pytype: disable=attribute-error
                 self.assertEqual(len(path), 3)
                 self.assertEqual(path[0], start)
                 self.assertEqual(path[-1], end)
@@ -40,7 +43,8 @@ class TestGetRandomPath(unittest.TestCase):
 
         for i in range(10):
             with self.subTest(seed=i):
-                path = pathMap.getRandomPath(5, Random(i)) # pytype: disable=attribute-error
+                path = pathMap.getRandomPath(
+                        start, Random(i)) # pytype: disable=attribute-error
                 self.assertEqual(len(path), 9)
                 self.assertEqual(path[0], start)
                 self.assertEqual(path[-1], end)
@@ -66,7 +70,8 @@ class TestGetRandomPath(unittest.TestCase):
 
         for i in range(10):
             with self.subTest(seed=i):
-                path = pathMap.getRandomPath(5, Random(i)) # pytype: disable=attribute-error
+                path = pathMap.getRandomPath(
+                        start, Random(i)) # pytype: disable=attribute-error
                 self.assertEqual(len(path), 9)
                 self.assertEqual(path[0], start)
                 self.assertEqual(path[-1], end)
@@ -152,8 +157,8 @@ class TestMakePathMap(unittest.TestCase):
 
         pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(0), Col(1)))
 
-        expectedPathMap = PathMap(dists = [0, 1, -1, -1])
-        self.assertEqual(pathMap, expectedPathMap)
+        np.testing.assert_array_equal(
+            pathMap.dists, np.asarray([[0, 1], [-1, -1]]))
 
     def test_multiStepPath(self):
         battleground = emptyBattleground(2, 3)
@@ -161,8 +166,8 @@ class TestMakePathMap(unittest.TestCase):
 
         pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(0), Col(2)))
 
-        expectedPathMap = PathMap(dists = [0, -1, 4, 1, 2, 3])
-        self.assertEqual(pathMap, expectedPathMap)
+        np.testing.assert_array_equal(
+            pathMap.dists, np.asarray([[0, -1, 4], [1, 2, 3]]))
 
     def test_multiplePaths(self):
         battleground = emptyBattleground(3, 3)
@@ -170,16 +175,16 @@ class TestMakePathMap(unittest.TestCase):
 
         pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(2), Col(2)))
 
-        expectedPathMap = PathMap(dists = [0, 1, 2, 1, -1, 3, 2, 3, 4])
-        self.assertEqual(pathMap, expectedPathMap)
+        np.testing.assert_array_equal(pathMap.dists,
+            np.asarray([[0, 1, 2], [1, -1, 3], [2, 3, 4]]))
 
     def test_manyPaths(self):
         battleground = emptyBattleground(3, 3)
 
         pathMap = makePathMap(battleground, CellPos(Row(0), Col(0)), CellPos(Row(2), Col(2)))
 
-        expectedPathMap = PathMap(dists = [0, 1, 2, 1, 2, 3, 2, 3, 4])
-        self.assertEqual(pathMap, expectedPathMap)
+        np.testing.assert_array_equal(
+            pathMap.dists, np.asarray([[0, 1, 2], [1, 2, 3], [2, 3, 4]]))
 
 class TestCompressPath(unittest.TestCase):
     def test_twoNodePaths(self):
