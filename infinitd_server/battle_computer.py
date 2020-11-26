@@ -58,7 +58,7 @@ class BattleComputer:
         self.gameTickSecs = gameTickSecs
         self.debug = debug
         jsonText = json.dumps(cattr.unstructure(gameConfig.gameConfigData))
-        self.cppBattleComputer = CppBattleComputer(jsonText)
+        self.cppBattleComputer = CppBattleComputer(gameConfig, jsonText)
         print(f"Made BattleComputer with seed {self.startingSeed}")
 
     def getInitialTowerStates(self, battleground: BattlegroundState) -> List[TowerState]:
@@ -104,7 +104,6 @@ class BattleComputer:
     # need to change to handle effects that may alter enemy speed (or
     # potentially stun them).
     def computeBattle(self, battleground: BattlegroundState, wave: List[ConfigId]) -> BattleCalcResults:
-        self.cppBattleComputer.computeBattle(battleground, wave, self.startingSeed)
 
         events: List[BattleEvent] = []
         nextId = 0
@@ -116,6 +115,9 @@ class BattleComputer:
         monstersDefeated: MonstersDefeated = {}
         towers = self.getInitialTowerStates(battleground)
 
+        if not wave:
+            raise ValueError("Cannot compute battle with empty wave.")
+
         pathMap = makePathMap(
                 battleground,
                 self.gameConfig.playfield.monsterEnter,
@@ -123,8 +125,18 @@ class BattleComputer:
         if not pathMap:
             raise ValueError("Cannot compute battle with no path.")
 
-        if not wave:
-            raise ValueError("Cannot compute battle with empty wave.")
+        # Calculate paths for all enemies ahead of time.
+        paths = []
+        longestPath = 0
+        for _ in wave:
+            paths.append(compressPath(pathMap.getRandomPath(
+                self.gameConfig.playfield.monsterEnter, rand)))
+
+        self.cppBattleComputer.computeBattle(battleground, wave, paths)
+
+        # Reverse so we can use these efficiently in Python. Remove when
+        # everything works in C++.
+        paths.reverse()
 
         spawnPoint = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
         while unspawnedMonsters or spawnedMonsters:
@@ -226,8 +238,7 @@ class BattleComputer:
                     monsterConfig = self.gameConfig.monsters[monsterConfigId]
                 except KeyError:
                     raise ValueError(f"Unknown monster ID: {monsterConfigId}")
-                path = compressPath(pathMap.getRandomPath(
-                    self.gameConfig.playfield.monsterEnter, rand))
+                path = paths.pop()
                 newMonster = MonsterState(
                         id = nextId,
                         config = monsterConfig,

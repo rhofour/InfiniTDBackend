@@ -21,6 +21,13 @@ CppBattleComputer::CppBattleComputer(std::string jsonText) {
   this->gameConfig = GameConfig(d);
 }
 
-void CppBattleComputer::ComputeBattle(int seed) {
-  cout << "Computing a battle with seed: " << seed << endl;
+void CppBattleComputer::ComputeBattle(
+    const vector<vector<int>>& towers,
+    vector<int> wave,
+    vector<vector<CppCellPos>> paths) {
+  const int numRows = towers.size();
+  const int numCols = towers[0].size();
+  cout << "Computing a " << numRows << " x " << numCols
+    << " battle with " << wave.size() << " enemies and "
+    << paths.size() << " paths." << endl;
 }
