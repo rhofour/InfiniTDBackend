@@ -21,7 +21,7 @@ CppBattleComputer::CppBattleComputer(std::string jsonText) {
   this->gameConfig = GameConfig(d);
 }
 
-void CppBattleComputer::ComputeBattle(
+CppBattleCalcResult CppBattleComputer::ComputeBattle(
     const vector<vector<int>>& towers,
     vector<int> wave,
     vector<vector<CppCellPos>> paths) {
@@ -30,4 +30,20 @@ void CppBattleComputer::ComputeBattle(
   cout << "Computing a " << numRows << " x " << numCols
     << " battle with " << wave.size() << " enemies and "
     << paths.size() << " paths." << endl;
+
+  CppBattleCalcResult result;
+
+  // Initialize tower states.
+
+  // Store enemies in reverse order so we can efficiently remove from the end.
+  vector<int> unspawnedEnemies(wave.crbegin(), wave.crend());
+
+  // Main game loop
+  while (!unspawnedEnemies.empty()) {
+    // Spawn new enemy
+    int enemyConfigId = unspawnedEnemies.back();
+    unspawnedEnemies.pop_back();
+  }
+
+  return result;
 }

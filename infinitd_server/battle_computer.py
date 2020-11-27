@@ -6,7 +6,7 @@ import json
 
 import cattr
 
-from infinitd_server.battle import ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol
+from infinitd_server.battle import ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol, BattleCalcResults
 from infinitd_server.battleground_state import BattlegroundState, BgTowerState
 from infinitd_server.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId, MonstersDefeated
 from infinitd_server.paths import PathMap, makePathMap, compressPath
@@ -38,12 +38,6 @@ class MonsterState:
     spawnedAt: float
     targetInPath: int = 1
     distTraveled: float = 0.0
-
-@dataclass(frozen=True)
-class BattleCalcResults:
-    events: List[BattleEvent]
-    results: BattleResults
-
 
 class BattleComputer:
     startingSeed: int

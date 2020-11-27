@@ -7,7 +7,45 @@ import numpy as np
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 
+from infinitd_server.battle import FpCellPos, ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, BattleCalcResults
 from infinitd_server.game_config import GameConfig, CellPos, ConfigId
+
+cdef extern from "types.h":
+    cdef struct CppCellPos:
+        float row
+        float col
+
+cdef extern from "battle_event.h":
+    cdef enum CppEventType:
+        CPP_MOVE, CPP_DELETE, CPP_DAMAGE
+
+    cdef enum CppObjectType:
+        CPP_MONSTER, CPP_PROJECTILE
+
+    cdef struct CppMoveEvent:
+        CppObjectType objType
+        int id
+        float startTime
+        float endTime
+        CppCellPos startPos
+        CppCellPos destPos
+
+    cdef struct CppDeleteEvent:
+        CppObjectType objType
+        int id
+        float startTime
+
+    cdef struct CppDamageEvent:
+        int id
+        float startTime
+        float health
+
+    cdef struct CppBattleEvent:
+        CppEventType eventType
+        # On the C++ side these are in an anonymous union
+        CppMoveEvent moveEvent
+        CppDeleteEvent deleteEvent
+        CppDamageEvent damageEvent
 
 cdef extern from "game_config.h":
     pass
@@ -16,14 +54,13 @@ cdef extern from "cpp_battle_computer.cpp":
     pass
 
 cdef extern from "cpp_battle_computer.h":
-    cdef struct CppCellPos:
-        float row
-        float col
+    cdef struct CppBattleCalcResult:
+        vector[CppBattleEvent] events
 
     cdef cppclass CppBattleComputer:
         CppBattleComputer() except +
         CppBattleComputer(string) except +
-        void ComputeBattle(const vector[vector[int]]&, vector[int] wave,
+        CppBattleCalcResult ComputeBattle(const vector[vector[int]]&, vector[int] wave,
                 vector[vector[CppCellPos]])
 
 cdef vector[CppCellPos] _pathToCpp(pyPath):
@@ -60,4 +97,7 @@ cdef class BattleComputer:
             cppPaths.push_back(_pathToCpp(pyPath))
 
         # Actually call the C++ code
-        self.cppBattleComputer.ComputeBattle(towers, wave, cppPaths)
+        cdef CppBattleCalcResult result = self.cppBattleComputer.ComputeBattle(
+                towers, wave, cppPaths)
+
+        # Convert C++ results into Python

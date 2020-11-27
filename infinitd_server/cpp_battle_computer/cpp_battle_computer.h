@@ -2,13 +2,15 @@
 #include <string>
 #include <vector>
 
+#include "types.h"
 #include "game_config.h"
+#include "battle_event.h"
 
 using std::string;
 using std::vector;
 
-struct CppCellPos {
-  float row, col;
+struct CppBattleCalcResult {
+  vector<CppBattleEvent> events;
 };
 
 class CppBattleComputer {
@@ -16,6 +18,6 @@ class CppBattleComputer {
   GameConfig gameConfig;
   CppBattleComputer() {};
   CppBattleComputer(string jsonText);
-  void ComputeBattle(const vector<vector<int>>& towers, vector<int> wave,
+  CppBattleCalcResult ComputeBattle(const vector<vector<int>>& towers, vector<int> wave,
       vector<vector<CppCellPos>> paths);
 };

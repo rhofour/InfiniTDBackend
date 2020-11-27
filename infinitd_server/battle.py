@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum, unique, auto
 import json
 from typing import NewType, Any, Union, Dict, List
@@ -162,6 +163,11 @@ class BattleResults:
                 reward = reward,
                 timeSecs = timeSecs
             )
+
+@dataclass(frozen=True)
+class BattleCalcResults:
+    events: List[BattleEvent]
+    results: BattleResults
 
 @attr.s(frozen=True, auto_attribs=True)
 class Battle:
