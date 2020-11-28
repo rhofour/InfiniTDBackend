@@ -6,8 +6,19 @@ import math
 
 import attr
 import cattr
+import flatbuffers
 
 from infinitd_server.game_config import GameConfig, ConfigId, CellPos, MonsterConfig, ConfigId, BattleBonus, MonstersDefeated, BattleBonus, BonusCondition
+import  InfiniTDFb.FpCellPosFb as FpCellPosFb
+import  InfiniTDFb.ObjectTypeFb as ObjectTypeFb
+import  InfiniTDFb.MoveEventFb as MoveEventFb
+import  InfiniTDFb.DeleteEventFb as DeleteEventFb
+import  InfiniTDFb.DamageEventFb as DamageEventFb
+import  InfiniTDFb.BattleEventFb as BattleEventFb
+import  InfiniTDFb.BattleEventUnionFb as BattleEventUnionFb
+import  InfiniTDFb.MonsterDefeatedFb as MonsterDefeatedFb
+import  InfiniTDFb.BattleResultsFb as BattleResultsFb
+import  InfiniTDFb.BattleEventsFb as BattleEventsFb
 
 FpRow = NewType('FpRow', float)
 cattr.register_structure_hook(FpRow, lambda d, _: FpRow(d))
@@ -46,10 +57,21 @@ class FpCellPos:
     def prettify(self, precision: int):
         return FpCellPos(FpRow(round(float(self.row), precision)), FpCol(round(float(self.col), precision)))
 
+    def toFb(self, builder):
+        return FpCellPosFb.CreateFpCellPosFb(builder, self.row, self.col)
+
 @unique
 class ObjectType(Enum):
     MONSTER = auto()
     PROJECTILE = auto()
+
+    @classmethod
+    def toFb(cls, x):
+        if x == cls.MONSTER:
+            return ObjectTypeFb.ObjectTypeFb().ENEMY
+        elif x == cls.PROJECTILE:
+            return ObjectTypeFb.ObjectTypeFb().PROJECTILE
+        raise ValueError(f"Unknown enum value: {x}")
 
 @unique
 class EventType(Enum):
@@ -79,6 +101,23 @@ class MoveEvent:
             endTime = round(self.endTime, precision)
         )
 
+    def toFb(self, builder):
+        MoveEventFb.MoveEventFbStart(builder)
+        MoveEventFb.MoveEventFbAddObjType(builder, ObjectType.toFb(self.objType))
+        MoveEventFb.MoveEventFbAddId(builder, self.id)
+        MoveEventFb.MoveEventFbAddConfigId(builder, self.configId)
+        MoveEventFb.MoveEventFbAddStartPos(builder, self.startPos.toFb(builder))
+        MoveEventFb.MoveEventFbAddDestPos(builder, self.destPos.toFb(builder))
+        MoveEventFb.MoveEventFbAddStartTime(builder, self.startTime)
+        MoveEventFb.MoveEventFbAddEndTime(builder, self.endTime)
+        event = MoveEventFb.MoveEventFbEnd(builder)
+
+        BattleEventFb.BattleEventFbStart(builder)
+        BattleEventFb.BattleEventFbAddEventType(builder,
+                BattleEventUnionFb.BattleEventUnionFb().Move)
+        BattleEventFb.BattleEventFbAddEvent(builder, event)
+        return BattleEventFb.BattleEventFbEnd(builder)
+
 @attr.s(frozen=True, auto_attribs=True)
 class DeleteEvent:
     objType: ObjectType
@@ -93,6 +132,19 @@ class DeleteEvent:
             startTime = round(self.startTime, precision),
         )
 
+    def toFb(self, builder):
+        DeleteEventFb.DeleteEventFbStart(builder)
+        DeleteEventFb.DeleteEventFbAddObjectTypeFb(builder, ObjectType.toFb(self.objType))
+        DeleteEventFb.DeleteEventFbAddId(builder, self.id)
+        DeleteEventFb.DeleteEventFbAddStartTime(builder, self.startTime)
+        event = DeleteEventFb.DeleteEventFbEnd(builder)
+
+        BattleEventFb.BattleEventFbStart(builder)
+        BattleEventFb.BattleEventFbAddEventType(builder,
+                BattleEventUnionFb.BattleEventUnionFb().Delete)
+        BattleEventFb.BattleEventFbAddEvent(builder, event)
+        return BattleEventFb.BattleEventFbEnd(builder)
+
 @attr.s(frozen=True, auto_attribs=True)
 class DamageEvent:
     id: int
@@ -106,6 +158,19 @@ class DamageEvent:
             startTime = round(self.startTime, precision),
             health = self.health,
         )
+
+    def toFb(self, builder):
+        DamageEventFb.DamageEventFbStart(builder)
+        DamageEventFb.DamageEventFbAddId(builder, self.id)
+        DamageEventFb.DamageEventFbAddStartTime(builder, self.startTime)
+        DamageEventFb.DamageEventFbAddHealth(builder, self.health)
+        event = DamageEventFb.DamageEventFbEnd(builder)
+
+        BattleEventFb.BattleEventFbStart(builder)
+        BattleEventFb.BattleEventFbAddEventType(builder,
+                BattleEventUnionFb.BattleEventUnionFb().Damage)
+        BattleEventFb.BattleEventFbAddEvent(builder, event)
+        return BattleEventFb.BattleEventFbEnd(builder)
 
 BattleEvent = Union[MoveEvent, DeleteEvent, DamageEvent]
 
@@ -174,6 +239,21 @@ class Battle:
     name: str
     events: List[BattleEvent]
     results: BattleResults
+
+    def encodeEventsFb(self) -> bytearray:
+        builder = flatbuffers.Builder(1024)
+        fbEventOffsets = [event.toFb(builder) for event in reversed(self.events)]
+
+        numEvents = len(self.events)
+        BattleEventsFb.BattleEventsFbStartEventsVector(builder, numEvents)
+        for fbEventOffset in fbEventOffsets:
+            builder.PrependUOffsetTRelative(fbEventOffset)
+        fbEvents = builder.EndVector(numEvents)
+
+        BattleEventsFb.BattleEventsFbStart(builder)
+        battleEventsFb = BattleEventsFb.BattleEventsFbEnd(builder)
+        builder.Finish(battleEventsFb)
+        return builder.Output()
 
     def encodeEvents(self) -> str:
         return json.dumps(cattr.unstructure(self.events))

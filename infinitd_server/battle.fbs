@@ -1,0 +1,57 @@
+namespace InfiniTDFb;
+
+struct FpCellPosFb {
+  row:float;
+  col:float;
+}
+
+enum ObjectTypeFb:byte { ENEMY=0, PROJECTILE }
+
+table MoveEventFb {
+  objType:ObjectTypeFb;
+  id:int;
+  configId:ushort;
+  startPos:FpCellPosFb;
+  destPos:FpCellPosFb;
+  startTime:float;
+  endTime:float;
+}
+
+table DeleteEventFb {
+  objType:ObjectTypeFb;
+  id:int;
+  startTime:float;
+}
+
+table DamageEventFb {
+  id:int;
+  startTime:float;
+  health:float;
+}
+
+union BattleEventUnionFb {
+  Move:MoveEventFb,
+  Delete:DeleteEventFb,
+  Damage:DamageEventFb
+}
+
+table BattleEventFb {
+  event:BattleEventUnionFb;
+}
+
+table BattleEventsFb {
+  events:[BattleEventFb];
+}
+
+struct MonsterDefeatedFb {
+  configId:ushort;
+  numSent:ushort;
+  numDefeated:ushort;
+}
+
+table BattleResultsFb {
+  monstersDefeated:[MonsterDefeatedFb];
+  bonuses:[ushort];
+  reward:float;
+  timeSecs:float;
+}

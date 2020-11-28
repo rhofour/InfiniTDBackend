@@ -19,6 +19,7 @@ cattrs = "*"
 hypothesis = "*"
 cython = "*"
 numpy = "*"
+flatbuffers = "*"
 
 [requires]
 python_version = "3.8"

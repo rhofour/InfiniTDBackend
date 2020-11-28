@@ -463,6 +463,7 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
 
         encodedStr = battle.encodeEvents()
         decodedEvents = Battle.decodeEvents(encodedStr)
+        encodedFb = battle.encodeEventsFb()
 
         self.assertEqual(battle.events, decodedEvents)
 
