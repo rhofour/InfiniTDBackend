@@ -310,14 +310,11 @@ class Battle:
 
     @staticmethod
     def decodeEventsFb(encodedBytes: bytearray):
-        print(encodedBytes)
         eventsObj = BattleEventsFb.BattleEventsFb.GetRootAsBattleEventsFb(encodedBytes, 0)
         numEvents = eventsObj.EventsLength()
         decodedEvents = []
-        print(numEvents)
         for i in range(numEvents):
             battleEvent = eventsObj.Events(i)
-            print(f"{i}/{numEvents}: {battleEvent}")
             battleEventUnionType = battleEvent.EventType()
             if battleEventUnionType == BattleEventUnionFb.BattleEventUnionFb().Move:
                 moveEvent = MoveEventFb.MoveEventFb()
@@ -330,5 +327,5 @@ class Battle:
             elif battleEventUnionType == BattleEventUnionFb.BattleEventUnionFb().Damage:
                 damageEvent = DamageEventFb.DamageEventFb()
                 damageEvent.Init(battleEvent.Event().Bytes, battleEvent.Event().Pos)
-                decodedEvents.append(damageEvent.fromFb(damageEvent))
+                decodedEvents.append(DamageEvent.fromFb(damageEvent))
         return decodedEvents
