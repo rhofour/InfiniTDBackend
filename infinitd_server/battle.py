@@ -60,6 +60,10 @@ class FpCellPos:
     def toFb(self, builder):
         return FpCellPosFb.CreateFpCellPosFb(builder, self.row, self.col)
 
+    @staticmethod
+    def fromFb(fb):
+        return FpCellPos(fb.Row(), fb.Col())
+
 @unique
 class ObjectType(Enum):
     MONSTER = auto()
@@ -71,6 +75,14 @@ class ObjectType(Enum):
             return ObjectTypeFb.ObjectTypeFb().ENEMY
         elif x == cls.PROJECTILE:
             return ObjectTypeFb.ObjectTypeFb().PROJECTILE
+        raise ValueError(f"Unknown enum value: {x}")
+
+    @classmethod
+    def fromFb(cls, x):
+        if x == ObjectTypeFb.ObjectTypeFb().ENEMY:
+            return cls.MONSTER
+        elif x == ObjectTypeFb.ObjectTypeFb().PROJECTILE:
+            return cls.PROJECTILE
         raise ValueError(f"Unknown enum value: {x}")
 
 @unique
@@ -118,6 +130,16 @@ class MoveEvent:
         BattleEventFb.BattleEventFbAddEvent(builder, event)
         return BattleEventFb.BattleEventFbEnd(builder)
 
+    @staticmethod
+    def fromFb(fb):
+        return MoveEvent(ObjectType.fromFb(fb.ObjType()),
+                fb.Id(),
+                fb.ConfigId(),
+                FpCellPos.fromFb(fb.StartPos()),
+                FpCellPos.fromFb(fb.DestPos()),
+                fb.StartTime(),
+                fb.EndTime())
+
 @attr.s(frozen=True, auto_attribs=True)
 class DeleteEvent:
     objType: ObjectType
@@ -134,7 +156,7 @@ class DeleteEvent:
 
     def toFb(self, builder):
         DeleteEventFb.DeleteEventFbStart(builder)
-        DeleteEventFb.DeleteEventFbAddObjectTypeFb(builder, ObjectType.toFb(self.objType))
+        DeleteEventFb.DeleteEventFbAddObjType(builder, ObjectType.toFb(self.objType))
         DeleteEventFb.DeleteEventFbAddId(builder, self.id)
         DeleteEventFb.DeleteEventFbAddStartTime(builder, self.startTime)
         event = DeleteEventFb.DeleteEventFbEnd(builder)
@@ -144,6 +166,12 @@ class DeleteEvent:
                 BattleEventUnionFb.BattleEventUnionFb().Delete)
         BattleEventFb.BattleEventFbAddEvent(builder, event)
         return BattleEventFb.BattleEventFbEnd(builder)
+
+    @staticmethod
+    def fromFb(fb):
+        return DeleteEvent(ObjectType.fromFb(fb.ObjType()),
+                fb.Id(),
+                fb.StartTime())
 
 @attr.s(frozen=True, auto_attribs=True)
 class DamageEvent:
@@ -171,6 +199,12 @@ class DamageEvent:
                 BattleEventUnionFb.BattleEventUnionFb().Damage)
         BattleEventFb.BattleEventFbAddEvent(builder, event)
         return BattleEventFb.BattleEventFbEnd(builder)
+
+    @staticmethod
+    def fromFb(fb):
+        return DamageEvent(fb.Id(),
+                fb.StartTime(),
+                fb.Health())
 
 BattleEvent = Union[MoveEvent, DeleteEvent, DamageEvent]
 
@@ -248,9 +282,10 @@ class Battle:
         BattleEventsFb.BattleEventsFbStartEventsVector(builder, numEvents)
         for fbEventOffset in fbEventOffsets:
             builder.PrependUOffsetTRelative(fbEventOffset)
-        fbEvents = builder.EndVector(numEvents)
+        eventsVector = builder.EndVector(numEvents)
 
         BattleEventsFb.BattleEventsFbStart(builder)
+        BattleEventsFb.BattleEventsFbAddEvents(builder, eventsVector)
         battleEventsFb = BattleEventsFb.BattleEventsFbEnd(builder)
         builder.Finish(battleEventsFb)
         return builder.Output()
@@ -272,3 +307,28 @@ class Battle:
         resultsJson = json.loads(encodedStr)
         battleResults = cattr.structure(resultsJson, BattleResults)
         return battleResults
+
+    @staticmethod
+    def decodeEventsFb(encodedBytes: bytearray):
+        print(encodedBytes)
+        eventsObj = BattleEventsFb.BattleEventsFb.GetRootAsBattleEventsFb(encodedBytes, 0)
+        numEvents = eventsObj.EventsLength()
+        decodedEvents = []
+        print(numEvents)
+        for i in range(numEvents):
+            battleEvent = eventsObj.Events(i)
+            print(f"{i}/{numEvents}: {battleEvent}")
+            battleEventUnionType = battleEvent.EventType()
+            if battleEventUnionType == BattleEventUnionFb.BattleEventUnionFb().Move:
+                moveEvent = MoveEventFb.MoveEventFb()
+                moveEvent.Init(battleEvent.Event().Bytes, battleEvent.Event().Pos)
+                decodedEvents.append(MoveEvent.fromFb(moveEvent))
+            elif battleEventUnionType == BattleEventUnionFb.BattleEventUnionFb().Delete:
+                deleteEvent = DeleteEventFb.DeleteEventFb()
+                deleteEvent.Init(battleEvent.Event().Bytes, battleEvent.Event().Pos)
+                decodedEvents.append(DeleteEvent.fromFb(deleteEvent))
+            elif battleEventUnionType == BattleEventUnionFb.BattleEventUnionFb().Damage:
+                damageEvent = DamageEventFb.DamageEventFb()
+                damageEvent.Init(battleEvent.Event().Bytes, battleEvent.Event().Pos)
+                decodedEvents.append(damageEvent.fromFb(damageEvent))
+        return decodedEvents

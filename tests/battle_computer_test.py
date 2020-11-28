@@ -7,7 +7,7 @@ import json
 
 import attr
 import cattr
-from hypothesis import given, assume
+from hypothesis import given, assume, settings
 import hypothesis.strategies as st
 
 
@@ -347,6 +347,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
             gameConfigData = cattr.structure(json.loads(gameConfigFile.read()), GameConfigData)
             self.gameConfig = GameConfig.fromGameConfigData(gameConfigData)
 
+    @settings(deadline=300)
     @given(st.data())
     def test_randomBattle(self, data):
         # Build the battleground
@@ -464,8 +465,10 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
         encodedStr = battle.encodeEvents()
         decodedEvents = Battle.decodeEvents(encodedStr)
         encodedFb = battle.encodeEventsFb()
+        decodedEventsFb = battle.decodeEventsFb(encodedFb)
 
         self.assertEqual(battle.events, decodedEvents)
+        self.assertEqual(battle.events, decodedEventsFb)
 
     def test_twoEvents(self):
         battle = Battle(
@@ -495,5 +498,8 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
 
         encodedStr = battle.encodeEvents()
         decodedEvents = Battle.decodeEvents(encodedStr)
+        encodedFb = battle.encodeEventsFb()
+        decodedEventsFb = battle.decodeEventsFb(encodedFb)
 
         self.assertEqual(battle.events, decodedEvents)
+        self.assertEqual(battle.events, decodedEventsFb)
