@@ -465,7 +465,7 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
         encodedStr = battle.encodeEvents()
         decodedEvents = Battle.decodeEvents(encodedStr)
         encodedFb = battle.encodeEventsFb()
-        decodedEventsFb = battle.decodeEventsFb(encodedFb)
+        decodedEventsFb = Battle.decodeEventsFb(encodedFb)
 
         self.assertEqual(battle.events, decodedEvents)
         self.assertEqual(battle.events, decodedEventsFb)
@@ -499,7 +499,7 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
         encodedStr = battle.encodeEvents()
         decodedEvents = Battle.decodeEvents(encodedStr)
         encodedFb = battle.encodeEventsFb()
-        decodedEventsFb = battle.decodeEventsFb(encodedFb)
+        decodedEventsFb = Battle.decodeEventsFb(encodedFb)
 
         self.assertEqual(battle.events, decodedEvents)
         self.assertEqual(battle.events, decodedEventsFb)
