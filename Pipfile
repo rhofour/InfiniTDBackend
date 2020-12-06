@@ -19,7 +19,7 @@ cattrs = "*"
 hypothesis = "*"
 cython = "*"
 numpy = "*"
-flatbuffers = "*"
+flatbuffers = {editable = true, path = "./flatbuffers/python"}
 
 [requires]
 python_version = "3.8"

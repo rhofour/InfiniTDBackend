@@ -8,24 +8,24 @@ struct FpCellPosFb {
 enum ObjectTypeFb:byte { ENEMY=0, PROJECTILE }
 
 table MoveEventFb {
-  objType:ObjectTypeFb;
+  obj_type:ObjectTypeFb;
   id:int;
-  configId:ushort;
-  startPos:FpCellPosFb;
-  destPos:FpCellPosFb;
-  startTime:float;
-  endTime:float;
+  config_id:ushort;
+  start_pos:FpCellPosFb;
+  dest_pos:FpCellPosFb;
+  start_time:float;
+  end_time:float;
 }
 
 table DeleteEventFb {
-  objType:ObjectTypeFb;
+  obj_type:ObjectTypeFb;
   id:int;
-  startTime:float;
+  start_time:float;
 }
 
 table DamageEventFb {
   id:int;
-  startTime:float;
+  start_time:float;
   health:float;
 }
 
@@ -44,14 +44,20 @@ table BattleEventsFb {
 }
 
 struct MonsterDefeatedFb {
-  configId:ushort;
-  numSent:ushort;
-  numDefeated:ushort;
+  config_id:ushort;
+  num_sent:ushort;
+  num_defeated:ushort;
 }
 
 table BattleResultsFb {
-  monstersDefeated:[MonsterDefeatedFb];
+  monsters_defeated:[MonsterDefeatedFb];
   bonuses:[ushort];
   reward:float;
-  timeSecs:float;
+  time_secs:float;
+}
+
+table BattleFb {
+  name:string;
+  events:[ubyte] (nested_flatbuffer: "BattleEventsFb");
+  results:[ubyte] (nested_flatbuffer: "BattleResultsFb");
 }

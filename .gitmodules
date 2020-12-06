@@ -1,3 +1,6 @@
 [submodule "infinitdserver/cpp_battle_computer/rapidjson"]
 	path = infinitd_server/cpp_battle_computer/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
+[submodule "flatbuffers"]
+	path = flatbuffers
+	url = git@github.com:rhofour/flatbuffers.git
