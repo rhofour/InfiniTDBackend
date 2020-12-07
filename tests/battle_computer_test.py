@@ -391,6 +391,24 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         # Ensure the process is deterministic.
         self.assertEqual(results, results2)
 
+        # Build a battle from the calc results
+        battle = Battle("random test battle", results.events, results.results)
+
+        # Ensure the battle encodes and decodes properly
+        encodedEventsFb = battle.encodeEventsFb()
+        decodedEvents = Battle.decodeEventsFb(encodedEventsFb)
+        encodedResultsFb = battle.encodeResultsFb()
+        decodedResults = BattleResults.decodeFb(encodedResultsFb)
+        # Encoding leads to some rounding
+        decodedBattle = Battle("decoded random test battle", decodedEvents, decodedResults)
+        encodedEventsFb2 = decodedBattle.encodeEventsFb()
+        encodedResultsFb2 = decodedBattle.encodeResultsFb()
+
+        # Test that re-encoding the decoded battle doesn't change the encoding
+        # further.
+        self.assertEqual(encodedEventsFb, encodedEventsFb2)
+        self.assertEqual(encodedResultsFb, encodedResultsFb2)
+
         # Check every ID is deleted by the end.
         activeIds = set()
         # Map every projectile fired to the tower it fired from.
@@ -462,13 +480,20 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
                 timeSecs = 1.5)
         )
 
-        encodedStr = battle.encodeEvents()
-        decodedEvents = Battle.decodeEvents(encodedStr)
-        encodedFb = battle.encodeEventsFb()
-        decodedEventsFb = Battle.decodeEventsFb(encodedFb)
+        # Test encoding / decoding events.
+        encodedEventsStr = battle.encodeEvents()
+        decodedEvents = Battle.decodeEvents(encodedEventsStr)
+        encodedEventsFb = battle.encodeEventsFb()
+        decodedEventsFb = Battle.decodeEventsFb(encodedEventsFb)
 
         self.assertEqual(battle.events, decodedEvents)
         self.assertEqual(battle.events, decodedEventsFb)
+
+        # Test encoding / decoding results.
+        encodedResultsFb = battle.encodeResultsFb()
+        decodedResultsFb = BattleResults.decodeFb(encodedResultsFb)
+
+        self.assertEqual(battle.results, decodedResultsFb)
 
     def test_twoEvents(self):
         battle = Battle(
@@ -496,10 +521,17 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
                 timeSecs = 1.5)
         )
 
-        encodedStr = battle.encodeEvents()
-        decodedEvents = Battle.decodeEvents(encodedStr)
-        encodedFb = battle.encodeEventsFb()
-        decodedEventsFb = Battle.decodeEventsFb(encodedFb)
+        # Test encoding / decoding events.
+        encodedEventsStr = battle.encodeEvents()
+        decodedEvents = Battle.decodeEvents(encodedEventsStr)
+        encodedEventsFb = battle.encodeEventsFb()
+        decodedEventsFb = Battle.decodeEventsFb(encodedEventsFb)
 
         self.assertEqual(battle.events, decodedEvents)
         self.assertEqual(battle.events, decodedEventsFb)
+
+        # Test encoding / decoding results.
+        encodedResultsFb = battle.encodeResultsFb()
+        decodedResultsFb = BattleResults.decodeFb(encodedResultsFb)
+
+        self.assertEqual(battle.results, decodedResultsFb)

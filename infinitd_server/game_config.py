@@ -77,6 +77,7 @@ class MonsterConfig(IdentifiedImage):
     bounty: float
     size: float
 
+# Maps ConfigId -> (# defeated, # sent)
 MonstersDefeated = Dict[ConfigId, Tuple[int, int]]
 
 @unique

@@ -36,9 +36,6 @@ class FpCellPos:
         # https://github.com/Tinche/cattrs/issues/41 is fixed.
         return FpCellPos(FpRow(cellPos.row), FpCol(cellPos.col))
 
-    def __eq__(self, other):
-        return math.isclose(self.row, other.row) and math.isclose(self.col, other.col)
-
     def distSq(self, other):
         return ((((self.row - other.row) * (self.row - other.row))) +
             ((self.col - other.col) * (self.col - other.col)))
@@ -263,6 +260,54 @@ class BattleResults:
                 timeSecs = timeSecs
             )
 
+    def encodeFb(self) -> bytearray:
+        builder = flatbuffers.Builder(64)
+
+        BattleResultsFb.BattleResultsFbStartMonstersDefeatedVector(
+                builder, len(self.monstersDefeated))
+        for (configId, (numDefeated, numSent)) in reversed(self.monstersDefeated.items()):
+            MonsterDefeatedFb.CreateMonsterDefeatedFb(builder,
+                configId = configId,
+                numDefeated = numDefeated,
+                numSent = numSent)
+        monstersDefeatedVector = builder.EndVector(len(self.monstersDefeated))
+
+        BattleResultsFb.BattleResultsFbStartBonusesVector(builder, len(self.bonuses))
+        for bonus in reversed(self.bonuses):
+            builder.PrependUint16(bonus)
+        bonusesVector = builder.EndVector(len(self.bonuses))
+
+        BattleResultsFb.BattleResultsFbStart(builder)
+        BattleResultsFb.BattleResultsFbAddMonstersDefeated(builder, monstersDefeatedVector)
+        BattleResultsFb.BattleResultsFbAddBonuses(builder, bonusesVector)
+        BattleResultsFb.BattleResultsFbAddReward(builder, self.reward)
+        BattleResultsFb.BattleResultsFbAddTimeSecs(builder, self.timeSecs)
+        battleResults = BattleResultsFb.BattleResultsFbEnd(builder)
+        builder.Finish(battleResults)
+        return builder.Output()
+
+    @staticmethod
+    def decodeFb(encodedBytes: bytearray):
+        resultsObj = BattleResultsFb.BattleResultsFb.GetRootAsBattleResultsFb(encodedBytes, 0)
+
+        numMonstersDefeated = resultsObj.MonstersDefeatedLength()
+        monstersDefeated = {}
+        for i in range(numMonstersDefeated):
+            monsterDefeatedFb = resultsObj.MonstersDefeated(i)
+            monstersDefeated[monsterDefeatedFb.ConfigId()] = (
+                    monsterDefeatedFb.NumDefeated(), monsterDefeatedFb.NumSent())
+
+        numBonuses = resultsObj.BonusesLength()
+        bonuses = []
+        for i in range(numBonuses):
+            bonuses.append(resultsObj.Bonuses(i))
+
+        return BattleResults(
+                monstersDefeated = monstersDefeated,
+                bonuses = bonuses,
+                reward = resultsObj.Reward(),
+                timeSecs = resultsObj.TimeSecs())
+
 @dataclass(frozen=True)
 class BattleCalcResults:
     events: List[BattleEvent]
@@ -292,6 +337,9 @@ class Battle:
 
     def encodeEvents(self) -> str:
         return json.dumps(cattr.unstructure(self.events))
+
+    def encodeResultsFb(self) -> bytearray:
+        return self.results.encodeFb()
 
     def encodeResults(self) -> str:
         return json.dumps(cattr.unstructure(self.results))
