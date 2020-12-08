@@ -66,7 +66,7 @@ class Db:
                 "attacking_uid TEXT KEY, "
                 "defending_uid TEXT KEY, "
                 "events BLOB, "
-                "results TEXT"
+                "results BLOB"
                 ");")
         self.conn.commit()
 
@@ -228,7 +228,7 @@ class Db:
         if res: # Battle exists
             self.logger.info(handler, requestId, f"Found battle: {defendingUser.name} vs {attackingUser.name}")
             events = Battle.decodeEventsFb(res[0])
-            results = Battle.decodeResults(res[1])
+            results = BattleResults.decodeFb(res[1])
             battle = Battle(events = events, name = battleName, results = results)
             return battle
         else: # Calculate a new battle
@@ -244,7 +244,7 @@ class Db:
                     "VALUES (:attackingUid, :defendingUid, :events, :results);",
                     {
                         "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid,
-                        "events": battle.encodeEventsFb(), "results": battle.encodeResults()
+                        "events": battle.encodeEventsFb(), "results": battle.encodeResultsFb()
                     }
             )
             # Don't end a transaction early.
