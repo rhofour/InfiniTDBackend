@@ -344,8 +344,6 @@ class BattleComputer:
         # Calculate bonuses using monstersDefeated
         battleResults = BattleResults.fromMonstersDefeatedFb(
                 monstersDefeatedFb, self.gameConfig, round(gameTime, EVENT_PRECISION))
-        # Round the times in events
-        events = [event.prettify(EVENT_PRECISION) for event in events]
         # Sort the events
         eventOrdering = {
             'MoveEvent': 0,
