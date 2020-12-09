@@ -53,6 +53,11 @@ table MonstersDefeatedFb {
   monsters_defeated:[MonsterDefeatedFb];
 }
 
+table BattleCalcResults {
+  monsters_defeated:MonstersDefeatedFb;
+  events:[ubyte] (nested_flatbuffer: "BattleEventsFb");
+}
+
 table BattleResultsFb {
   monsters_defeated:MonstersDefeatedFb;
   bonuses:[ushort];
