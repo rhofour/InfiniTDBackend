@@ -5,12 +5,14 @@ from typing import List, Optional, Tuple, Sequence
 import json
 
 import cattr
+import flatbuffers
 
 from infinitd_server.battle import ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol, BattleCalcResults
 from infinitd_server.battleground_state import BattlegroundState, BgTowerState
 from infinitd_server.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId, MonstersDefeated
 from infinitd_server.paths import PathMap, makePathMap, compressPath
 from infinitd_server.cpp_battle_computer.battle_computer import BattleComputer as CppBattleComputer
+import  InfiniTDFb.MonstersDefeatedFb as MonstersDefeatedFb
 
 EVENT_PRECISION = 4 # Number of decimal places to use for events
 
@@ -330,9 +332,18 @@ class BattleComputer:
 
             ticks += 1
 
+        # Above will be replaced with C++ version
+        # For now fake it by transforming everything in flatbuffers here.
+        builder = flatbuffers.Builder(256)
+        encoded = BattleResults.encodeMonstersDefeated(builder, monstersDefeated)
+        builder.Finish(encoded)
+        monstersDefeatedBytes = builder.Output()
+        monstersDefeatedFb = MonstersDefeatedFb.MonstersDefeatedFb.GetRootAsMonstersDefeatedFb(
+                monstersDefeatedBytes, 0)
+
         # Calculate bonuses using monstersDefeated
-        battleResults = BattleResults.fromMonstersDefeated(
-                monstersDefeated, self.gameConfig, round(gameTime, EVENT_PRECISION))
+        battleResults = BattleResults.fromMonstersDefeatedFb(
+                monstersDefeatedFb, self.gameConfig, round(gameTime, EVENT_PRECISION))
         # Round the times in events
         events = [event.prettify(EVENT_PRECISION) for event in events]
         # Sort the events

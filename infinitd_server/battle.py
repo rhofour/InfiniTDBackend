@@ -17,6 +17,7 @@ import  InfiniTDFb.DamageEventFb as DamageEventFb
 import  InfiniTDFb.BattleEventFb as BattleEventFb
 import  InfiniTDFb.BattleEventUnionFb as BattleEventUnionFb
 import  InfiniTDFb.MonsterDefeatedFb as MonsterDefeatedFb
+import  InfiniTDFb.MonstersDefeatedFb as MonstersDefeatedFb
 import  InfiniTDFb.BattleResultsFb as BattleResultsFb
 import  InfiniTDFb.BattleEventsFb as BattleEventsFb
 
@@ -237,6 +238,36 @@ class BattleResults:
         return round(self.reward / minutes, ndigits = 1)
 
     @staticmethod
+    def decodeMonstersDefeated(monstersDefeatedFb: MonstersDefeatedFb) -> MonstersDefeated:
+        numMonstersDefeated = monstersDefeatedFb.MonstersDefeatedLength()
+        monstersDefeated = {}
+        for i in range(numMonstersDefeated):
+            monsterDefeatedFb = monstersDefeatedFb.MonstersDefeated(i)
+            monstersDefeated[monsterDefeatedFb.ConfigId()] = (
+                    monsterDefeatedFb.NumDefeated(), monsterDefeatedFb.NumSent())
+        return monstersDefeated
+
+    @staticmethod
+    def encodeMonstersDefeated(builder, monstersDefeated: MonstersDefeated):
+        MonstersDefeatedFb.MonstersDefeatedFbStartMonstersDefeatedVector(
+                builder, len(monstersDefeated))
+        for (configId, (numDefeated, numSent)) in reversed(monstersDefeated.items()):
+            MonsterDefeatedFb.CreateMonsterDefeatedFb(builder,
+                configId = configId,
+                numDefeated = numDefeated,
+                numSent = numSent)
+        monstersDefeatedVector = builder.EndVector(len(monstersDefeated))
+        MonstersDefeatedFb.MonstersDefeatedFbStart(builder)
+        MonstersDefeatedFb.MonstersDefeatedFbAddMonstersDefeated(builder, monstersDefeatedVector)
+        return MonstersDefeatedFb.MonstersDefeatedFbEnd(builder)
+
+    @staticmethod
+    def fromMonstersDefeatedFb(monstersDefeatedFb: MonstersDefeatedFb, gameConfig: GameConfig, timeSecs: float) -> Any:
+        return BattleResults.fromMonstersDefeated(
+                BattleResults.decodeMonstersDefeated(monstersDefeatedFb),
+                gameConfig, timeSecs)
+
+    @staticmethod
     def fromMonstersDefeated(monstersDefeated: MonstersDefeated, gameConfig: GameConfig, timeSecs: float) -> Any:
         # First, calculate the base reward from monstersDefeated
         reward = 0.0
@@ -261,16 +292,8 @@ class BattleResults:
             )
 
     def encodeFb(self) -> bytearray:
-        builder = flatbuffers.Builder(64)
-
-        BattleResultsFb.BattleResultsFbStartMonstersDefeatedVector(
-                builder, len(self.monstersDefeated))
-        for (configId, (numDefeated, numSent)) in reversed(self.monstersDefeated.items()):
-            MonsterDefeatedFb.CreateMonsterDefeatedFb(builder,
-                configId = configId,
-                numDefeated = numDefeated,
-                numSent = numSent)
-        monstersDefeatedVector = builder.EndVector(len(self.monstersDefeated))
+        builder = flatbuffers.Builder(256)
+        monstersDefeated = BattleResults.encodeMonstersDefeated(builder, self.monstersDefeated)
 
         BattleResultsFb.BattleResultsFbStartBonusesVector(builder, len(self.bonuses))
         for bonus in reversed(self.bonuses):
@@ -278,7 +301,7 @@ class BattleResults:
         bonusesVector = builder.EndVector(len(self.bonuses))
 
         BattleResultsFb.BattleResultsFbStart(builder)
-        BattleResultsFb.BattleResultsFbAddMonstersDefeated(builder, monstersDefeatedVector)
+        BattleResultsFb.BattleResultsFbAddMonstersDefeated(builder, monstersDefeated)
         BattleResultsFb.BattleResultsFbAddBonuses(builder, bonusesVector)
         BattleResultsFb.BattleResultsFbAddReward(builder, self.reward)
         BattleResultsFb.BattleResultsFbAddTimeSecs(builder, self.timeSecs)
@@ -288,25 +311,21 @@ class BattleResults:
 
     @staticmethod
     def decodeFb(encodedBytes: bytearray):
-        resultsObj = BattleResultsFb.BattleResultsFb.GetRootAsBattleResultsFb(encodedBytes, 0)
+        resultsFb = BattleResultsFb.BattleResultsFb.GetRootAsBattleResultsFb(encodedBytes, 0)
 
-        numMonstersDefeated = resultsObj.MonstersDefeatedLength()
-        monstersDefeated = {}
-        for i in range(numMonstersDefeated):
-            monsterDefeatedFb = resultsObj.MonstersDefeated(i)
-            monstersDefeated[monsterDefeatedFb.ConfigId()] = (
-                    monsterDefeatedFb.NumDefeated(), monsterDefeatedFb.NumSent())
+        monstersDefeatedFb = resultsFb.MonstersDefeated()
+        monstersDefeated = BattleResults.decodeMonstersDefeated(monstersDefeatedFb)
 
-        numBonuses = resultsObj.BonusesLength()
+        numBonuses = resultsFb.BonusesLength()
         bonuses = []
         for i in range(numBonuses):
-            bonuses.append(resultsObj.Bonuses(i))
+            bonuses.append(resultsFb.Bonuses(i))
 
         return BattleResults(
                 monstersDefeated = monstersDefeated,
                 bonuses = bonuses,
-                reward = resultsObj.Reward(),
-                timeSecs = resultsObj.TimeSecs())
+                reward = resultsFb.Reward(),
+                timeSecs = resultsFb.TimeSecs())
 
 @dataclass(frozen=True)
 class BattleCalcResults:
