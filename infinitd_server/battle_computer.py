@@ -12,7 +12,7 @@ from infinitd_server.battleground_state import BattlegroundState, BgTowerState
 from infinitd_server.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId, MonstersDefeated
 from infinitd_server.paths import PathMap, makePathMap, compressPath
 from infinitd_server.cpp_battle_computer.battle_computer import BattleComputer as CppBattleComputer
-import  InfiniTDFb.MonstersDefeatedFb as MonstersDefeatedFb
+import  InfiniTDFb.BattleCalcResultsFb as BattleCalcResultsFb
 
 EVENT_PRECISION = 4 # Number of decimal places to use for events
 
@@ -332,18 +332,6 @@ class BattleComputer:
 
             ticks += 1
 
-        # Above will be replaced with C++ version
-        # For now fake it by transforming everything in flatbuffers here.
-        builder = flatbuffers.Builder(256)
-        encoded = BattleResults.encodeMonstersDefeated(builder, monstersDefeated)
-        builder.Finish(encoded)
-        monstersDefeatedBytes = builder.Output()
-        monstersDefeatedFb = MonstersDefeatedFb.MonstersDefeatedFb.GetRootAsMonstersDefeatedFb(
-                monstersDefeatedBytes, 0)
-
-        # Calculate bonuses using monstersDefeated
-        battleResults = BattleResults.fromMonstersDefeatedFb(
-                monstersDefeatedFb, self.gameConfig, round(gameTime, EVENT_PRECISION))
         # Sort the events
         eventOrdering = {
             'MoveEvent': 0,
@@ -373,6 +361,32 @@ class BattleComputer:
                         raise BattleCalculationException(battleground, wave,
                             f"Received an event with ID {event.id}, but {event.id} was deleted earlier in event at index "
                             "{deletedEventIndex[event.id]}: {event}")
+
+        # Above will be replaced with C++ version
+        # For now fake it by transforming everything in flatbuffers here.
+        builder = flatbuffers.Builder(1024)
+
+        encodedMonstersDefeated = BattleResults.encodeMonstersDefeated(builder, monstersDefeated)
+
+        eventOffsets = [event.toFb(builder) for event in reversed(sortedEvents)]
+        BattleCalcResultsFb.BattleCalcResultsFbStartEventsVector(builder, len(sortedEvents))
+        for offset in eventOffsets:
+            builder.PrependUOffsetTRelative(offset)
+        eventsVector = builder.EndVector(len(sortedEvents))
+
+        BattleCalcResultsFb.BattleCalcResultsFbStart(builder)
+        BattleCalcResultsFb.BattleCalcResultsFbAddMonstersDefeated(builder, encodedMonstersDefeated)
+        BattleCalcResultsFb.BattleCalcResultsFbAddEvents(builder, eventsVector)
+        battleCalcResultsEncoded = BattleCalcResultsFb.BattleCalcResultsFbEnd(builder)
+        builder.Finish(battleCalcResultsEncoded)
+        battleCalcBytes = builder.Output()
+        battleCalcFb = BattleCalcResultsFb.BattleCalcResultsFb.GetRootAsBattleCalcResultsFb(
+                battleCalcBytes, 0)
+
+        # Calculate bonuses using monstersDefeated
+        battleResults = BattleResults.fromMonstersDefeatedFb(
+                battleCalcFb.MonstersDefeated(),
+                self.gameConfig, round(gameTime, EVENT_PRECISION))
 
         return BattleCalcResults(
                 events = sortedEvents,
