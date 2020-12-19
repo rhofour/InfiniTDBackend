@@ -96,6 +96,11 @@ async def main():
     app.listen(args.port)
     logger.info("startup", -1, f"Listening on port {args.port}.")
     await updateGoldEveryMinute(game)
+    # I don't think this should ever happen.
+    logger.warn("shutdown", -1, "Main finished.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Received a keyboard interupt.")
