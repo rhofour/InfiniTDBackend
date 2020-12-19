@@ -20,6 +20,7 @@ import  InfiniTDFb.MonsterDefeatedFb as MonsterDefeatedFb
 import  InfiniTDFb.MonstersDefeatedFb as MonstersDefeatedFb
 import  InfiniTDFb.BattleResultsFb as BattleResultsFb
 import  InfiniTDFb.BattleEventsFb as BattleEventsFb
+import  InfiniTDFb.BattleCalcResultsFb as BattleCalcResultsFb
 
 FpRow = NewType('FpRow', float)
 cattr.register_structure_hook(FpRow, lambda d, _: FpRow(d))
@@ -330,6 +331,7 @@ class BattleResults:
 @dataclass(frozen=True)
 class BattleCalcResults:
     events: List[BattleEvent]
+    fb: BattleCalcResultsFb
     results: BattleResults
 
 @attr.s(frozen=True, auto_attribs=True)

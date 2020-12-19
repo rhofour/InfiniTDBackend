@@ -13,6 +13,7 @@ from infinitd_server.game_config import GameConfig, TowerConfig, CellPos, Monste
 from infinitd_server.paths import PathMap, makePathMap, compressPath
 from infinitd_server.cpp_battle_computer.battle_computer import BattleComputer as CppBattleComputer
 import  InfiniTDFb.BattleCalcResultsFb as BattleCalcResultsFb
+import  InfiniTDFb.BattleEventsFb as BattleEventsFb
 
 EVENT_PRECISION = 4 # Number of decimal places to use for events
 
@@ -364,19 +365,25 @@ class BattleComputer:
 
         # Above will be replaced with C++ version
         # For now fake it by transforming everything in flatbuffers here.
-        builder = flatbuffers.Builder(1024)
+        eventsBuilder = flatbuffers.Builder(1024)
+        eventOffsets = [event.toFb(eventsBuilder) for event in reversed(sortedEvents)]
+        BattleEventsFb.BattleEventsFbStartEventsVector(eventsBuilder, len(sortedEvents))
+        for offset in eventOffsets:
+            eventsBuilder.PrependUOffsetTRelative(offset)
+        eventsVector = eventsBuilder.EndVector(len(sortedEvents))
+        BattleEventsFb.BattleEventsFbStart(eventsBuilder)
+        BattleEventsFb.BattleEventsFbAddEvents(eventsBuilder, eventsVector)
+        eventsFb = BattleEventsFb.BattleEventsFbEnd(eventsBuilder)
+        eventsBuilder.Finish(eventsFb)
 
+        builder = flatbuffers.Builder(1024)
         encodedMonstersDefeated = BattleResults.encodeMonstersDefeated(builder, monstersDefeated)
 
-        eventOffsets = [event.toFb(builder) for event in reversed(sortedEvents)]
-        BattleCalcResultsFb.BattleCalcResultsFbStartEventsVector(builder, len(sortedEvents))
-        for offset in eventOffsets:
-            builder.PrependUOffsetTRelative(offset)
-        eventsVector = builder.EndVector(len(sortedEvents))
-
+        eventsSubBuf = BattleCalcResultsFb.BattleCalcResultsFbMakeEventsVectorFromBytes(
+            builder, eventsBuilder.Output())
         BattleCalcResultsFb.BattleCalcResultsFbStart(builder)
         BattleCalcResultsFb.BattleCalcResultsFbAddMonstersDefeated(builder, encodedMonstersDefeated)
-        BattleCalcResultsFb.BattleCalcResultsFbAddEvents(builder, eventsVector)
+        BattleCalcResultsFb.BattleCalcResultsFbAddEvents(builder, eventsSubBuf)
         battleCalcResultsEncoded = BattleCalcResultsFb.BattleCalcResultsFbEnd(builder)
         builder.Finish(battleCalcResultsEncoded)
         battleCalcBytes = builder.Output()
@@ -390,5 +397,6 @@ class BattleComputer:
 
         return BattleCalcResults(
                 events = sortedEvents,
+                fb = battleCalcFb,
                 results = battleResults,
             )

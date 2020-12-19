@@ -72,7 +72,9 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         results2 = battleComputer.computeBattle(battleground, wave)
 
         # Ensure the process is deterministic.
-        self.assertEqual(results, results2)
+        self.assertEqual(results.events, results2.events)
+        self.assertEqual(results.fb._tab.Bytes, results2.fb._tab.Bytes)
+        self.assertEqual(results.results, results2.results)
 
         # Build a battle from the calc results
         battle = Battle("random test battle", results.events, results.results)

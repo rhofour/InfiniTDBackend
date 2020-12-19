@@ -244,7 +244,8 @@ class Db:
                     "VALUES (:attackingUid, :defendingUid, :events, :results);",
                     {
                         "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid,
-                        "events": battle.encodeEventsFb(), "results": battle.encodeResultsFb()
+                        "events": battleCalcResults.fb.EventsAsNumpy().tobytes(),
+                        "results": battle.encodeResultsFb()
                     }
             )
             # Don't end a transaction early.
