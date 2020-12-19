@@ -72,34 +72,21 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         results2 = battleComputer.computeBattle(battleground, wave)
 
         # Ensure the process is deterministic.
-        self.assertEqual(results.events, results2.events)
         self.assertEqual(results.fb._tab.Bytes, results2.fb._tab.Bytes)
         self.assertEqual(results.results, results2.results)
 
-        # Build a battle from the calc results
-        battle = Battle("random test battle", results.events, results.results)
-
-        # Ensure the battle encodes and decodes properly
-        encodedEventsFb = battle.encodeEventsFb()
-        decodedEvents = Battle.decodeEventsFb(encodedEventsFb)
-        encodedResultsFb = battle.encodeResultsFb()
-        decodedResults = BattleResults.decodeFb(encodedResultsFb)
-        # Encoding leads to some rounding
-        decodedBattle = Battle("decoded random test battle", decodedEvents, decodedResults)
-        encodedEventsFb2 = decodedBattle.encodeEventsFb()
-        encodedResultsFb2 = decodedBattle.encodeResultsFb()
-
-        # Test that re-encoding the decoded battle doesn't change the encoding
-        # further.
-        self.assertEqual(encodedEventsFb, encodedEventsFb2)
-        self.assertEqual(encodedResultsFb, encodedResultsFb2)
+        # Ensure we can go from FB events to Python events and back.
+        events = Battle.fbToEvents(results.fb.EventsNestedRoot())
+        battle = Battle("random test battle", events, results.results)
+        reencodedEventsFb = battle.encodeEventsFb()
+        self.assertEquals(results.fb.EventsAsNumpy().tobytes(), reencodedEventsFb)
 
         # Check every ID is deleted by the end.
         activeIds = set()
         # Map every projectile fired to the tower it fired from.
         projFiredFrom: Dict[FpCellPos, List[MoveEvent]] = defaultdict(list)
         # pytype: disable=attribute-error
-        for event in results.events:
+        for event in events:
             if event.eventType == EventType.MOVE:
                 activeIds.add(event.id)
                 if event.objType == ObjectType.PROJECTILE:

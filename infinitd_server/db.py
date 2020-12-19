@@ -237,7 +237,10 @@ class Db:
             if battleground is None: # This should be impossible since we know the user exists.
                 raise ValueError(f"Cannot find battleground for {defendingUser.name}")
             battleCalcResults = self.battleComputer.computeBattle(battleground, attackingUser.wave)
-            battle = Battle(events = battleCalcResults.events, name = battleName,
+            events = Battle.decodeEventsFb(battleCalcResults.fb.EventsAsNumpy().tobytes())
+            #eventsFb = battleCalcResults.fb.EventsNestedRoot()
+            #events = Battle.decodeEventsFb(eventsFb._tab.Bytes, eventsFb._tab.Pos)
+            battle = Battle(events = events, name = battleName,
                     results = battleCalcResults.results)
             self.conn.execute(
                     "INSERT into battles (attacking_uid, defending_uid, events, results) "
@@ -245,7 +248,7 @@ class Db:
                     {
                         "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid,
                         "events": battleCalcResults.fb.EventsAsNumpy().tobytes(),
-                        "results": battle.encodeResultsFb()
+                        "results": battleCalcResults.results.encodeFb(),
                     }
             )
             # Don't end a transaction early.

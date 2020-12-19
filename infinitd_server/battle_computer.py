@@ -396,7 +396,6 @@ class BattleComputer:
                 self.gameConfig, round(gameTime, EVENT_PRECISION))
 
         return BattleCalcResults(
-                events = sortedEvents,
                 fb = battleCalcFb,
                 results = battleResults,
             )

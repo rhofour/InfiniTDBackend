@@ -330,7 +330,6 @@ class BattleResults:
 
 @dataclass(frozen=True)
 class BattleCalcResults:
-    events: List[BattleEvent]
     fb: BattleCalcResultsFb
     results: BattleResults
 
@@ -378,8 +377,12 @@ class Battle:
         return battleResults
 
     @staticmethod
-    def decodeEventsFb(encodedBytes: bytearray):
-        eventsObj = BattleEventsFb.BattleEventsFb.GetRootAsBattleEventsFb(encodedBytes, 0)
+    def decodeEventsFb(encodedBytes: bytearray, offset: int = 0) -> List[BattleEvent]:
+        eventsObj = BattleEventsFb.BattleEventsFb.GetRootAsBattleEventsFb(encodedBytes, offset)
+        return Battle.fbToEvents(eventsObj)
+
+    @staticmethod
+    def fbToEvents(eventsObj: BattleEventsFb) -> List[BattleEvent]:
         numEvents = eventsObj.EventsLength()
         decodedEvents = []
         for i in range(numEvents):
