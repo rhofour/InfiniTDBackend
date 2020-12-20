@@ -79,7 +79,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         events = Battle.fbToEvents(results.fb.EventsNestedRoot())
         battle = Battle("random test battle", events, results.results)
         reencodedEventsFb = battle.encodeEventsFb()
-        self.assertEquals(results.fb.EventsAsNumpy().tobytes(), reencodedEventsFb)
+        self.assertEqual(results.fb.EventsAsNumpy().tobytes(), reencodedEventsFb)
 
         # Check every ID is deleted by the end.
         activeIds = set()

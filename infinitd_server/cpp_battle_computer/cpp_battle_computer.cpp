@@ -9,6 +9,12 @@ using std::cout;
 using std::cerr;
 using std::endl;
 using rapidjson::Document;
+using InfiniTDFb::BattleEventFb;
+using InfiniTDFb::MonsterDefeatedFb;
+using InfiniTDFb::MonstersDefeatedFb;
+using InfiniTDFb::CreateMonstersDefeatedFb;
+using InfiniTDFb::CreateBattleEventFb;
+using InfiniTDFb::CreateBattleCalcResultsFb;
 
 CppBattleComputer::CppBattleComputer(std::string jsonText) {
   Document d;
@@ -21,7 +27,7 @@ CppBattleComputer::CppBattleComputer(std::string jsonText) {
   this->gameConfig = GameConfig(d);
 }
 
-CppBattleCalcResult CppBattleComputer::ComputeBattle(
+std::string CppBattleComputer::ComputeBattle(
     const vector<vector<int>>& towers,
     vector<int> wave,
     vector<vector<CppCellPos>> paths) {
@@ -30,8 +36,6 @@ CppBattleCalcResult CppBattleComputer::ComputeBattle(
   cout << "Computing a " << numRows << " x " << numCols
     << " battle with " << wave.size() << " enemies and "
     << paths.size() << " paths." << endl;
-
-  CppBattleCalcResult result;
 
   // Initialize tower states.
 
@@ -45,5 +49,23 @@ CppBattleCalcResult CppBattleComputer::ComputeBattle(
     unspawnedEnemies.pop_back();
   }
 
-  return result;
+  // First, serialize the events into a BattleEventsFb.
+  flatbuffers::FlatBufferBuilder eventsBuilder(1024);
+  std::vector<flatbuffers::Offset<BattleEventFb>> eventOffsets;
+  auto eventsFb = eventsBuilder.CreateVector(eventOffsets);
+  auto battleEventsFb = CreateBattleEventsFb(eventsBuilder, eventsFb);
+  eventsBuilder.Finish(battleEventsFb);
+
+  flatbuffers::FlatBufferBuilder builder(1024);
+  builder.ForceVectorAlignment(eventsBuilder.GetSize(), sizeof(uint8_t),
+    eventsBuilder.GetBufferMinAlignment());
+  std::vector<MonsterDefeatedFb> monsterDefeatedFbs;
+  auto monstersDefeatedVector = builder.CreateVectorOfStructs(monsterDefeatedFbs);
+  auto monstersDefeatedFb = CreateMonstersDefeatedFb(builder, monstersDefeatedVector);
+  auto eventBytesFb = builder.CreateVector(eventsBuilder.GetBufferPointer(), eventsBuilder.GetSize());
+  auto result = CreateBattleCalcResultsFb(builder, monstersDefeatedFb, eventBytesFb);
+  builder.Finish(result);
+  // Copy the created buffer into and std::string to pass to Python.
+  string bytes((const char*)builder.GetBufferPointer(), builder.GetSize());
+  return bytes;
 }

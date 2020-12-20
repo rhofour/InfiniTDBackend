@@ -129,7 +129,12 @@ class BattleComputer:
             paths.append(compressPath(pathMap.getRandomPath(
                 self.gameConfig.playfield.monsterEnter, rand)))
 
-        self.cppBattleComputer.computeBattle(battleground, wave, paths)
+        cppResult = self.cppBattleComputer.computeBattle(battleground, wave, paths)
+        print(f"Got cppResult with {len(cppResult)} bytes.")
+        cppBattleCalcResults = BattleCalcResultsFb.BattleCalcResultsFb.GetRootAsBattleCalcResultsFb(cppResult, 0)
+        print(f"Monsters defeated {cppBattleCalcResults.MonstersDefeated().MonstersDefeatedLength()}")
+        cppEvents = cppBattleCalcResults.EventsNestedRoot()
+        print(f"Events {cppEvents.EventsLength()}")
 
         # Reverse so we can use these efficiently in Python. Remove when
         # everything works in C++.
