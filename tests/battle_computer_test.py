@@ -30,7 +30,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
             gameConfigData = cattr.structure(json.loads(gameConfigFile.read()), GameConfigData)
             self.gameConfig = GameConfig.fromGameConfigData(gameConfigData)
 
-    @settings(deadline=300)
+    @settings(deadline=500)
     @given(st.data())
     def test_randomBattle(self, data):
         # Build the battleground

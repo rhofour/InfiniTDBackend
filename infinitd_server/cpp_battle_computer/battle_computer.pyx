@@ -1,5 +1,5 @@
 # distutils: language = c++
-# distutils: include_dirs = ./infinitd_server/cpp_battle_computer/rapidjson/include ./flatbuffers/include
+# distutils: include_dirs = ./infinitd_server/cpp_battle_computer/rapidjson/include ./flatbuffers/include ./fmt/include
 from typing import List
 
 import numpy as np

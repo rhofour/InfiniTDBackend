@@ -54,6 +54,7 @@ table MonstersDefeatedFb {
 }
 
 table BattleCalcResultsFb {
+  error:string;
   monsters_defeated:MonstersDefeatedFb;
   events:[ubyte] (nested_flatbuffer: "BattleEventsFb");
 }

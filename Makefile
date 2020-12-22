@@ -1,5 +1,5 @@
 all: flatbuffers cython
-.PHONY: cython flatbuffers all
+.PHONY: cython flatbuffers/flatc all
 
 flatbuffers/Makefile:
 	cd flatbuffers && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release

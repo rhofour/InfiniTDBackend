@@ -130,8 +130,9 @@ class BattleComputer:
                 self.gameConfig.playfield.monsterEnter, rand)))
 
         cppResult = self.cppBattleComputer.computeBattle(battleground, wave, paths)
-        print(f"Got cppResult with {len(cppResult)} bytes.")
         cppBattleCalcResults = BattleCalcResultsFb.BattleCalcResultsFb.GetRootAsBattleCalcResultsFb(cppResult, 0)
+        if cppErr := cppBattleCalcResults.Error():
+            raise BattleCalculationException(battleground, wave, cppErr)
         print(f"Monsters defeated {cppBattleCalcResults.MonstersDefeated().MonstersDefeatedLength()}")
         cppEvents = cppBattleCalcResults.EventsNestedRoot()
         print(f"Events {cppEvents.EventsLength()}")
