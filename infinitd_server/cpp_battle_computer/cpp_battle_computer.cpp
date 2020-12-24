@@ -40,8 +40,9 @@ vector<TowerState> CppBattleComputer::getInitialTowerStates(const vector<vector<
       col++;
       if (towerId == -1) continue;
       try {
-        TowerConfig &towerConfig = this->gameConfig.towers.at(towerId);
-        towers.emplace_back(nextId++, row, col, towerConfig);
+        const TowerConfig &towerConfig = this->gameConfig.towers.at(towerId);
+        TowerState towerState = TowerState(nextId++, row, col, towerConfig);
+        towers.push_back(towerState);
       }
       catch (const std::out_of_range& e) {
         stringstream ss;
@@ -58,11 +59,18 @@ string CppBattleComputer::ComputeBattle(
     const vector<vector<int>>& towerIds,
     vector<int> wave,
     vector<vector<CppCellPos>> paths) {
-  const int numRows = towerIds.size();
-  const int numCols = towerIds[0].size();
+  const int numRows = this->gameConfig.playfield.numRows;
+  const int numCols = this->gameConfig.playfield.numCols;
+  float enemyEnterRow = this->gameConfig.playfield.enemyEnter / numRows;
+  float enemyEnterCol = this->gameConfig.playfield.enemyEnter % numRows;
   cout << "Computing a " << numRows << " x " << numCols
     << " battle with " << wave.size() << " enemies and "
     << paths.size() << " paths." << endl;
+
+  // Quick checks.
+  assert(towerIds.size() == this->gameConfig.playfield.numRows);
+  assert(towerIds[0].size() == this->gameConfig.playfield.numCols);
+  assert(wave.size() == paths.size());
 
   string errStr;
   try {
@@ -76,9 +84,20 @@ string CppBattleComputer::ComputeBattle(
     uint16_t nextId = 0;
     float gameTime = 0.0;
     uint16_t ticks = 0;
+    vector<EnemyState> spawnedEnemies;
     while (!unspawnedEnemies.empty()) {
       // Spawn new enemy
       int enemyConfigId = unspawnedEnemies.back();
+      try {
+        const EnemyConfig& enemyConfig = this->gameConfig.enemies.at(enemyConfigId);
+        EnemyState newEnemy = EnemyState(nextId, enemyEnterRow, enemyEnterCol, enemyConfig);
+        spawnedEnemies.push_back(newEnemy);
+      }
+      catch (const std::out_of_range& e) {
+        stringstream ss;
+        ss << "Could not find enemy config with ID: " << enemyConfigId;
+        throw ss.str();
+      }
       unspawnedEnemies.pop_back();
     }
   }

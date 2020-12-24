@@ -124,7 +124,6 @@ class BattleComputer:
 
         # Calculate paths for all enemies ahead of time.
         paths = []
-        longestPath = 0
         for _ in wave:
             paths.append(compressPath(pathMap.getRandomPath(
                 self.gameConfig.playfield.monsterEnter, rand)))
