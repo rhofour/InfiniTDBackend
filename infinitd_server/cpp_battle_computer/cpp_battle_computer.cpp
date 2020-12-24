@@ -19,7 +19,8 @@ using InfiniTDFb::CreateMonstersDefeatedFb;
 using InfiniTDFb::CreateBattleEventFb;
 using InfiniTDFb::CreateBattleCalcResultsFb;
 
-CppBattleComputer::CppBattleComputer(std::string jsonText) {
+CppBattleComputer::CppBattleComputer(std::string jsonText, float gameTickSecs_) :
+    gameTickSecs(gameTickSecs_) {
   Document d;
   if (d.Parse(jsonText.c_str()).HasParseError()) {
     cerr << "Error parsing JSON (offset " <<
@@ -99,6 +100,12 @@ string CppBattleComputer::ComputeBattle(
         throw ss.str();
       }
       unspawnedEnemies.pop_back();
+
+      // Move spawned enemies
+
+      // Advance time
+      ticks++;
+      gameTime = ticks * this->gameTickSecs;
     }
   }
   catch (string err) {

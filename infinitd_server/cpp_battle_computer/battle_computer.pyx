@@ -24,7 +24,7 @@ cdef extern from "cpp_battle_computer.cpp":
 cdef extern from "cpp_battle_computer.h":
     cdef cppclass CppBattleComputer:
         CppBattleComputer() except +
-        CppBattleComputer(string) except +
+        CppBattleComputer(string, float) except +
         string ComputeBattle(const vector[vector[int]]&, vector[int] wave,
                 vector[vector[CppCellPos]])
 
@@ -38,9 +38,9 @@ cdef class BattleComputer:
     cdef CppBattleComputer cppBattleComputer
     cdef object gameConfig
 
-    def __init__(self, gameConfig: GameConfig, jsonStr: str):
+    def __init__(self, gameConfig: GameConfig, jsonStr: str, gameTickSecs: float):
         self.gameConfig = gameConfig
-        self.cppBattleComputer = CppBattleComputer(jsonStr.encode("UTF-8"))
+        self.cppBattleComputer = CppBattleComputer(jsonStr.encode("UTF-8"), gameTickSecs)
 
     def computeBattle(self, battleground, wave: List[ConfigId], paths: List[List[CellPos]]):
         if not wave:

@@ -46,8 +46,10 @@ struct EnemyState {
 class CppBattleComputer {
  public:
   GameConfig gameConfig;
+  float gameTickSecs; // Period of the battle calculation clock
+
   CppBattleComputer() {};
-  CppBattleComputer(string jsonText);
+  CppBattleComputer(string jsonText, float gameTickSecs_);
   string ComputeBattle(const vector<vector<int>>& towers, vector<int> wave,
     vector<vector<CppCellPos>> paths);
  private:
