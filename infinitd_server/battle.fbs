@@ -11,8 +11,8 @@ table MoveEventFb {
   obj_type:ObjectTypeFb;
   id:int;
   config_id:ushort;
-  start_pos:FpCellPosFb;
-  dest_pos:FpCellPosFb;
+  start_pos:FpCellPosFb (native_inline);
+  dest_pos:FpCellPosFb (native_inline);
   start_time:float;
   end_time:float;
 }

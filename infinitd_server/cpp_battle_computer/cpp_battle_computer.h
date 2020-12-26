@@ -12,14 +12,13 @@ using InfiniTDFb::BattleCalcResultsFb;
 
 struct TowerState {
   uint16_t id;
-  float posRow;
-  float posCol;
+  CppCellPos pos;
   float lastFired;
   float firingRadius; // How far a projectile from this tower could have traveled at this point.
   const TowerConfig& config;
 
   TowerState(int id_, int row, int col, const TowerConfig& config_) :
-      id(id_), posRow(row), posCol(col), firingRadius(0.0f), config(config_) {
+      id(id_), pos(row, col), firingRadius(0.0f), config(config_) {
     if (config_.firingRate > 0) {
       this->lastFired = -1.0f / config_.firingRate;
     } else {
@@ -30,16 +29,22 @@ struct TowerState {
 
 struct EnemyState {
   uint16_t id;
-  float posRow;
-  float posCol;
+
+  CppCellPos pos;
+  // For updating position.
+  vector<CppCellPos>& path;
+  uint16_t pathIdx;
+  float lastPathTime;
+  float nextPathTime;
+
   float health;
   float distTraveled;
   const EnemyConfig& config;
 
-  EnemyState(int id_, int row, int col, const EnemyConfig& config_) :
-      id(id_), posRow(row), posCol(col), config(config_) {          
-    health = config.health;
-    distTraveled = 0;
+  EnemyState(int id_, vector<CppCellPos>& path_, float curTime, const EnemyConfig& config_) :
+        id(id_), pos(path_[0]), path(path_), pathIdx(1), lastPathTime(curTime), health(config_.health),
+        distTraveled(0), config(config_) {
+    this->nextPathTime = curTime; // This will be updated when the enemy is first moved.
   }
 };
 

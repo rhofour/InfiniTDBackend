@@ -12,7 +12,14 @@ using std::cerr;
 using std::endl;
 using std::stringstream;
 using rapidjson::Document;
+using InfiniTDFb::FpCellPosFb;
+using InfiniTDFb::ObjectTypeFb;
 using InfiniTDFb::BattleEventFb;
+using InfiniTDFb::BattleEventUnionFb;
+using InfiniTDFb::BattleEventUnionFbUnion;
+using InfiniTDFb::BattleEventFbT;
+using InfiniTDFb::DeleteEventFbT;
+using InfiniTDFb::MoveEventFbT;
 using InfiniTDFb::MonsterDefeatedFb;
 using InfiniTDFb::MonstersDefeatedFb;
 using InfiniTDFb::CreateMonstersDefeatedFb;
@@ -62,8 +69,10 @@ string CppBattleComputer::ComputeBattle(
     vector<vector<CppCellPos>> paths) {
   const int numRows = this->gameConfig.playfield.numRows;
   const int numCols = this->gameConfig.playfield.numCols;
-  float enemyEnterRow = this->gameConfig.playfield.enemyEnter / numRows;
-  float enemyEnterCol = this->gameConfig.playfield.enemyEnter % numRows;
+  CppCellPos enemyEnter(
+    this->gameConfig.playfield.enemyEnter / numRows,
+    this->gameConfig.playfield.enemyEnter % numRows
+  );
   cout << "Computing a " << numRows << " x " << numCols
     << " battle with " << wave.size() << " enemies and "
     << paths.size() << " paths." << endl;
@@ -73,7 +82,9 @@ string CppBattleComputer::ComputeBattle(
   assert(towerIds[0].size() == this->gameConfig.playfield.numCols);
   assert(wave.size() == paths.size());
 
+  // Output containers
   string errStr;
+  vector<BattleEventFbT> events;
   try {
     // Initialize tower states.
     vector<TowerState> towers = this->getInitialTowerStates(towerIds);
@@ -83,15 +94,20 @@ string CppBattleComputer::ComputeBattle(
 
     // Main game loop
     uint16_t nextId = 0;
+    uint16_t numSpawnedEnemies = 0;
     float gameTime = 0.0;
     uint16_t ticks = 0;
     vector<EnemyState> spawnedEnemies;
+
     while (!unspawnedEnemies.empty()) {
       // Spawn new enemy
       int enemyConfigId = unspawnedEnemies.back();
       try {
         const EnemyConfig& enemyConfig = this->gameConfig.enemies.at(enemyConfigId);
-        EnemyState newEnemy = EnemyState(nextId, enemyEnterRow, enemyEnterCol, enemyConfig);
+        vector<CppCellPos> &path = paths[numSpawnedEnemies];
+        EnemyState newEnemy = EnemyState(nextId, path, gameTime, enemyConfig);
+        numSpawnedEnemies++;
+        nextId++;
         spawnedEnemies.push_back(newEnemy);
       }
       catch (const std::out_of_range& e) {
@@ -102,6 +118,52 @@ string CppBattleComputer::ComputeBattle(
       unspawnedEnemies.pop_back();
 
       // Move spawned enemies
+      for (EnemyState &enemy : spawnedEnemies) {
+        if (enemy.nextPathTime <= gameTime) {
+          // Update path and make a new move event.
+
+          // First, add remaining bit of path to distTraveled.
+          enemy.distTraveled += enemy.pos.dist(enemy.path[enemy.pathIdx]);
+
+          // Check if we've reached the destination.
+          if (enemy.pathIdx == enemy.path.size() - 1) {
+            // Remove this enemy.
+            DeleteEventFbT deleteEvent;
+            deleteEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
+            deleteEvent.id = enemy.id;
+            deleteEvent.start_time = enemy.nextPathTime;
+            BattleEventFbT battleEvent;
+            BattleEventUnionFbUnion battleEventUnion;
+            battleEventUnion.Set(deleteEvent);
+            battleEvent.event = battleEventUnion;
+            events.push_back(battleEvent);
+            continue;
+          }
+          // Otherwise make a new move event.
+          MoveEventFbT moveEvent;
+          moveEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
+          moveEvent.id = enemy.id;
+          moveEvent.start_time = enemy.nextPathTime;
+          CppCellPos &prevDest = enemy.path[enemy.pathIdx];
+          moveEvent.start_pos = FpCellPosFb(prevDest.row, prevDest.row);
+          CppCellPos nextDest = enemy.path[enemy.pathIdx + 1];
+          float timeToDest = enemy.path[enemy.pathIdx].dist(nextDest);
+          moveEvent.start_pos = FpCellPosFb(nextDest.row, nextDest.row);
+          moveEvent.end_time = enemy.nextPathTime + timeToDest;
+          // TODO: refactor this out into an AddEvent method
+          BattleEventFbT battleEvent;
+          BattleEventUnionFbUnion battleEventUnion;
+          battleEventUnion.Set(moveEvent);
+          battleEvent.event = battleEventUnion;
+          events.push_back(battleEvent);
+
+          // Then update enemy state.
+          enemy.pathIdx++;
+          enemy.lastPathTime = enemy.nextPathTime;
+          enemy.nextPathTime += timeToDest;
+        }
+        // Update enemy position.
+      }
 
       // Advance time
       ticks++;
@@ -116,6 +178,10 @@ string CppBattleComputer::ComputeBattle(
   // First, serialize the events into a BattleEventsFb.
   flatbuffers::FlatBufferBuilder eventsBuilder(1024);
   vector<flatbuffers::Offset<BattleEventFb>> eventOffsets;
+  // Make offsets from events.
+  for (const BattleEventFbT& event : events) {
+    eventOffsets.push_back(CreateBattleEventFb(eventsBuilder, &event));
+  }
   auto eventsFb = eventsBuilder.CreateVector(eventOffsets);
   auto battleEventsFb = CreateBattleEventsFb(eventsBuilder, eventsFb);
   eventsBuilder.Finish(battleEventsFb);
