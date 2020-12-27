@@ -19,6 +19,7 @@ using InfiniTDFb::BattleEventUnionFb;
 using InfiniTDFb::BattleEventUnionFbUnion;
 using InfiniTDFb::BattleEventFbT;
 using InfiniTDFb::DeleteEventFbT;
+using InfiniTDFb::DamageEventFbT;
 using InfiniTDFb::MoveEventFbT;
 using InfiniTDFb::MonsterDefeatedFb;
 using InfiniTDFb::MonstersDefeatedFb;
@@ -63,6 +64,19 @@ vector<TowerState> CppBattleComputer::getInitialTowerStates(const vector<vector<
   return towers;
 }
 
+// For sorting the events.
+float GetStartTime(const BattleEventFbT &event) {
+  const MoveEventFbT *moveEvent = event.event.AsMove();
+  if (moveEvent) return moveEvent->start_time;
+  const DeleteEventFbT *deleteEvent = event.event.AsDelete();
+  if (deleteEvent) return deleteEvent->start_time;
+  const DamageEventFbT *damageEvent = event.event.AsDamage();
+  if (damageEvent) return damageEvent->start_time;
+
+  assert(false);
+  return -1.0;
+}
+
 string CppBattleComputer::ComputeBattle(
     const vector<vector<int>>& towerIds,
     vector<int> wave,
@@ -85,6 +99,7 @@ string CppBattleComputer::ComputeBattle(
   // Output containers
   string errStr;
   vector<BattleEventFbT> events;
+  float gameTime = -1.0;
   try {
     // Initialize tower states.
     vector<TowerState> towers = this->getInitialTowerStates(towerIds);
@@ -95,11 +110,14 @@ string CppBattleComputer::ComputeBattle(
     // Main game loop
     uint16_t nextId = 0;
     uint16_t numSpawnedEnemies = 0;
-    float gameTime = 0.0;
-    uint16_t ticks = 0;
+    uint16_t ticks = -1; // This will be equal to 0 in the first loop.
     vector<EnemyState> spawnedEnemies;
 
     while (!unspawnedEnemies.empty() || !spawnedEnemies.empty()) {
+      // Advance time
+      ticks++;
+      gameTime = ticks * this->gameTickSecs;
+
       // Per loop state
       vector<size_t> removedEnemyIdx;
       bool spawnOpen = true;
@@ -205,10 +223,6 @@ string CppBattleComputer::ComputeBattle(
         assert(!spawnedEnemies.empty());
         spawnedEnemies.pop_back();
       }
-
-      // Advance time
-      ticks++;
-      gameTime = ticks * this->gameTickSecs;
     }
   }
   catch (string err) {
@@ -219,6 +233,10 @@ string CppBattleComputer::ComputeBattle(
   // First, serialize the events into a BattleEventsFb.
   flatbuffers::FlatBufferBuilder eventsBuilder(1024);
   vector<flatbuffers::Offset<BattleEventFb>> eventOffsets;
+  // Sort events by start time.
+  std::sort(events.begin(), events.end(), [](const BattleEventFbT &a, const BattleEventFbT &b) {
+    return GetStartTime(a) < GetStartTime(b);
+  });
   // Make offsets from events.
   for (const BattleEventFbT& event : events) {
     eventOffsets.push_back(CreateBattleEventFb(eventsBuilder, &event));
@@ -235,7 +253,7 @@ string CppBattleComputer::ComputeBattle(
   auto monstersDefeatedVector = builder.CreateVectorOfStructs(monsterDefeatedFbs);
   auto monstersDefeatedFb = CreateMonstersDefeatedFb(builder, monstersDefeatedVector);
   auto eventBytesFb = builder.CreateVector(eventsBuilder.GetBufferPointer(), eventsBuilder.GetSize());
-  auto result = CreateBattleCalcResultsFb(builder, errStrOffset, monstersDefeatedFb, eventBytesFb);
+  auto result = CreateBattleCalcResultsFb(builder, errStrOffset, monstersDefeatedFb, eventBytesFb, gameTime);
   builder.Finish(result);
   // Copy the created buffer into a std::string to pass to Python.
   string bytes((const char*)builder.GetBufferPointer(), builder.GetSize());

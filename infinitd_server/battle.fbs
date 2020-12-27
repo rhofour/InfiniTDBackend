@@ -57,6 +57,7 @@ table BattleCalcResultsFb {
   error:string;
   monsters_defeated:MonstersDefeatedFb;
   events:[ubyte] (nested_flatbuffer: "BattleEventsFb");
+  time_secs:float;
 }
 
 table BattleResultsFb {

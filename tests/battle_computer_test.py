@@ -191,7 +191,15 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         # pytype: disable=attribute-error
         lastSpawnedMoveEvent: Optional[MoveEvent] = None
         spawnFp = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
+        lastStartTime = 0.0
+        # Ensure the first event is a move event starting at 0.0.
+        firstEvent = events[0]
+        self.assertEqual(firstEvent.eventType, EventType.MOVE)
+        self.assertEqual(firstEvent.startTime, 0.0)
         for event in events:
+            # Ensure events are in sorted order.
+            self.assertGreaterEqual(event.startTime, lastStartTime, msg="Events are not sorted.")
+            lastStartTime = event.startTime
             if event.eventType == EventType.MOVE:
                 activeIds.add(event.id)
                 if event.objType == ObjectType.PROJECTILE:
@@ -213,7 +221,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                     expectedSpeed: float = self.gameConfig.monsters[event.configId].speed
                     self.assertAlmostEqual(dist / time, expectedSpeed,
                         msg=f"MoveEvent has the wrong speed: {event}",
-                        places=5)
+                        places=4)
                 # Ensure spawned enemies don't overlap.
                 if event.objType == ObjectType.MONSTER and event.startPos == spawnFp:
                     if lastSpawnedMoveEvent:
@@ -280,6 +288,9 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 self.assertEqual(configId, wave[enemiesSeen])
                 enemiesSeen += 1
         self.assertEqual(enemiesSeen, len(wave))
+
+        # Ensure battle time is positive.
+        self.assertGreater(results.fb.TimeSecs(), 0.0)
 
 class TestBattleEventEncodingAndDecoding(unittest.TestCase):
     def setUp(self):
