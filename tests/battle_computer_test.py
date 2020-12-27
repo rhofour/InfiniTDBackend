@@ -186,6 +186,8 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         activeIds = set()
         # Map every projectile fired to the tower it fired from.
         projFiredFrom: Dict[FpCellPos, List[MoveEvent]] = defaultdict(list)
+        # Map every move event to the object it's moving.
+        movesById: Dict[int, List[MoveEvent]] = defaultdict(list)
         # pytype: disable=attribute-error
         print(events)
         for event in events:
@@ -193,6 +195,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 activeIds.add(event.id)
                 if event.objType == ObjectType.PROJECTILE:
                     projFiredFrom[event.startPos].append(event)
+                movesById[event.id].append(event)
                 # Ensure bounds of every move are within the playfield
                 self.assertGreaterEqual(event.startPos.row, 0)
                 self.assertGreaterEqual(event.startPos.col, 0)
@@ -237,6 +240,17 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 # Check that projectile config ID matches.
                 self.assertEqual(towerConfig.projectileId, event.configId)
                 # pytype: enable=attribute-error
+
+        for (id, events) in movesById.items():
+            lastPos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
+            lastTime = None
+            # Ensure all moves are connected in space and time.
+            for event in events:
+                self.assertEqual(lastPos, event.startPos)
+                lastPos = event.destPos
+                if lastTime:
+                    self.assertEqual(lastTime, event.startTime)
+                lastTime = event.endTime
 
 class TestBattleEventEncodingAndDecoding(unittest.TestCase):
     def setUp(self):
