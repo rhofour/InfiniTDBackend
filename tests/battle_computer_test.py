@@ -197,7 +197,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 if event.objType == ObjectType.PROJECTILE:
                     projFiredFrom[event.startPos].append(event)
                 movesById[event.id].append(event)
-                # Ensure bounds of every move are within the playfield
+                # Ensure bounds of every move are within the playfield.
                 self.assertGreaterEqual(event.startPos.row, 0)
                 self.assertGreaterEqual(event.startPos.col, 0)
                 self.assertLessEqual(event.startPos.row, self.gameConfig.playfield.numRows - 1)
@@ -206,11 +206,19 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 self.assertGreaterEqual(event.destPos.col, 0)
                 self.assertLessEqual(event.destPos.row, self.gameConfig.playfield.numRows - 1)
                 self.assertLessEqual(event.destPos.col, self.gameConfig.playfield.numCols - 1)
+                # Ensure monsters are traveling at the correct speed.
+                if event.objType == ObjectType.MONSTER:
+                    dist: float = event.startPos.dist(event.destPos)
+                    time: float = event.endTime - event.startTime
+                    expectedSpeed: float = self.gameConfig.monsters[event.configId].speed
+                    self.assertAlmostEqual(dist / time, expectedSpeed,
+                        msg=f"MoveEvent has the wrong speed: {event}",
+                        places=5)
                 # Ensure spawned enemies don't overlap.
                 if event.objType == ObjectType.MONSTER and event.startPos == spawnFp:
                     if lastSpawnedMoveEvent:
                         # Calculate previous enemy position at this time.
-                        # This assumes the enemy leaves the spawn before it's killed.
+                        # This assumes the enemy leaves the spawn before they're killed.
                         amount = min(1.0, event.startTime / lastSpawnedMoveEvent.endTime)
                         curPos = lastSpawnedMoveEvent.startPos.interpolateTo(lastSpawnedMoveEvent.destPos, amount)
                         self.assertGreaterEqual(curPos.dist(spawnFp), 1.0)
@@ -251,16 +259,27 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 self.assertEqual(towerConfig.projectileId, event.configId)
                 # pytype: enable=attribute-error
 
+        enemiesSeen = 0
         for (id, events) in movesById.items():
             lastPos = spawnFp
             lastTime = None
-            # Ensure all moves are connected in space and time.
+            objType = events[0].objType
+            configId = events[0].configId
             for event in events:
+                # Ensure all moves are connected in space and time.
                 self.assertEqual(lastPos, event.startPos)
                 lastPos = event.destPos
                 if lastTime:
                     self.assertEqual(lastTime, event.startTime)
                 lastTime = event.endTime
+                # Ensure object type and config ID are fixed for each object.
+                self.assertEqual(objType, event.objType)
+                self.assertEqual(configId, event.configId)
+            if objType == ObjectType.MONSTER:
+                # Ensure enemies are generated in the correct order.
+                self.assertEqual(configId, wave[enemiesSeen])
+                enemiesSeen += 1
+        self.assertEqual(enemiesSeen, len(wave))
 
 class TestBattleEventEncodingAndDecoding(unittest.TestCase):
     def setUp(self):

@@ -166,11 +166,12 @@ string CppBattleComputer::ComputeBattle(
           MoveEventFbT moveEvent;
           moveEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
           moveEvent.id = enemy.id;
+          moveEvent.config_id = enemy.config.get().id;
           moveEvent.start_time = enemy.nextPathTime;
           const CppCellPos &prevDest = enemy.path.get()[enemy.pathIdx];
           moveEvent.start_pos = FpCellPosFb(prevDest.row, prevDest.col);
           const CppCellPos nextDest = enemy.path.get()[enemy.pathIdx + 1];
-          float timeToDest = enemy.path.get()[enemy.pathIdx].dist(nextDest);
+          float timeToDest = prevDest.dist(nextDest) / enemy.config.get().speed;
           moveEvent.dest_pos = FpCellPosFb(nextDest.row, nextDest.col);
           moveEvent.end_time = enemy.nextPathTime + timeToDest;
           // TODO: refactor this out into an AddEvent method

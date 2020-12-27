@@ -54,6 +54,7 @@ class EnemyConfig {
   float speed;
   float bounty;
   float size;
+  uint16_t id;
 
   EnemyConfig(const Value& val) {
     assert(val.IsObject());
@@ -61,6 +62,7 @@ class EnemyConfig {
     this->speed = val["speed"].GetDouble();
     this->bounty = val["health"].GetDouble();
     this->size = val["health"].GetDouble();
+    this->id = val["id"].GetUint();
   }
 };
 
@@ -82,7 +84,7 @@ class GameConfig {
     }
     const Value& enemies = jsonDoc["monsters"];
     for (SizeType i = 0; i < enemies.Size(); i++) {
-      const int id = enemies[i]["id"].GetInt();
+      const int id = enemies[i]["id"].GetUint();
       this->enemies.insert({id, EnemyConfig(enemies[i])});
     }
   }
