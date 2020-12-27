@@ -101,7 +101,7 @@ string CppBattleComputer::ComputeBattle(
 
     while (!unspawnedEnemies.empty() || !spawnedEnemies.empty()) {
       // Per loop state
-      vector<int> removedEnemyIdx;
+      vector<size_t> removedEnemyIdx;
       bool spawnOpen = true;
       if (!unspawnedEnemies.empty()) {
         for (const EnemyState &enemy : spawnedEnemies) {
@@ -136,7 +136,7 @@ string CppBattleComputer::ComputeBattle(
       }
 
       // Move spawned enemies
-      int enemyIdx = -1;
+      size_t enemyIdx = -1; // Intentional overflow so the first real value is 0.
       for (EnemyState &enemy : spawnedEnemies) {
         enemyIdx++;
         if (enemy.nextPathTime <= gameTime) {
