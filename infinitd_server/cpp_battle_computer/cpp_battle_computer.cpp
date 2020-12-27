@@ -157,10 +157,10 @@ string CppBattleComputer::ComputeBattle(
           moveEvent.id = enemy.id;
           moveEvent.start_time = enemy.nextPathTime;
           const CppCellPos &prevDest = enemy.path.get()[enemy.pathIdx];
-          moveEvent.start_pos = FpCellPosFb(prevDest.row, prevDest.row);
+          moveEvent.start_pos = FpCellPosFb(prevDest.row, prevDest.col);
           const CppCellPos nextDest = enemy.path.get()[enemy.pathIdx + 1];
           float timeToDest = enemy.path.get()[enemy.pathIdx].dist(nextDest);
-          moveEvent.start_pos = FpCellPosFb(nextDest.row, nextDest.row);
+          moveEvent.dest_pos = FpCellPosFb(nextDest.row, nextDest.col);
           moveEvent.end_time = enemy.nextPathTime + timeToDest;
           // TODO: refactor this out into an AddEvent method
           BattleEventFbT battleEvent;

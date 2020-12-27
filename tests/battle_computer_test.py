@@ -193,6 +193,15 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 activeIds.add(event.id)
                 if event.objType == ObjectType.PROJECTILE:
                     projFiredFrom[event.startPos].append(event)
+                # Ensure bounds of every move are within the playfield
+                self.assertGreaterEqual(event.startPos.row, 0)
+                self.assertGreaterEqual(event.startPos.col, 0)
+                self.assertLessEqual(event.startPos.row, self.gameConfig.playfield.numRows - 1)
+                self.assertLessEqual(event.startPos.col, self.gameConfig.playfield.numCols - 1)
+                self.assertGreaterEqual(event.destPos.row, 0)
+                self.assertGreaterEqual(event.destPos.col, 0)
+                self.assertLessEqual(event.destPos.row, self.gameConfig.playfield.numRows - 1)
+                self.assertLessEqual(event.destPos.col, self.gameConfig.playfield.numCols - 1)
             if event.eventType == EventType.DELETE:
                 activeIds.discard(event.id)
         # pytype: enable=attribute-error
