@@ -1,6 +1,6 @@
 import unittest
 from collections import defaultdict
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 from enum import Enum, unique, auto
 from pathlib import Path
 import json
@@ -189,7 +189,8 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         # Map every move event to the object it's moving.
         movesById: Dict[int, List[MoveEvent]] = defaultdict(list)
         # pytype: disable=attribute-error
-        print(events)
+        lastSpawnedMoveEvent: Optional[MoveEvent] = None
+        spawnFp = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
         for event in events:
             if event.eventType == EventType.MOVE:
                 activeIds.add(event.id)
@@ -205,6 +206,15 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 self.assertGreaterEqual(event.destPos.col, 0)
                 self.assertLessEqual(event.destPos.row, self.gameConfig.playfield.numRows - 1)
                 self.assertLessEqual(event.destPos.col, self.gameConfig.playfield.numCols - 1)
+                # Ensure spawned enemies don't overlap.
+                if event.objType == ObjectType.MONSTER and event.startPos == spawnFp:
+                    if lastSpawnedMoveEvent:
+                        # Calculate previous enemy position at this time.
+                        # This assumes the enemy leaves the spawn before it's killed.
+                        amount = min(1.0, event.startTime / lastSpawnedMoveEvent.endTime)
+                        curPos = lastSpawnedMoveEvent.startPos.interpolateTo(lastSpawnedMoveEvent.destPos, amount)
+                        self.assertGreaterEqual(curPos.dist(spawnFp), 1.0)
+                    lastSpawnedMoveEvent = event
             if event.eventType == EventType.DELETE:
                 activeIds.discard(event.id)
         # pytype: enable=attribute-error
@@ -242,7 +252,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 # pytype: enable=attribute-error
 
         for (id, events) in movesById.items():
-            lastPos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
+            lastPos = spawnFp
             lastTime = None
             # Ensure all moves are connected in space and time.
             for event in events:

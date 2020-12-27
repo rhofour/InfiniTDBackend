@@ -18,6 +18,22 @@ struct CppCellPos {
   float dist(const CppCellPos& other) const {
     return sqrt(this->distSq(other));
   }
+
+  CppCellPos operator-() const {
+    return CppCellPos(-this->row, -this->col);
+  }
+
+  CppCellPos operator-(const CppCellPos& in) const {
+    return CppCellPos(this->row - in.row, this->col - in.col);
+  }
+
+  CppCellPos operator+(const CppCellPos& in) const {
+    return CppCellPos(this->row + in.row, this->col + in.col);
+  }
+
+  CppCellPos operator*(const float scalar) const {
+    return CppCellPos(this->row * scalar, this->col * scalar);
+  }
 };
 
 std::ostream& operator<< (std::ostream &out, CppCellPos const& pos) {

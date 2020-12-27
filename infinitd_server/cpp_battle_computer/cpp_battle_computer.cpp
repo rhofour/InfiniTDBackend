@@ -102,8 +102,19 @@ string CppBattleComputer::ComputeBattle(
     while (!unspawnedEnemies.empty() || !spawnedEnemies.empty()) {
       // Per loop state
       vector<int> removedEnemyIdx;
-      // TODO: Check if spawn is free before spawning an enemy.
+      bool spawnOpen = true;
       if (!unspawnedEnemies.empty()) {
+        for (const EnemyState &enemy : spawnedEnemies) {
+          if (enemy.pos.distSq(enemyEnter) < 1.0) {
+            spawnOpen = false;
+            break;
+          }
+        }
+      } else {
+        // If there are no more enemies to spawn always mark the spawn as blocked.
+        spawnOpen = false;
+      }
+      if (spawnOpen) {
         // Spawn new enemy
         int enemyConfigId = unspawnedEnemies.back();
         try {
@@ -175,6 +186,10 @@ string CppBattleComputer::ComputeBattle(
           enemy.nextPathTime += timeToDest;
         }
         // Update enemy position.
+        float fracTraveled = (gameTime - enemy.lastPathTime) / (enemy.nextPathTime - enemy.lastPathTime);
+        CppCellPos fromPos = enemy.path.get()[enemy.pathIdx - 1];
+        CppCellPos toPos = enemy.path.get()[enemy.pathIdx];
+        enemy.pos = (toPos - fromPos) * fracTraveled + fromPos;
       }
 
       // Remove any enemies marked for removal.
