@@ -8,6 +8,7 @@
 
 using std::string;
 using std::vector;
+using std::reference_wrapper;
 using InfiniTDFb::BattleCalcResultsFb;
 
 struct TowerState {
@@ -32,21 +33,27 @@ struct EnemyState {
 
   CppCellPos pos;
   // For updating position.
-  vector<CppCellPos>& path;
+  reference_wrapper<const vector<CppCellPos>> path;
   uint16_t pathIdx;
   float lastPathTime;
   float nextPathTime;
 
   float health;
   float distTraveled;
-  const EnemyConfig& config;
+  reference_wrapper<const EnemyConfig> config;
 
-  EnemyState(int id_, vector<CppCellPos>& path_, float curTime, const EnemyConfig& config_) :
-        id(id_), pos(path_[0]), path(path_), pathIdx(1), lastPathTime(curTime), health(config_.health),
-        distTraveled(0), config(config_) {
-    this->nextPathTime = curTime; // This will be updated when the enemy is first moved.
-  }
+  EnemyState(int id_, const vector<CppCellPos>& path_, float curTime, const EnemyConfig& config_) :
+        id(id_), pos(path_[0]), path(path_), pathIdx(0), lastPathTime(curTime),
+        nextPathTime(curTime), health(config_.health), distTraveled(0), config(config_) { }
+
 };
+
+std::ostream& operator<< (std::ostream &out, EnemyState const& enemy) {
+    out << "Enemy " << enemy.id << " at " << enemy.pos << endl;
+    out << " Traveled " << enemy.distTraveled;
+    out << " (" << enemy.pathIdx << "/" << enemy.path.get().size() << ")" << endl;
+    return out;
+}
 
 class CppBattleComputer {
  public:

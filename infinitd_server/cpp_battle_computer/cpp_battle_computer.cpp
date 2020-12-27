@@ -99,34 +99,44 @@ string CppBattleComputer::ComputeBattle(
     uint16_t ticks = 0;
     vector<EnemyState> spawnedEnemies;
 
-    while (!unspawnedEnemies.empty()) {
-      // Spawn new enemy
-      int enemyConfigId = unspawnedEnemies.back();
-      try {
-        const EnemyConfig& enemyConfig = this->gameConfig.enemies.at(enemyConfigId);
-        vector<CppCellPos> &path = paths[numSpawnedEnemies];
-        EnemyState newEnemy = EnemyState(nextId, path, gameTime, enemyConfig);
-        numSpawnedEnemies++;
-        nextId++;
-        spawnedEnemies.push_back(newEnemy);
+    while (!unspawnedEnemies.empty() || !spawnedEnemies.empty()) {
+      // Per loop state
+      vector<int> removedEnemyIdx;
+      // TODO: Check if spawn is free before spawning an enemy.
+      if (!unspawnedEnemies.empty()) {
+        // Spawn new enemy
+        int enemyConfigId = unspawnedEnemies.back();
+        try {
+          const EnemyConfig& enemyConfig = this->gameConfig.enemies.at(enemyConfigId);
+          const vector<CppCellPos> &path = paths[numSpawnedEnemies];
+          EnemyState newEnemy = EnemyState(nextId, path, gameTime, enemyConfig);
+          numSpawnedEnemies++;
+          nextId++;
+          spawnedEnemies.push_back(newEnemy);
+
+          // TODO: Update monsters spawned stats.
+        }
+        catch (const std::out_of_range& e) {
+          stringstream ss;
+          ss << "Could not find enemy config with ID: " << enemyConfigId;
+          throw ss.str();
+        }
+        unspawnedEnemies.pop_back();
       }
-      catch (const std::out_of_range& e) {
-        stringstream ss;
-        ss << "Could not find enemy config with ID: " << enemyConfigId;
-        throw ss.str();
-      }
-      unspawnedEnemies.pop_back();
 
       // Move spawned enemies
+      int enemyIdx = -1;
       for (EnemyState &enemy : spawnedEnemies) {
+        enemyIdx++;
         if (enemy.nextPathTime <= gameTime) {
           // Update path and make a new move event.
 
           // First, add remaining bit of path to distTraveled.
-          enemy.distTraveled += enemy.pos.dist(enemy.path[enemy.pathIdx]);
+          enemy.distTraveled += enemy.pos.dist(enemy.path.get()[enemy.pathIdx]);
 
           // Check if we've reached the destination.
-          if (enemy.pathIdx == enemy.path.size() - 1) {
+          assert(enemy.pathIdx < enemy.path.get().size());
+          if (enemy.pathIdx == enemy.path.get().size() - 1) {
             // Remove this enemy.
             DeleteEventFbT deleteEvent;
             deleteEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
@@ -137,6 +147,8 @@ string CppBattleComputer::ComputeBattle(
             battleEventUnion.Set(deleteEvent);
             battleEvent.event = battleEventUnion;
             events.push_back(battleEvent);
+
+            removedEnemyIdx.push_back(enemyIdx);
             continue;
           }
           // Otherwise make a new move event.
@@ -144,10 +156,10 @@ string CppBattleComputer::ComputeBattle(
           moveEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
           moveEvent.id = enemy.id;
           moveEvent.start_time = enemy.nextPathTime;
-          CppCellPos &prevDest = enemy.path[enemy.pathIdx];
+          const CppCellPos &prevDest = enemy.path.get()[enemy.pathIdx];
           moveEvent.start_pos = FpCellPosFb(prevDest.row, prevDest.row);
-          CppCellPos nextDest = enemy.path[enemy.pathIdx + 1];
-          float timeToDest = enemy.path[enemy.pathIdx].dist(nextDest);
+          const CppCellPos nextDest = enemy.path.get()[enemy.pathIdx + 1];
+          float timeToDest = enemy.path.get()[enemy.pathIdx].dist(nextDest);
           moveEvent.start_pos = FpCellPosFb(nextDest.row, nextDest.row);
           moveEvent.end_time = enemy.nextPathTime + timeToDest;
           // TODO: refactor this out into an AddEvent method
@@ -163,6 +175,19 @@ string CppBattleComputer::ComputeBattle(
           enemy.nextPathTime += timeToDest;
         }
         // Update enemy position.
+      }
+
+      // Remove any enemies marked for removal.
+      // Do this in reverse order so we don't have to worry about indices changing as we remove enemies.
+      for (auto enemyIdx = removedEnemyIdx.rbegin(); enemyIdx != removedEnemyIdx.rend(); enemyIdx++) {
+        // Replace enemy at enemyIdx with the last element, then pop it.
+        // This removes the enemy in constant time.
+        assert(*enemyIdx >= 0);
+        if (*enemyIdx != spawnedEnemies.size() - 1) {
+          spawnedEnemies[*enemyIdx] = spawnedEnemies.back();
+        }
+        assert(!spawnedEnemies.empty());
+        spawnedEnemies.pop_back();
       }
 
       // Advance time

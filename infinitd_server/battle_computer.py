@@ -100,8 +100,8 @@ class BattleComputer:
     # Note: This code assumes enemies always move at a constant speed. It will
     # need to change to handle effects that may alter enemy speed (or
     # potentially stun them).
-    def computeBattle(self, battleground: BattlegroundState, wave: List[ConfigId]) -> BattleCalcResults:
-
+    def computeBattle(self, battleground: BattlegroundState, wave: List[ConfigId],
+     useCpp: bool = False) -> BattleCalcResults:
         events: List[BattleEvent] = []
         nextId = 0
         unspawnedMonsters = wave[::-1] # Reverse so we can pop off elements efficiently
@@ -128,272 +128,274 @@ class BattleComputer:
             paths.append(compressPath(pathMap.getRandomPath(
                 self.gameConfig.playfield.monsterEnter, rand)))
 
-        cppResult = self.cppBattleComputer.computeBattle(battleground, wave, paths)
-        cppBattleCalcResults = BattleCalcResultsFb.BattleCalcResultsFb.GetRootAsBattleCalcResultsFb(cppResult, 0)
-        if cppErr := cppBattleCalcResults.Error():
-            raise BattleCalculationException(battleground, wave, cppErr)
-        print(f"Monsters defeated {cppBattleCalcResults.MonstersDefeated().MonstersDefeatedLength()}")
-        cppEvents = cppBattleCalcResults.EventsNestedRoot()
-        print(f"Events {cppEvents.EventsLength()}")
+        if useCpp:
+            result = self.cppBattleComputer.computeBattle(battleground, wave, paths)
+            battleCalcFb = BattleCalcResultsFb.BattleCalcResultsFb.GetRootAsBattleCalcResultsFb(result, 0)
+            if cppErr := battleCalcFb.Error():
+                raise BattleCalculationException(battleground, wave, cppErr)
+            print(f"Monsters defeated {battleCalcFb.MonstersDefeated().MonstersDefeatedLength()}")
+            cppEvents = battleCalcFb.EventsNestedRoot()
+            print(f"Events {cppEvents.EventsLength()}")
 
-        # Reverse so we can use these efficiently in Python. Remove when
-        # everything works in C++.
-        paths.reverse()
+        else:
+            # Reverse so we can use these efficiently in Python. Remove when
+            # everything works in C++.
+            paths.reverse()
 
-        spawnPoint = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
-        while unspawnedMonsters or spawnedMonsters:
-            gameTime = ticks * self.gameTickSecs
-            # Update existing monster positions
-            spawnOpen = True
-            finishedMonsters = []
-            for monster in spawnedMonsters:
-                dest = monster.path[monster.targetInPath]
-                distPerTick = monster.config.speed * self.gameTickSecs
+            spawnPoint = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
+            while unspawnedMonsters or spawnedMonsters:
+                gameTime = ticks * self.gameTickSecs
+                # Update existing monster positions
+                spawnOpen = True
+                finishedMonsters = []
+                for monster in spawnedMonsters:
+                    dest = monster.path[monster.targetInPath]
+                    distPerTick = monster.config.speed * self.gameTickSecs
 
-                if monster.pos.row == float(dest.row):
-                    initialDist = abs(monster.pos.col - dest.col)
-                    movingHorizontally = True
-                elif monster.pos.col == float(dest.col): # Moving vertically
-                    initialDist = abs(monster.pos.row - dest.row)
-                    movingHorizontally = False
-                else:
-                    raise BattleCalculationException(battleground, wave,
-                            f"Monster {monster.id} isn't lined up with destination. Monster {monster.pos} Dest {dest}")
-
-                # Remaining dist is how far the enemy can move after reaching
-                # the destination.
-                remainingDist = distPerTick - initialDist
-                if remainingDist < 0: # Advance normally
-                    if movingHorizontally:
-                        if float(dest.col) > monster.pos.col:
-                            monster.pos = FpCellPos(
-                                    FpRow(monster.pos.row), FpCol(monster.pos.col + distPerTick))
-                        else:
-                            monster.pos = FpCellPos(
-                                    FpRow(monster.pos.row), FpCol(monster.pos.col - distPerTick))
-                    else:
-                        if float(dest.row) > monster.pos.row:
-                            monster.pos = FpCellPos(
-                                    FpRow(monster.pos.row + distPerTick), FpCol(monster.pos.col))
-                        else:
-                            monster.pos = FpCellPos(
-                                    FpRow(monster.pos.row - distPerTick), FpCol(monster.pos.col))
-                else: # Either finish the path or move to the next segment
-                    # Time between ticks where we start the next path / reach
-                    # the end. This is always <= gameTime because gameTime is
-                    # the time at which the monsters have finished moving.
-                    newTime = gameTime - self.gameTickSecs + (initialDist / monster.config.speed)
-                    if monster.targetInPath == len(monster.path) - 1: # We reached the end
-                        deleteEvent = DeleteEvent(
-                            objType = ObjectType.MONSTER,
-                            id = monster.id,
-                            startTime = newTime,
-                        )
-                        events.append(deleteEvent)
-                        finishedMonsters.append(monster)
-                        continue
-
-                    # Continue to the next segment of the path
-                    monster.targetInPath += 1
-                    newDest = monster.path[monster.targetInPath]
-                    # Figure out if we're moving horizontally for vertically
-                    if dest.row == float(newDest.row):
+                    if monster.pos.row == float(dest.row):
+                        initialDist = abs(monster.pos.col - dest.col)
                         movingHorizontally = True
-                    elif dest.col == float(newDest.col): # Moving vertically
+                    elif monster.pos.col == float(dest.col): # Moving vertically
+                        initialDist = abs(monster.pos.row - dest.row)
                         movingHorizontally = False
                     else:
                         raise BattleCalculationException(battleground, wave,
-                                f"Monster {monster.id} isn't lined up with new destination. Monster {monster.pos} NewDest {dest}")
-                    if movingHorizontally:
-                        if newDest.col > dest.col:
-                            monster.pos = FpCellPos(FpRow(dest.row), FpCol(dest.col + remainingDist))
-                        else:
-                            monster.pos = FpCellPos(FpRow(dest.row), FpCol(dest.col - remainingDist))
-                        timeToNewDest = abs(newDest.col - monster.pos.col) / monster.config.speed
-                    else:
-                        if newDest.row > dest.col:
-                            monster.pos = FpCellPos(FpRow(dest.row + remainingDist), FpCol(dest.col))
-                        else:
-                            monster.pos = FpCellPos(FpRow(dest.row - remainingDist), FpCol(dest.col))
-                        timeToNewDest = abs(newDest.row - monster.pos.row) / monster.config.speed
+                                f"Monster {monster.id} isn't lined up with destination. Monster {monster.pos} Dest {dest}")
 
-                    endTime = gameTime + timeToNewDest
-                    newEvent = MoveEvent(
+                    # Remaining dist is how far the enemy can move after reaching
+                    # the destination.
+                    remainingDist = distPerTick - initialDist
+                    if remainingDist < 0: # Advance normally
+                        if movingHorizontally:
+                            if float(dest.col) > monster.pos.col:
+                                monster.pos = FpCellPos(
+                                        FpRow(monster.pos.row), FpCol(monster.pos.col + distPerTick))
+                            else:
+                                monster.pos = FpCellPos(
+                                        FpRow(monster.pos.row), FpCol(monster.pos.col - distPerTick))
+                        else:
+                            if float(dest.row) > monster.pos.row:
+                                monster.pos = FpCellPos(
+                                        FpRow(monster.pos.row + distPerTick), FpCol(monster.pos.col))
+                            else:
+                                monster.pos = FpCellPos(
+                                        FpRow(monster.pos.row - distPerTick), FpCol(monster.pos.col))
+                    else: # Either finish the path or move to the next segment
+                        # Time between ticks where we start the next path / reach
+                        # the end. This is always <= gameTime because gameTime is
+                        # the time at which the monsters have finished moving.
+                        newTime = gameTime - self.gameTickSecs + (initialDist / monster.config.speed)
+                        if monster.targetInPath == len(monster.path) - 1: # We reached the end
+                            deleteEvent = DeleteEvent(
+                                objType = ObjectType.MONSTER,
+                                id = monster.id,
+                                startTime = newTime,
+                            )
+                            events.append(deleteEvent)
+                            finishedMonsters.append(monster)
+                            continue
+
+                        # Continue to the next segment of the path
+                        monster.targetInPath += 1
+                        newDest = monster.path[monster.targetInPath]
+                        # Figure out if we're moving horizontally for vertically
+                        if dest.row == float(newDest.row):
+                            movingHorizontally = True
+                        elif dest.col == float(newDest.col): # Moving vertically
+                            movingHorizontally = False
+                        else:
+                            raise BattleCalculationException(battleground, wave,
+                                    f"Monster {monster.id} isn't lined up with new destination. Monster {monster.pos} NewDest {dest}")
+                        if movingHorizontally:
+                            if newDest.col > dest.col:
+                                monster.pos = FpCellPos(FpRow(dest.row), FpCol(dest.col + remainingDist))
+                            else:
+                                monster.pos = FpCellPos(FpRow(dest.row), FpCol(dest.col - remainingDist))
+                            timeToNewDest = abs(newDest.col - monster.pos.col) / monster.config.speed
+                        else:
+                            if newDest.row > dest.col:
+                                monster.pos = FpCellPos(FpRow(dest.row + remainingDist), FpCol(dest.col))
+                            else:
+                                monster.pos = FpCellPos(FpRow(dest.row - remainingDist), FpCol(dest.col))
+                            timeToNewDest = abs(newDest.row - monster.pos.row) / monster.config.speed
+
+                        endTime = gameTime + timeToNewDest
+                        newEvent = MoveEvent(
+                            objType = ObjectType.MONSTER,
+                            id = monster.id,
+                            configId = monster.config.id,
+                            startPos = FpCellPos.fromCellPos(dest),
+                            destPos = FpCellPos.fromCellPos(newDest),
+                            startTime = newTime,
+                            endTime = endTime,
+                        )
+                        events.append(newEvent)
+
+                    monster.distTraveled += distPerTick
+                    if abs(spawnPoint.row - monster.pos.row) < 1 and abs(spawnPoint.col - monster.pos.col) < 1:
+                        spawnOpen = False
+
+                # If possible, spawn the next monster
+                if spawnOpen and unspawnedMonsters:
+                    monsterConfigId = unspawnedMonsters.pop()
+                    try:
+                        monsterConfig = self.gameConfig.monsters[monsterConfigId]
+                    except KeyError:
+                        raise ValueError(f"Unknown monster ID: {monsterConfigId}")
+                    path = paths.pop()
+                    newMonster = MonsterState(
+                            id = nextId,
+                            config = monsterConfig,
+                            pos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter),
+                            health = monsterConfig.health,
+                            path = path,
+                            spawnedAt = gameTime)
+                    nextId += 1
+                    spawnedMonsters.append(newMonster)
+
+                    # Update monsters defeated dict to note the new monster
+                    prevMonstersDefeatedState = monstersDefeated.get(monsterConfig.id, (0, 0))
+                    monstersDefeated[monsterConfig.id] = (
+                            prevMonstersDefeatedState[0], prevMonstersDefeatedState[1] + 1)
+
+                    # Add the battle events for the new monster
+                    startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
+                    destPos: FpCellPos = FpCellPos.fromCellPos(path[1])
+                    dist = max(abs(startPos.row - destPos.row), abs(startPos.col - destPos.col))
+                    endTime = gameTime + (dist / monsterConfig.speed)
+                    newMonsterEvent = MoveEvent(
                         objType = ObjectType.MONSTER,
-                        id = monster.id,
-                        configId = monster.config.id,
-                        startPos = FpCellPos.fromCellPos(dest),
-                        destPos = FpCellPos.fromCellPos(newDest),
-                        startTime = newTime,
+                        id = newMonster.id,
+                        configId = newMonster.config.id,
+                        startPos = startPos,
+                        destPos = destPos,
+                        startTime = gameTime,
                         endTime = endTime,
                     )
-                    events.append(newEvent)
+                    events.append(newMonsterEvent)
 
-                monster.distTraveled += distPerTick
-                if abs(spawnPoint.row - monster.pos.row) < 1 and abs(spawnPoint.col - monster.pos.col) < 1:
-                    spawnOpen = False
+                for monster in finishedMonsters:
+                    spawnedMonsters.remove(monster)
 
-            # If possible, spawn the next monster
-            if spawnOpen and unspawnedMonsters:
-                monsterConfigId = unspawnedMonsters.pop()
-                try:
-                    monsterConfig = self.gameConfig.monsters[monsterConfigId]
-                except KeyError:
-                    raise ValueError(f"Unknown monster ID: {monsterConfigId}")
-                path = paths.pop()
-                newMonster = MonsterState(
-                        id = nextId,
-                        config = monsterConfig,
-                        pos = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter),
-                        health = monsterConfig.health,
-                        path = path,
-                        spawnedAt = gameTime)
-                nextId += 1
-                spawnedMonsters.append(newMonster)
+                # Sort monsters by distance traveled to make target selection
+                # easier.
+                spawnedMonsters = sorted(spawnedMonsters, key=lambda x: x.distTraveled, reverse=True)
 
-                # Update monsters defeated dict to note the new monster
-                prevMonstersDefeatedState = monstersDefeated.get(monsterConfig.id, (0, 0))
-                monstersDefeated[monsterConfig.id] = (
-                        prevMonstersDefeatedState[0], prevMonstersDefeatedState[1] + 1)
+                # Handle towers
+                for tower in towers:
+                    # Update firing radius
+                    if tower.config.firingRate > 0:
+                        timeSinceAbleToFire = gameTime - (tower.lastFired + (1.0 / tower.config.firingRate))
+                        tower.firingRadius = max(0, min(tower.config.range, timeSinceAbleToFire * tower.config.projectileSpeed))
+                        tower.firingRadiusSq = tower.firingRadius * tower.firingRadius
 
-                # Add the battle events for the new monster
-                startPos: FpCellPos = FpCellPos.fromCellPos(path[0])
-                destPos: FpCellPos = FpCellPos.fromCellPos(path[1])
-                dist = max(abs(startPos.row - destPos.row), abs(startPos.col - destPos.col))
-                endTime = gameTime + (dist / monsterConfig.speed)
-                newMonsterEvent = MoveEvent(
-                    objType = ObjectType.MONSTER,
-                    id = newMonster.id,
-                    configId = newMonster.config.id,
-                    startPos = startPos,
-                    destPos = destPos,
-                    startTime = gameTime,
-                    endTime = endTime,
-                )
-                events.append(newMonsterEvent)
+                    # Fire at the farthest enemy within our firing radius.
+                    target = BattleComputer.selectTarget(tower, spawnedMonsters, gameTime)
+                    if target:
+                        targetEnemy, targetDist = target
+                        shotDuration = targetDist / tower.config.projectileSpeed
 
-            for monster in finishedMonsters:
-                spawnedMonsters.remove(monster)
+                        # Round here so tiny FP errors don't lead to a battle calculation exception.
+                        tower.lastFired = round(gameTime - shotDuration, EVENT_PRECISION)
+                        if (tower.lastFired < 0):
+                            raise BattleCalculationException(battleground, wave,
+                                    f"Calculated tower firing time < 0: {tower.lastFired}\nDist: {dist} Duration: {shotDuration} Game time: {gameTime}")
 
-            # Sort monsters by distance traveled to make target selection
-            # easier.
-            spawnedMonsters = sorted(spawnedMonsters, key=lambda x: x.distTraveled, reverse=True)
+                        targetEnemy.health -= tower.config.damage
 
-            # Handle towers
-            for tower in towers:
-                # Update firing radius
-                if tower.config.firingRate > 0:
-                    timeSinceAbleToFire = gameTime - (tower.lastFired + (1.0 / tower.config.firingRate))
-                    tower.firingRadius = max(0, min(tower.config.range, timeSinceAbleToFire * tower.config.projectileSpeed))
-                    tower.firingRadiusSq = tower.firingRadius * tower.firingRadius
-
-                # Fire at the farthest enemy within our firing radius.
-                target = BattleComputer.selectTarget(tower, spawnedMonsters, gameTime)
-                if target:
-                    targetEnemy, targetDist = target
-                    shotDuration = targetDist / tower.config.projectileSpeed
-
-                    # Round here so tiny FP errors don't lead to a battle calculation exception.
-                    tower.lastFired = round(gameTime - shotDuration, EVENT_PRECISION)
-                    if (tower.lastFired < 0):
-                        raise BattleCalculationException(battleground, wave,
-                                f"Calculated tower firing time < 0: {tower.lastFired}\nDist: {dist} Duration: {shotDuration} Game time: {gameTime}")
-
-                    targetEnemy.health -= tower.config.damage
-
-                    # Build and send the events
-                    projectileMove = MoveEvent(
-                        objType = ObjectType.PROJECTILE,
-                        id = nextId,
-                        configId = tower.config.projectileId,
-                        startPos = tower.pos,
-                        destPos = targetEnemy.pos,
-                        startTime = tower.lastFired,
-                        endTime = gameTime,
-                    )
-                    events.append(projectileMove)
-                    projectileDelete = DeleteEvent(
-                        objType = ObjectType.PROJECTILE,
-                        id = nextId,
-                        startTime = gameTime,
-                    )
-                    events.append(projectileDelete)
-                    damageEvent = DamageEvent(
-                        id = targetEnemy.id,
-                        startTime = gameTime,
-                        health = targetEnemy.health,
-                    )
-                    events.append(damageEvent)
-                    if targetEnemy.health <= 0:
-                        prevMonstersDefeatedState = monstersDefeated[targetEnemy.config.id]
-                        monstersDefeated[targetEnemy.config.id] = (prevMonstersDefeatedState[0] + 1, prevMonstersDefeatedState[1])
-                        deleteTargetEvent = DeleteEvent(
-                            objType = ObjectType.MONSTER,
-                            id = targetEnemy.id,
+                        # Build and send the events
+                        projectileMove = MoveEvent(
+                            objType = ObjectType.PROJECTILE,
+                            id = nextId,
+                            configId = tower.config.projectileId,
+                            startPos = tower.pos,
+                            destPos = targetEnemy.pos,
+                            startTime = tower.lastFired,
+                            endTime = gameTime,
+                        )
+                        events.append(projectileMove)
+                        projectileDelete = DeleteEvent(
+                            objType = ObjectType.PROJECTILE,
+                            id = nextId,
                             startTime = gameTime,
                         )
-                        events.append(deleteTargetEvent)
-                        spawnedMonsters.remove(targetEnemy)
-                    nextId += 1
+                        events.append(projectileDelete)
+                        damageEvent = DamageEvent(
+                            id = targetEnemy.id,
+                            startTime = gameTime,
+                            health = targetEnemy.health,
+                        )
+                        events.append(damageEvent)
+                        if targetEnemy.health <= 0:
+                            prevMonstersDefeatedState = monstersDefeated[targetEnemy.config.id]
+                            monstersDefeated[targetEnemy.config.id] = (prevMonstersDefeatedState[0] + 1, prevMonstersDefeatedState[1])
+                            deleteTargetEvent = DeleteEvent(
+                                objType = ObjectType.MONSTER,
+                                id = targetEnemy.id,
+                                startTime = gameTime,
+                            )
+                            events.append(deleteTargetEvent)
+                            spawnedMonsters.remove(targetEnemy)
+                        nextId += 1
 
-            ticks += 1
+                ticks += 1
 
-        # Sort the events
-        eventOrdering = {
-            'MoveEvent': 0,
-            'DamageEvent': 1,
-            'DeleteEvent': 2,
-        }
-        def eventToSortKeys(event: BattleEvent):
-            try:
-                return (event.startTime, eventOrdering[event.__class__.__name__], event.endTime) # pytype: disable=attribute-error
-            except AttributeError:
-                return (event.startTime, eventOrdering[event.__class__.__name__], -1)
-        sortedEvents = sorted(events, key=eventToSortKeys)
+            # Sort the events
+            eventOrdering = {
+                'MoveEvent': 0,
+                'DamageEvent': 1,
+                'DeleteEvent': 2,
+            }
+            def eventToSortKeys(event: BattleEvent):
+                try:
+                    return (event.startTime, eventOrdering[event.__class__.__name__], event.endTime) # pytype: disable=attribute-error
+                except AttributeError:
+                    return (event.startTime, eventOrdering[event.__class__.__name__], -1)
+            sortedEvents = sorted(events, key=eventToSortKeys)
 
-        if self.debug:
-            deletedIds = set()
-            deletedEventIndex = {}
+            if self.debug:
+                deletedIds = set()
+                deletedEventIndex = {}
 
-            for (i, event) in enumerate(sortedEvents):
-                if event.eventType == EventType.DELETE:
-                    if event.id in deletedIds:
-                        raise BattleCalculationException(battleground, wave,
-                            f"Duplicate event to delete {event.id}, previous event at index {deletedEventIndex[event.id]}: {event}")
-                    deletedIds.add(event.id)
-                    deletedEventIndex[event.id] = i
-                else:
-                    if event.id in deletedIds:
-                        raise BattleCalculationException(battleground, wave,
-                            f"Received an event with ID {event.id}, but {event.id} was deleted earlier in event at index "
-                            "{deletedEventIndex[event.id]}: {event}")
+                for (i, event) in enumerate(sortedEvents):
+                    if event.eventType == EventType.DELETE:
+                        if event.id in deletedIds:
+                            raise BattleCalculationException(battleground, wave,
+                                f"Duplicate event to delete {event.id}, previous event at index {deletedEventIndex[event.id]}: {event}")
+                        deletedIds.add(event.id)
+                        deletedEventIndex[event.id] = i
+                    else:
+                        if event.id in deletedIds:
+                            raise BattleCalculationException(battleground, wave,
+                                f"Received an event with ID {event.id}, but {event.id} was deleted earlier in event at index "
+                                "{deletedEventIndex[event.id]}: {event}")
 
-        # Above will be replaced with C++ version
-        # For now fake it by transforming everything in flatbuffers here.
-        eventsBuilder = flatbuffers.Builder(1024)
-        eventOffsets = [event.toFb(eventsBuilder) for event in reversed(sortedEvents)]
-        BattleEventsFb.BattleEventsFbStartEventsVector(eventsBuilder, len(sortedEvents))
-        for offset in eventOffsets:
-            eventsBuilder.PrependUOffsetTRelative(offset)
-        eventsVector = eventsBuilder.EndVector(len(sortedEvents))
-        BattleEventsFb.BattleEventsFbStart(eventsBuilder)
-        BattleEventsFb.BattleEventsFbAddEvents(eventsBuilder, eventsVector)
-        eventsFb = BattleEventsFb.BattleEventsFbEnd(eventsBuilder)
-        eventsBuilder.Finish(eventsFb)
+            # Above will be replaced with C++ version
+            # For now fake it by transforming everything in flatbuffers here.
+            eventsBuilder = flatbuffers.Builder(1024)
+            eventOffsets = [event.toFb(eventsBuilder) for event in reversed(sortedEvents)]
+            BattleEventsFb.BattleEventsFbStartEventsVector(eventsBuilder, len(sortedEvents))
+            for offset in eventOffsets:
+                eventsBuilder.PrependUOffsetTRelative(offset)
+            eventsVector = eventsBuilder.EndVector(len(sortedEvents))
+            BattleEventsFb.BattleEventsFbStart(eventsBuilder)
+            BattleEventsFb.BattleEventsFbAddEvents(eventsBuilder, eventsVector)
+            eventsFb = BattleEventsFb.BattleEventsFbEnd(eventsBuilder)
+            eventsBuilder.Finish(eventsFb)
 
-        builder = flatbuffers.Builder(1024)
-        encodedMonstersDefeated = BattleResults.encodeMonstersDefeated(builder, monstersDefeated)
+            builder = flatbuffers.Builder(1024)
+            encodedMonstersDefeated = BattleResults.encodeMonstersDefeated(builder, monstersDefeated)
 
-        eventsSubBuf = BattleCalcResultsFb.BattleCalcResultsFbMakeEventsVectorFromBytes(
-            builder, eventsBuilder.Output())
-        BattleCalcResultsFb.BattleCalcResultsFbStart(builder)
-        BattleCalcResultsFb.BattleCalcResultsFbAddMonstersDefeated(builder, encodedMonstersDefeated)
-        BattleCalcResultsFb.BattleCalcResultsFbAddEvents(builder, eventsSubBuf)
-        battleCalcResultsEncoded = BattleCalcResultsFb.BattleCalcResultsFbEnd(builder)
-        builder.Finish(battleCalcResultsEncoded)
-        battleCalcBytes = builder.Output()
-        battleCalcFb = BattleCalcResultsFb.BattleCalcResultsFb.GetRootAsBattleCalcResultsFb(
-                battleCalcBytes, 0)
+            eventsSubBuf = BattleCalcResultsFb.BattleCalcResultsFbMakeEventsVectorFromBytes(
+                builder, eventsBuilder.Output())
+            BattleCalcResultsFb.BattleCalcResultsFbStart(builder)
+            BattleCalcResultsFb.BattleCalcResultsFbAddMonstersDefeated(builder, encodedMonstersDefeated)
+            BattleCalcResultsFb.BattleCalcResultsFbAddEvents(builder, eventsSubBuf)
+            battleCalcResultsEncoded = BattleCalcResultsFb.BattleCalcResultsFbEnd(builder)
+            builder.Finish(battleCalcResultsEncoded)
+            battleCalcBytes = builder.Output()
+            battleCalcFb = BattleCalcResultsFb.BattleCalcResultsFb.GetRootAsBattleCalcResultsFb(
+                    battleCalcBytes, 0)
 
         # Calculate bonuses using monstersDefeated
         battleResults = BattleResults.fromMonstersDefeatedFb(

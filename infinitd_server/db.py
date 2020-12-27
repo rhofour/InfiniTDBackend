@@ -236,7 +236,7 @@ class Db:
             battleground = defendingUser.battleground
             if battleground is None: # This should be impossible since we know the user exists.
                 raise ValueError(f"Cannot find battleground for {defendingUser.name}")
-            battleCalcResults = self.battleComputer.computeBattle(battleground, attackingUser.wave)
+            battleCalcResults = self.battleComputer.computeBattle(battleground, attackingUser.wave, useCpp=True)
             events = Battle.decodeEventsFb(battleCalcResults.fb.EventsAsNumpy().tobytes())
             #eventsFb = battleCalcResults.fb.EventsNestedRoot()
             #events = Battle.decodeEventsFb(eventsFb._tab.Bytes, eventsFb._tab.Pos)
