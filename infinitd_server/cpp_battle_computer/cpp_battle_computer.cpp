@@ -77,6 +77,66 @@ float GetStartTime(const BattleEventFbT &event) {
   return -1.0;
 }
 
+void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEventFbT> &events,
+    vector<size_t> &removedEnemyIdx) {
+  size_t enemyIdx = -1; // Intentional overflow so the first real value is 0.
+  for (EnemyState &enemy : enemies) {
+    enemyIdx++;
+    if (enemy.nextPathTime <= gameTime) {
+      // Update path and make a new move event.
+
+      // First, add remaining bit of path to distTraveled.
+      enemy.distTraveled += enemy.pos.dist(enemy.path.get()[enemy.pathIdx]);
+
+      // Check if we've reached the destination.
+      assert(enemy.pathIdx < enemy.path.get().size());
+      if (enemy.pathIdx == enemy.path.get().size() - 1) {
+        // Remove this enemy.
+        DeleteEventFbT deleteEvent;
+        deleteEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
+        deleteEvent.id = enemy.id;
+        deleteEvent.start_time = enemy.nextPathTime;
+        BattleEventFbT battleEvent;
+        BattleEventUnionFbUnion battleEventUnion;
+        battleEventUnion.Set(deleteEvent);
+        battleEvent.event = battleEventUnion;
+        events.push_back(battleEvent);
+
+        removedEnemyIdx.push_back(enemyIdx);
+        continue;
+      }
+      // Otherwise make a new move event.
+      MoveEventFbT moveEvent;
+      moveEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
+      moveEvent.id = enemy.id;
+      moveEvent.config_id = enemy.config.get().id;
+      moveEvent.start_time = enemy.nextPathTime;
+      const CppCellPos &prevDest = enemy.path.get()[enemy.pathIdx];
+      moveEvent.start_pos = FpCellPosFb(prevDest.row, prevDest.col);
+      const CppCellPos nextDest = enemy.path.get()[enemy.pathIdx + 1];
+      float timeToDest = prevDest.dist(nextDest) / enemy.config.get().speed;
+      moveEvent.dest_pos = FpCellPosFb(nextDest.row, nextDest.col);
+      moveEvent.end_time = enemy.nextPathTime + timeToDest;
+      // TODO: refactor this out into an AddEvent method
+      BattleEventFbT battleEvent;
+      BattleEventUnionFbUnion battleEventUnion;
+      battleEventUnion.Set(moveEvent);
+      battleEvent.event = battleEventUnion;
+      events.push_back(battleEvent);
+
+      // Then update enemy state.
+      enemy.pathIdx++;
+      enemy.lastPathTime = enemy.nextPathTime;
+      enemy.nextPathTime += timeToDest;
+    }
+    // Update enemy position.
+    float fracTraveled = (gameTime - enemy.lastPathTime) / (enemy.nextPathTime - enemy.lastPathTime);
+    CppCellPos fromPos = enemy.path.get()[enemy.pathIdx - 1];
+    CppCellPos toPos = enemy.path.get()[enemy.pathIdx];
+    enemy.pos = (toPos - fromPos) * fracTraveled + fromPos;
+  }
+}
+
 string CppBattleComputer::ComputeBattle(
     const vector<vector<int>>& towerIds,
     vector<int> wave,
@@ -154,62 +214,7 @@ string CppBattleComputer::ComputeBattle(
       }
 
       // Move spawned enemies
-      size_t enemyIdx = -1; // Intentional overflow so the first real value is 0.
-      for (EnemyState &enemy : spawnedEnemies) {
-        enemyIdx++;
-        if (enemy.nextPathTime <= gameTime) {
-          // Update path and make a new move event.
-
-          // First, add remaining bit of path to distTraveled.
-          enemy.distTraveled += enemy.pos.dist(enemy.path.get()[enemy.pathIdx]);
-
-          // Check if we've reached the destination.
-          assert(enemy.pathIdx < enemy.path.get().size());
-          if (enemy.pathIdx == enemy.path.get().size() - 1) {
-            // Remove this enemy.
-            DeleteEventFbT deleteEvent;
-            deleteEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
-            deleteEvent.id = enemy.id;
-            deleteEvent.start_time = enemy.nextPathTime;
-            BattleEventFbT battleEvent;
-            BattleEventUnionFbUnion battleEventUnion;
-            battleEventUnion.Set(deleteEvent);
-            battleEvent.event = battleEventUnion;
-            events.push_back(battleEvent);
-
-            removedEnemyIdx.push_back(enemyIdx);
-            continue;
-          }
-          // Otherwise make a new move event.
-          MoveEventFbT moveEvent;
-          moveEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
-          moveEvent.id = enemy.id;
-          moveEvent.config_id = enemy.config.get().id;
-          moveEvent.start_time = enemy.nextPathTime;
-          const CppCellPos &prevDest = enemy.path.get()[enemy.pathIdx];
-          moveEvent.start_pos = FpCellPosFb(prevDest.row, prevDest.col);
-          const CppCellPos nextDest = enemy.path.get()[enemy.pathIdx + 1];
-          float timeToDest = prevDest.dist(nextDest) / enemy.config.get().speed;
-          moveEvent.dest_pos = FpCellPosFb(nextDest.row, nextDest.col);
-          moveEvent.end_time = enemy.nextPathTime + timeToDest;
-          // TODO: refactor this out into an AddEvent method
-          BattleEventFbT battleEvent;
-          BattleEventUnionFbUnion battleEventUnion;
-          battleEventUnion.Set(moveEvent);
-          battleEvent.event = battleEventUnion;
-          events.push_back(battleEvent);
-
-          // Then update enemy state.
-          enemy.pathIdx++;
-          enemy.lastPathTime = enemy.nextPathTime;
-          enemy.nextPathTime += timeToDest;
-        }
-        // Update enemy position.
-        float fracTraveled = (gameTime - enemy.lastPathTime) / (enemy.nextPathTime - enemy.lastPathTime);
-        CppCellPos fromPos = enemy.path.get()[enemy.pathIdx - 1];
-        CppCellPos toPos = enemy.path.get()[enemy.pathIdx];
-        enemy.pos = (toPos - fromPos) * fracTraveled + fromPos;
-      }
+      MoveEnemies(gameTime, spawnedEnemies, events, removedEnemyIdx);
 
       // Remove any enemies marked for removal.
       // Do this in reverse order so we don't have to worry about indices changing as we remove enemies.
