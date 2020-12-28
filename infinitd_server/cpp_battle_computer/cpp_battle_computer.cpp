@@ -77,6 +77,14 @@ float GetStartTime(const BattleEventFbT &event) {
   return -1.0;
 }
 
+template<class T> void AddEvent(T &event, vector<BattleEventFbT> &events) {
+  BattleEventFbT battleEvent;
+  BattleEventUnionFbUnion battleEventUnion;
+  battleEventUnion.Set(event);
+  battleEvent.event = battleEventUnion;
+  events.push_back(battleEvent);
+}
+
 void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEventFbT> &events,
     vector<size_t> &removedEnemyIdx) {
   size_t enemyIdx = -1; // Intentional overflow so the first real value is 0.
@@ -96,11 +104,7 @@ void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEvent
         deleteEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
         deleteEvent.id = enemy.id;
         deleteEvent.start_time = enemy.nextPathTime;
-        BattleEventFbT battleEvent;
-        BattleEventUnionFbUnion battleEventUnion;
-        battleEventUnion.Set(deleteEvent);
-        battleEvent.event = battleEventUnion;
-        events.push_back(battleEvent);
+        AddEvent(deleteEvent, events);
 
         removedEnemyIdx.push_back(enemyIdx);
         continue;
@@ -117,12 +121,7 @@ void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEvent
       float timeToDest = prevDest.dist(nextDest) / enemy.config.get().speed;
       moveEvent.dest_pos = FpCellPosFb(nextDest.row, nextDest.col);
       moveEvent.end_time = enemy.nextPathTime + timeToDest;
-      // TODO: refactor this out into an AddEvent method
-      BattleEventFbT battleEvent;
-      BattleEventUnionFbUnion battleEventUnion;
-      battleEventUnion.Set(moveEvent);
-      battleEvent.event = battleEventUnion;
-      events.push_back(battleEvent);
+      AddEvent(moveEvent, events);
 
       // Then update enemy state.
       enemy.pathIdx++;

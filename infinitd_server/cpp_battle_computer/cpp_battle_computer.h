@@ -15,11 +15,11 @@ struct TowerState {
   uint16_t id;
   CppCellPos pos;
   float lastFired;
-  float firingRadius; // How far a projectile from this tower could have traveled at this point.
+  float firingRadiusSq; // How far a projectile from this tower could have traveled at this point.
   const TowerConfig& config;
 
   TowerState(int id_, int row, int col, const TowerConfig& config_) :
-      id(id_), pos(row, col), firingRadius(0.0f), config(config_) {
+      id(id_), pos(row, col), firingRadiusSq(0.0f), config(config_) {
     if (config_.firingRate > 0) {
       this->lastFired = -1.0f / config_.firingRate;
     } else {

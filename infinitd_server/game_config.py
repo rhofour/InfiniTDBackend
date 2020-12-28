@@ -33,7 +33,7 @@ class CellPos:
     def fromTuple(t: Tuple[int, int]):
         return CellPos(Row(t[0]), Col(t[1]))
 
-@attr.s(frozen=True, auto_attribs=True)
+@attr.s(auto_attribs=True)
 class PlayfieldConfig:
     numRows: int
     numCols: int

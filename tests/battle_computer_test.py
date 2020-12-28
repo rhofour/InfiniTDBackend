@@ -292,6 +292,60 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         # Ensure battle time is positive.
         self.assertGreater(results.fb.TimeSecs(), 0.0)
 
+class TestTowerFiringLongColumn(unittest.TestCase):
+    def setUp(self):
+        self.maxDiff = None
+        # Use the real game config.
+        gameConfigPath = Path('./game_config.json')
+        with open(gameConfigPath) as gameConfigFile:
+            gameConfigData = cattr.structure(json.loads(gameConfigFile.read()), GameConfigData)
+            # Change battlefield to one long column where we'll place towers on either side
+            gameConfigData.playfield.numRows = 200
+            gameConfigData.playfield.numCols = 3
+            gameConfigData.playfield.monsterEnter = CellPos(0, 1)
+            gameConfigData.playfield.monsterExit = CellPos(gameConfigData.playfield.numRows - 1, 1)
+            self.gameConfig = GameConfig.fromGameConfigData(gameConfigData)
+    
+    @given(st.sampled_from([0, 2]), st.integers(20, 199), st.data())
+    def test_towerFiresFirstShotCorrectly(self, towerCol: int, towerRow: int, data):
+        # Pick a tower from any of the available ones.
+        towerId = data.draw(st.sampled_from(sorted(self.gameConfig.towers.keys())))
+        battleground = BattlegroundState.empty(self.gameConfig)
+        battleground.towers.towers[towerRow][towerCol] = BgTowerState(TowerId(towerId))
+        # Build the wave
+        possibleMonsterIds = list(self.gameConfig.monsters.keys())
+        monsterIndices = data.draw(st.lists(
+            st.integers(0, len(possibleMonsterIds)-1),
+            min_size=1))
+        wave: List[ConfigId] = [possibleMonsterIds[i] for i in monsterIndices]
+
+        battleComputer = BattleComputer(gameConfig = self.gameConfig)
+
+        # First thing checked is that it doesn't throw an error.
+        results = battleComputer.computeBattle(battleground, wave, useCpp=True)
+        events = Battle.fbToEvents(results.fb.EventsNestedRoot())
+
+        towerPos = FpCellPos(float(towerRow), float(towerCol))
+        towerEvents = []
+        damageEvents = []
+        for event in events:
+            if event.eventType == EventType.MOVE and event.objType == ObjectType.PROJECTILE:
+                towerEvents.append(event)
+                # Ensure every projectile is fired from the one tower.
+                assertEqual(towerPos, event.startPos)
+            if event.eventType == EventType.DAMAGE:
+                damageEvents.append(event)
+
+        # Ensure the tower has fired.
+        self.assertGreater(len(towerEvents), 0, msg="The tower hasn't fired.")
+        # Ensure the first shot fired is approximately at the range of the tower.
+        towerConfig: TowerConfig = self.gameConfig.towers[towerId]
+        firstEvent = towerEvents[0]
+        dist = firstEvent.startPos.dist(firstEvent.destPos)
+        self.assertAlmostEqual(dist, towerConfig.range)
+        # Ensure every shot fired corresponds to damage dealt.
+        self.assertEqual(len(towerEvents), len(damageEvents))
+
 class TestBattleEventEncodingAndDecoding(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
