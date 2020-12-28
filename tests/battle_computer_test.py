@@ -16,7 +16,8 @@ from infinitd_server.battle import Battle, BattleEvent, MoveEvent, DeleteEvent, 
 from infinitd_server.battle_computer import BattleComputer, MonsterState, TowerState
 from infinitd_server.game_config import ConfigId, CellPos, Row, Col
 from infinitd_server.paths import pathExists
-import  InfiniTDFb.BattleEventsFb as BattleEventsFb
+import InfiniTDFb.BattleEventsFb as BattleEventsFb
+import InfiniTDFb.MonstersDefeatedFb as MonstersDefeatedFb
 import test_data
 
 EPSILON = 0.0001
@@ -291,6 +292,18 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
 
         # Ensure battle time is positive.
         self.assertGreater(results.fb.TimeSecs(), 0.0)
+
+        # Check monsters defeated data.
+        monstersDefeated = MonstersDefeatedFb.MonstersDefeatedFbT.InitFromObj(results.fb.MonstersDefeated())
+        totalMonstersSent = 0
+        seenConfigIds = set()
+        for monsterDefeated in monstersDefeated.monstersDefeated:
+            # Ensure we don't see duplicate config IDs
+            self.assertNotIn(monsterDefeated.configId, seenConfigIds)
+            seenConfigIds.add(monsterDefeated.configId)
+            totalMonstersSent += monsterDefeated.numSent
+        # Ensure all of the monsters sent add up to the wave size
+        self.assertEqual(totalMonstersSent, len(wave))
 
 class TestTowerFiringLongColumn(unittest.TestCase):
     def setUp(self):

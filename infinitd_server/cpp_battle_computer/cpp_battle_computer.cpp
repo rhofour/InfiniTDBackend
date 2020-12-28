@@ -11,6 +11,8 @@ using std::cout;
 using std::cerr;
 using std::endl;
 using std::stringstream;
+using std::pair;
+using std::for_each;
 using rapidjson::Document;
 using InfiniTDFb::FpCellPosFb;
 using InfiniTDFb::ObjectTypeFb;
@@ -38,6 +40,13 @@ CppBattleComputer::CppBattleComputer(std::string jsonText, float gameTickSecs_) 
   }
   this->gameConfig = GameConfig(d);
 }
+
+struct MonsterStats {
+  uint16_t numSent;
+  uint16_t numDefeated;
+
+  MonsterStats(): numSent(0), numDefeated(0) {};
+};
 
 vector<TowerState> CppBattleComputer::getInitialTowerStates(const vector<vector<int>>& towerIds) {
   vector<TowerState> towers;
@@ -158,6 +167,7 @@ string CppBattleComputer::ComputeBattle(
   // Output containers
   string errStr;
   vector<BattleEventFbT> events;
+  unordered_map<uint16_t, MonsterStats> monstersDefeated;
   float gameTime = -1.0;
   try {
     // Initialize tower states.
@@ -202,7 +212,7 @@ string CppBattleComputer::ComputeBattle(
           nextId++;
           spawnedEnemies.push_back(newEnemy);
 
-          // TODO: Update monsters spawned stats.
+          monstersDefeated[enemyConfigId].numSent++;
         }
         catch (const std::out_of_range& e) {
           stringstream ss;
@@ -254,6 +264,10 @@ string CppBattleComputer::ComputeBattle(
     eventsBuilder.GetBufferMinAlignment());
   auto errStrOffset = builder.CreateString(errStr);
   vector<MonsterDefeatedFb> monsterDefeatedFbs;
+  for_each(monstersDefeated.cbegin(), monstersDefeated.cend(),
+    [&monsterDefeatedFbs](pair<int16_t, MonsterStats> x) {
+      monsterDefeatedFbs.push_back(MonsterDefeatedFb(x.first, x.second.numSent, x.second.numDefeated));
+    });
   auto monstersDefeatedVector = builder.CreateVectorOfStructs(monsterDefeatedFbs);
   auto monstersDefeatedFb = CreateMonstersDefeatedFb(builder, monstersDefeatedVector);
   auto eventBytesFb = builder.CreateVector(eventsBuilder.GetBufferPointer(), eventsBuilder.GetSize());
