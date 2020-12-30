@@ -3,6 +3,10 @@
 #include <math.h>
 #include <ostream>
 
+#include "../../battle_generated.h"
+
+using InfiniTDFb::FpCellPosFb;
+
 struct CppCellPos {
   float row, col;
 
@@ -33,6 +37,10 @@ struct CppCellPos {
 
   CppCellPos operator*(const float scalar) const {
     return CppCellPos(this->row * scalar, this->col * scalar);
+  }
+
+  FpCellPosFb toFp() const {
+    return FpCellPosFb(this->row, this->col);
   }
 };
 

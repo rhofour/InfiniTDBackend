@@ -1,5 +1,6 @@
 #include "cpp_battle_computer.h"
 
+#include <algorithm>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -14,7 +15,6 @@ using std::stringstream;
 using std::pair;
 using std::for_each;
 using rapidjson::Document;
-using InfiniTDFb::FpCellPosFb;
 using InfiniTDFb::ObjectTypeFb;
 using InfiniTDFb::BattleEventFb;
 using InfiniTDFb::BattleEventUnionFb;
@@ -100,13 +100,11 @@ void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEvent
   for (EnemyState &enemy : enemies) {
     enemyIdx++;
     if (enemy.nextPathTime <= gameTime) {
-      // Update path and make a new move event.
-
       // First, add remaining bit of path to distTraveled.
       enemy.distTraveled += enemy.pos.dist(enemy.path.get()[enemy.pathIdx]);
 
-      // Check if we've reached the destination.
       assert(enemy.pathIdx < enemy.path.get().size());
+      // Check if we've reached the destination.
       if (enemy.pathIdx == enemy.path.get().size() - 1) {
         // Remove this enemy.
         DeleteEventFbT deleteEvent;
@@ -116,6 +114,8 @@ void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEvent
         AddEvent(deleteEvent, events);
 
         removedEnemyIdx.push_back(enemyIdx);
+        // Mark the enemy as having no health so no towers try and fire on it.
+        enemy.health = 0.0;
         continue;
       }
       // Otherwise make a new move event.
@@ -125,10 +125,10 @@ void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEvent
       moveEvent.config_id = enemy.config.get().id;
       moveEvent.start_time = enemy.nextPathTime;
       const CppCellPos &prevDest = enemy.path.get()[enemy.pathIdx];
-      moveEvent.start_pos = FpCellPosFb(prevDest.row, prevDest.col);
+      moveEvent.start_pos = prevDest.toFp();
       const CppCellPos nextDest = enemy.path.get()[enemy.pathIdx + 1];
       float timeToDest = prevDest.dist(nextDest) / enemy.config.get().speed;
-      moveEvent.dest_pos = FpCellPosFb(nextDest.row, nextDest.col);
+      moveEvent.dest_pos = nextDest.toFp();
       moveEvent.end_time = enemy.nextPathTime + timeToDest;
       AddEvent(moveEvent, events);
 
@@ -142,6 +142,85 @@ void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEvent
     CppCellPos fromPos = enemy.path.get()[enemy.pathIdx - 1];
     CppCellPos toPos = enemy.path.get()[enemy.pathIdx];
     enemy.pos = (toPos - fromPos) * fracTraveled + fromPos;
+  }
+}
+
+void UpdateTowers(float gameTime, vector<TowerState> &towers) {
+  for (TowerState &tower : towers) {
+    if (tower.config.firingRate <= 0) continue;
+    float timeSinceAbleToFire = gameTime - (tower.lastFired + (1.0 / tower.config.firingRate));
+    float firingRadius = std::clamp(
+      timeSinceAbleToFire * tower.config.projectileSpeed, 0.0f, tower.config.range);
+    tower.firingRadiusSq = firingRadius * firingRadius;
+  }
+}
+
+// Note: These shots land at gameTime and were essentially fired in the past. This allows every
+// shot to land exactly where the enemy will be.
+void FireTowers(float gameTime, vector<TowerState> &towers, vector<EnemyState> &enemies,
+    vector<BattleEventFbT> &events, vector<size_t> &removedEnemyIdx, uint16_t &nextId,
+    unordered_map<uint16_t, MonsterStats> &monstersDefeated) {
+  for (TowerState &tower : towers) {
+    if (tower.firingRadiusSq == 0) continue;
+
+    // Fire at the enemy which has traveled the farthest which we can reach.
+    size_t enemyIdx = -1;
+    float farthestEnemyDistSq = -1.0f;
+    size_t farthestEnemyIdx;
+    for (EnemyState &enemy : enemies) {
+      enemyIdx++;
+      float distSq = tower.pos.distSq(enemy.pos);
+      if (distSq <= tower.firingRadiusSq && distSq > farthestEnemyDistSq && enemy.health > 0.0) {
+        farthestEnemyDistSq = distSq;
+        farthestEnemyIdx = enemyIdx;
+      }
+    }
+
+    if (farthestEnemyDistSq > 0.0) {
+      EnemyState &enemy = enemies[farthestEnemyIdx];
+      // Update tower state.
+      float shotDist = sqrt(farthestEnemyDistSq);
+      float shotDuration = shotDist / tower.config.projectileSpeed;
+      tower.lastFired = std::max(gameTime - shotDuration, 0.0f);
+
+      // Create a projectile heading at the enemy.
+      MoveEventFbT moveEvent;
+      moveEvent.obj_type = ObjectTypeFb::ObjectTypeFb_PROJECTILE;
+      moveEvent.id = nextId++;
+      moveEvent.config_id = tower.config.projectileId;
+      moveEvent.start_time = tower.lastFired;
+      moveEvent.end_time = gameTime;
+      moveEvent.start_pos = tower.pos.toFp();
+      moveEvent.dest_pos = enemy.pos.toFp();
+      AddEvent(moveEvent, events);
+      DeleteEventFbT deleteProjEvent;
+      deleteProjEvent.id = moveEvent.id;
+      deleteProjEvent.obj_type = ObjectTypeFb::ObjectTypeFb_PROJECTILE;
+      deleteProjEvent.start_time = gameTime;
+      AddEvent(deleteProjEvent, events);
+
+      // Update the enemy.
+      enemy.health -= tower.config.damage;
+
+      // Create a Damage event.
+      DamageEventFbT damageEvent;
+      damageEvent.id = enemy.id;
+      damageEvent.health = enemy.health;
+      damageEvent.start_time = gameTime;
+      AddEvent(damageEvent, events);
+
+      // Check if the enemy was defeated.
+      if (enemy.health <= 0.0) {
+        DeleteEventFbT deleteEnemyEvent;
+        deleteEnemyEvent.id = enemy.id;
+        deleteEnemyEvent.obj_type = ObjectTypeFb::ObjectTypeFb_ENEMY;
+        deleteEnemyEvent.start_time = gameTime;
+        AddEvent(deleteEnemyEvent, events);
+
+        removedEnemyIdx.push_back(farthestEnemyIdx);
+        monstersDefeated[enemy.config.get().id].numDefeated++;
+      }
+    }
   }
 }
 
@@ -207,9 +286,8 @@ string CppBattleComputer::ComputeBattle(
         try {
           const EnemyConfig& enemyConfig = this->gameConfig.enemies.at(enemyConfigId);
           const vector<CppCellPos> &path = paths[numSpawnedEnemies];
-          EnemyState newEnemy = EnemyState(nextId, path, gameTime, enemyConfig);
+          EnemyState newEnemy = EnemyState(nextId++, path, gameTime, enemyConfig);
           numSpawnedEnemies++;
-          nextId++;
           spawnedEnemies.push_back(newEnemy);
 
           monstersDefeated[enemyConfigId].numSent++;
@@ -222,8 +300,11 @@ string CppBattleComputer::ComputeBattle(
         unspawnedEnemies.pop_back();
       }
 
-      // Move spawned enemies
       MoveEnemies(gameTime, spawnedEnemies, events, removedEnemyIdx);
+
+      UpdateTowers(gameTime, towers);
+
+      FireTowers(gameTime, towers, spawnedEnemies, events, removedEnemyIdx, nextId, monstersDefeated);
 
       // Remove any enemies marked for removal.
       // Do this in reverse order so we don't have to worry about indices changing as we remove enemies.
@@ -248,7 +329,10 @@ string CppBattleComputer::ComputeBattle(
   flatbuffers::FlatBufferBuilder eventsBuilder(1024);
   vector<flatbuffers::Offset<BattleEventFb>> eventOffsets;
   // Sort events by start time.
-  std::sort(events.begin(), events.end(), [](const BattleEventFbT &a, const BattleEventFbT &b) {
+  // Use stable sort so things like damage events arriving at the same time maintain their order.
+  // Otherwise two damage events for the same enemy at the exact same time may be ordered so that the
+  // event with the lower health comes first (and is effectively undone by the second event).
+  std::stable_sort(events.begin(), events.end(), [](const BattleEventFbT &a, const BattleEventFbT &b) {
     return GetStartTime(a) < GetStartTime(b);
   });
   // Make offsets from events.

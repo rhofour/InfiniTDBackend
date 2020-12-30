@@ -56,8 +56,9 @@ from distutils.extension import Extension
 from Cython.Build import cythonize
 kwargs['ext_modules']=cythonize([
     Extension(
-        "infinitd_server.cpp_battle_computer.battle_computer",
-        ["infinitd_server/cpp_battle_computer/battle_computer.pyx"],
+        name="infinitd_server.cpp_battle_computer.battle_computer",
+        sources=["infinitd_server/cpp_battle_computer/battle_computer.pyx"],
+        extra_compile_args=["-std=c++17"],
     )],
     compiler_directives={'language_level': 3},
 )
