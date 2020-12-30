@@ -36,7 +36,7 @@ def main():
         duration = time.monotonic() - startTime
 
     print(f"Computed the {args.iters} battles in {duration:.3f}s "
-        f"({duration / args.iters:.3f}s each)")
+        f"({duration / args.iters:.4f}s each)")
 
 if __name__ == "__main__":
     main()

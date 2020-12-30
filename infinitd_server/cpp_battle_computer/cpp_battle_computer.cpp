@@ -234,9 +234,6 @@ string CppBattleComputer::ComputeBattle(
     this->gameConfig.playfield.enemyEnter / numRows,
     this->gameConfig.playfield.enemyEnter % numRows
   );
-  cout << "Computing a " << numRows << " x " << numCols
-    << " battle with " << wave.size() << " enemies and "
-    << paths.size() << " paths." << endl;
 
   // Quick checks.
   assert(towerIds.size() == this->gameConfig.playfield.numRows);
