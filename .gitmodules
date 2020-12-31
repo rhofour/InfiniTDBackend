@@ -3,4 +3,5 @@
 	url = https://github.com/Tencent/rapidjson.git
 [submodule "flatbuffers"]
 	path = flatbuffers
-	url = git@github.com:rhofour/flatbuffers.git
+	url = https://github.com/rhofour/flatbuffers.git
+	branch = python_nested_fb
