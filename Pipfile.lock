@@ -607,16 +607,10 @@
         },
         "pytype": {
             "hashes": [
-                "sha256:0891b318c298d0c71af80f9cd3ef71dc62569cbcab116a4ab2959d1a775b178d",
-                "sha256:0ac0719df93cb873f2ff3d7dc01c595650caed4ec737e0629eeae9b172a87fe9",
-                "sha256:7bafb46f6960a41aefead4c96e577c0d1b2878b254e7590b52b298391cc4dda2",
-                "sha256:aefea50cdc759efec3cfe401388fdf6b67347bf71e26e645d965db34a92c392f",
-                "sha256:e66a9fa0ede2d089360f628fb383c2d9af60fd51654d3c470921002d374a4628",
-                "sha256:ec4a7dba0d96620a602e4ac3f4fedbb21094369f2a40d8c08bd835647305025e",
-                "sha256:f28cb933fc9c36f4f01215c16a6157520ce05f54fd77637d38c1264e3db2db8d"
+                "sha256:53803f0f1fadf4923efc88a0bd0cfa4c242d2fa3f04421b6f8ab4d658ffd2b90"
             ],
             "index": "pypi",
-            "version": "==2020.12.23"
+            "version": "==2020.2.6"
         },
         "pytz": {
             "hashes": [

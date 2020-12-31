@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+# A git post-receive hook
+# 
+# On master branch only :
+# 1. Deletes any existing, old copy of the repo data
+# 2. Copies the repo data so a container can be built
+# 3. Builds a podman container named with the dir name
+# 4. Requests systemd restarts the container
+
+
+## --- Config
+
+deployDir="../deploy-infinitd-server"
+gitDir=`pwd`
+buildConfig="" #could be empty
+systemdUnit="infinitd-backend.service"
+
+## --- End Config
+
+while read oldrev newrev refname
+do
+    branch=$(git rev-parse --symbolic --abbrev-ref $refname)
+    if [ "master" == "$branch" ]; then
+
+        imageName=`basename $(pwd) | tr \'[:upper:]\' \'[:lower:]\'` #podman img name
+        containerName="$imageName"                                   #podman container name
+
+        lastCommit=`git log --pretty=format:'%h' -n 1`  #get last commit for img tag
+
+        echo "Hook : erase dir $deployDir"
+        rm -rf $deployDir
+        mkdir $deployDir
+
+        echo "Hook : deploy to dir $deployDir"
+        # Checkout a copy of this repo so we can build the container.
+        GIT_WORK_TREE=$deployDir git checkout -f master
+        cd $deployDir
+
+        echo "Update submodules"
+        # First, ensure the submodules are synced from .gitmodules.
+        git --work-tree=$deployDir --git-dir=$gitDir submodule sync
+        # Then, actually grab them.
+        git --work-tree=$deployDir --git-dir=$gitDir submodule update --init --recursive
+
+        echo "Podman : Building $imageName:$lastCommit"
+        buildID=`podman build $buildConfig -t $imageName .`
+        podman tag $imageName:latest $imageName:$lastCommit
+
+        if [ $? -ne 0 ]; then
+            echo "Podman : Build failed, aborting"
+        fi
+
+        echo "restart $systemdUnit"
+        systemctl --user restart $systemdUnit
+
+        if [ $? -ne 0 ]; then
+            echo "Docker : Run failed, aborting"
+        fi
+
+    fi
+done
