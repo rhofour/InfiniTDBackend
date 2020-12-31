@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "04c48e278b13113d3093d7f0aaa510521b2c5b9bdd352907d8196201ad3b0cfe"
+            "sha256": "afe60d3a4d919e7f4c6062d1b17d8b208274dbc1c6094e5857b25b76bd2a624a"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -185,8 +185,8 @@
             "version": "==4.5.0"
         },
         "flatbuffers": {
-            "editable": true,
-            "path": "./flatbuffers/python"
+            "path": "./flatbuffers/python",
+            "version": "==20201231193558"
         },
         "google-api-core": {
             "extras": [
@@ -814,11 +814,11 @@
         },
         "isort": {
             "hashes": [
-                "sha256:dcab1d98b469a12a1a624ead220584391648790275560e1a43e54c5dceae65e7",
-                "sha256:dcaeec1b5f0eca77faea2a35ab790b4f3680ff75590bfcb7145986905aab2f58"
+                "sha256:c729845434366216d320e936b8ad6f9d681aab72dc7cbc2d51bedc3582f3ad1e",
+                "sha256:fff4f0c04e1825522ce6949973e83110a6e907750cd92d128b0d14aaaadbffdc"
             ],
             "markers": "python_version >= '3.6' and python_version < '4.0'",
-            "version": "==5.6.4"
+            "version": "==5.7.0"
         },
         "lazy-object-proxy": {
             "hashes": [
