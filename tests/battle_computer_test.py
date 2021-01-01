@@ -1,5 +1,6 @@
 import unittest
 from collections import defaultdict
+from dataclasses import dataclass, field
 from typing import List, Tuple, Dict, Optional
 from enum import Enum, unique, auto
 from pathlib import Path
@@ -21,6 +22,14 @@ import InfiniTDFb.MonstersDefeatedFb as MonstersDefeatedFb
 import test_data
 
 EPSILON = 0.0001
+
+@dataclass
+class ObjectData:
+    configId: Optional[ConfigId]
+    objType: Optional[ObjectType]
+    moves: List[MoveEvent] = field(default_factory=list)
+    damages: List[DamageEvent] = field(default_factory=list)
+    delete: Optional[DeleteEvent] = None
 
 class TestRandomBattlesRealConfig(unittest.TestCase):
     def setUp(self):
@@ -87,20 +96,11 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         # This should stay the same.
         self.assertEqual(reencodedEventsBytes, tripleEncodedEventsBytes)
 
-        # Check every ID is deleted by the end.
-        activeIds = set()
         # Map every projectile fired to the tower it fired from.
         projFiredFrom: Dict[FpCellPos, List[MoveEvent]] = defaultdict(list)
-        # Map events to the objects they're affecting
-        movesById: Dict[int, List[MoveEvent]] = defaultdict(list)
-        damageById: Dict[int, List[DamageEvent]] = defaultdict(list)
-        deleteById: Dict[int, DeleteEvent] = {}
-        # Map every ID to the associated config ID
-        idToConfigId: Dict[int, int] = {}
-        # Map every ID to the associated object type
-        idToObjType: Dict[int, ObjectType] = {}
+        objDataById: Dict[int, ObjectData] = {}
+        enemiesInOrder: List[int] = []
         # pytype: disable=attribute-error
-        lastSpawnedMoveEvent: Optional[MoveEvent] = None
         spawnFp = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterEnter)
         exitFp = FpCellPos.fromCellPos(self.gameConfig.playfield.monsterExit)
         lastStartTime = 0.0
@@ -108,20 +108,22 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         firstEvent = events[0]
         self.assertEqual(firstEvent.eventType, EventType.MOVE)
         self.assertEqual(firstEvent.startTime, 0.0)
-        enemiesDefeated = 0
         for event in events:
             # Ensure events are in sorted order.
             self.assertGreaterEqual(event.startTime, lastStartTime, msg="Events are not sorted.")
             lastStartTime = event.startTime
             if event.eventType == EventType.MOVE:
-                activeIds.add(event.id)
                 if event.objType == ObjectType.PROJECTILE:
                     projFiredFrom[event.startPos].append(event)
-                movesById[event.id].append(event)
-                if event.id in idToConfigId:
-                    self.assertEqual(event.configId, idToConfigId[event.id])
-                idToConfigId[event.id] = event.configId
-                idToObjType[event.id] = event.objType
+                if event.id not in objDataById:
+                    objDataById[event.id] = ObjectData(configId=event.configId, objType=event.objType)
+                else:
+                    # Ensure config ID and object type don't change for any objects.
+                    self.assertEqual(event.configId, objDataById[event.id].configId)
+                    self.assertEqual(event.objType, objDataById[event.id].objType)
+                objDataById[event.id].configId = event.configId
+                objDataById[event.id].objType = event.objType
+                objDataById[event.id].moves.append(event)
                 # Ensure bounds of every move are within the playfield.
                 self.assertGreaterEqual(event.startPos.row, 0)
                 self.assertGreaterEqual(event.startPos.col, 0)
@@ -139,31 +141,21 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                     self.assertAlmostEqual(dist / time, expectedSpeed,
                         msg=f"MoveEvent has the wrong speed: {event}",
                         places=4)
-                # Ensure spawned enemies don't overlap.
-                if event.objType == ObjectType.MONSTER and event.startPos == spawnFp:
-                    if lastSpawnedMoveEvent:
-                        # Calculate previous enemy position at this time.
-                        # This assumes the enemy leaves the spawn before they're killed.
-                        amount = min(1.0, event.startTime / lastSpawnedMoveEvent.endTime)
-                        curPos = lastSpawnedMoveEvent.startPos.interpolateTo(lastSpawnedMoveEvent.destPos, amount)
-                        self.assertGreaterEqual(curPos.dist(spawnFp), 1.0)
-                    lastSpawnedMoveEvent = event
             if event.eventType == EventType.DELETE:
-                self.assertIn(event.id, activeIds)
-                activeIds.discard(event.id)
-                deleteById[event.id] = event
+                self.assertTrue(objDataById[event.id].moves, msg="Object is deleted before it exists.")
+                self.assertIsNone(objDataById[event.id].delete, msg="Object was deleted more than once.")
+                objDataById[event.id].delete = event
             if event.eventType == EventType.DAMAGE:
-                damageById[event.id].append(event)
+                objDataById[event.id].damages.append(event)
         # pytype: enable=attribute-error
-        self.assertFalse(activeIds, msg=f"Not all IDs were deleted. Remaining: {activeIds}")
 
         for (firedFrom, events) in projFiredFrom.items():
             # Ensure projectiles are fired from grid cells.
-            self.assertFalse(firedFrom.row % 1)
-            self.assertFalse(firedFrom.col % 1)
+            self.assertEqual(firedFrom.row % 1, 0.0)
+            self.assertEqual(firedFrom.col % 1, 0.0)
             # Look up tower associated with this position.
             tower = battleground.towers.towers[int(firedFrom.row)][int(firedFrom.col)]
-            self.assertTrue(tower)
+            self.assertIsNotNone(tower)
             towerConfig = self.gameConfig.towers[tower.id]
 
             lastFired = -1000.0
@@ -189,45 +181,58 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 # pytype: enable=attribute-error
 
         enemiesSeen = 0
-        for (id, events) in movesById.items():
-            if events[0].objType == ObjectType.MONSTER:
+        enemiesDefeated = 0
+        for obj in objDataById.values():
+            self.assertIsNotNone(obj.delete, msg="Object was never deleted.")
+
+            # Ensure all move events are connected.
+            if obj.objType == ObjectType.MONSTER:
                 lastPos = spawnFp
             else:
                 lastPos = None
             lastTime = None
-            objType = events[0].objType
-            configId = events[0].configId
-            for event in events:
+            for move in obj.moves:
                 # Ensure all moves are connected in space and time.
                 if lastPos is not None:
-                    self.assertEqual(lastPos, event.startPos)
-                lastPos = event.destPos
+                    self.assertEqual(lastPos, move.startPos)
+                lastPos = move.destPos
                 if lastTime:
-                    self.assertEqual(lastTime, event.startTime)
-                lastTime = event.endTime
-                # Ensure object type and config ID are fixed for each object.
-                self.assertEqual(objType, event.objType)
-                self.assertEqual(configId, event.configId)
-            if objType == ObjectType.MONSTER:
+                    self.assertEqual(lastTime, move.startTime)
+                lastTime = move.endTime
+            
+            if obj.objType == ObjectType.MONSTER:
                 # Ensure enemies are generated in the correct order.
-                self.assertEqual(configId, wave[enemiesSeen])
+                self.assertEqual(obj.configId, wave[enemiesSeen])
+                # Keep track of the number of enemies spawned and defeated.
                 enemiesSeen += 1
                 # Check if this enemy was defeated.
-                self.assertIn(id, deleteById)
-                deleteEvent = deleteById[id]
-                if events[-1].destPos != exitFp or events[-1].endTime != deleteEvent.startTime:
-                    # Enemy was defeated.
+                if obj.moves[-1].destPos != exitFp or obj.moves[-1].endTime != obj.delete.startTime:
                     enemiesDefeated += 1
+                
+                # Ensure damage always decreases enemy health.
+                health = self.gameConfig.monsters[obj.configId].health
+                errMsg = f"Enemy {id} (Config {obj.configId}) starts with {health}. Events: {obj.damages}"
+                for event in obj.damages:
+                    self.assertLess(event.health, health, msg=errMsg)
+                    health = event.health
+
         self.assertEqual(enemiesSeen, len(wave))
 
-        # Ensure damage always decreases enemy health.
-        for (id, events) in damageById.items():
-            configId = idToConfigId[id]
-            health = self.gameConfig.monsters[configId].health
-            errMsg = f"Enemy {id} (Config {configId}) starts with {health}. Events: {events}"
-            for event in events:
-                self.assertLess(event.health, health, msg=errMsg)
-                health = event.health
+        # Ensure spawned enemies don't overlap.
+        lastEnemySpawned: Optional[ObjectData] = None
+        for enemyId in enemiesInOrder:
+            enemy = objDataById[enemyId]
+            firstMove = enemy.moves[0]
+            if lastEnemySpawned:
+                # Do nothing if the last enemy died already.
+                if lastEnemySpawned.delete.startTime > firstMove.startTime:
+                    # Determine distance from spawn
+                    lastEnemyMove = lastEnemySpawned.moves[0]
+                    amount = min(1.0, firstMove.startTime / lastEnemyMove.endTime)
+                    curPos = lastEnemyMove.startPos.interpolateTo(lastEnemyMove.destPos, amount)
+                    self.assertGreaterEqual(curPos.dist(spawnFp), 1.0, msg="Enemies overlap with each other.")
+
+            lastEnemySpawned = enemy
 
         # Ensure battle time is positive.
         self.assertGreater(results.fb.TimeSecs(), 0.0)
