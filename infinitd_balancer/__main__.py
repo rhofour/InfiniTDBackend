@@ -41,9 +41,12 @@ class FixedOrderTowerPlacing(TowerPlacingStrategy):
 class FixedTowerSelection(TowerSelectionStrategy):
     fixedTower: Optional[ConfigId]
 
-    def __init__(self, gameConfig, fixedTower: Optional[ConfigId] = None):
+    def __init__(self, gameConfig, fixedTower: Optional[str] = None):
         super().__init__(gameConfig)
-        self.fixedTower = fixedTower
+        if fixedTower:
+            self.fixedTower = gameConfig.nameToTowerId[fixedTower]
+        else:
+            self.fixedTower = None
 
     def nextTower(self, battleground: BattlegroundState) -> Optional[ConfigId]:
         return self.fixedTower
@@ -51,9 +54,9 @@ class FixedTowerSelection(TowerSelectionStrategy):
 class HomogenousWaveSelection(WaveSelectionStrategy):
     monsterIds: List[ConfigId]
 
-    def __init__(self, gameConfig: GameConfig, monsterIds: List[ConfigId]):
+    def __init__(self, gameConfig: GameConfig, monsterNames: List[str]):
         super().__init__(gameConfig)
-        self.monsterIds = monsterIds
+        self.monsterIds = [gameConfig.nameToMonsterId[name] for name in monsterNames]
 
     def nextWave(self, battleground: BattlegroundState) -> List[ConfigId]:
         bestWave = [self.monsterIds[0]]
@@ -141,23 +144,11 @@ def main():
             simpleRowOrder.append(CellPos(Row(row), Col(col)))
 
     strategies: Dict[str, FullStrategy] = {
-        'DoNothing': FullStrategy(
-            gameConfig,
-            FixedOrderTowerPlacing(gameConfig),
-            FixedTowerSelection(gameConfig),
-            FixedWaveSelection(gameConfig, [ConfigId(0)])
-        ),
-        'SimpleRows_StaticWave': FullStrategy(
-            gameConfig,
-            FixedOrderTowerPlacing(gameConfig, simpleRowOrder),
-            FixedTowerSelection(gameConfig, ConfigId(0)),
-            FixedWaveSelection(gameConfig, [ConfigId(0)])
-        ),
         'SimpleRows': FullStrategy(
             gameConfig,
             FixedOrderTowerPlacing(gameConfig, simpleRowOrder),
-            FixedTowerSelection(gameConfig, ConfigId(0)),
-            HomogenousWaveSelection(gameConfig, [ConfigId(0), ConfigId(1)])
+            FixedTowerSelection(gameConfig, "Boring Tower"),
+            HomogenousWaveSelection(gameConfig, ["Lame Slime", "Green Slime"])
         ),
     }
 
@@ -175,7 +166,7 @@ def main():
                     if tower is not None:
                         numTowers += 1
             print(f"After {state.totalMinutes:3}m accumulated {state.accumulatedGold:3.1f} gold "
-                f"({state.battleResults.goldPerMinute} / m) and built {numTowers} towers.")
+                f" and built {numTowers} towers. Future gold rate: {state.battleResults.goldPerMinute} gpm")
 
     with open('balancing_results.json', 'w') as outFile:
         outFile.write(strategyResults.to_json())

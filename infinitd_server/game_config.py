@@ -114,9 +114,9 @@ class BattleBonus:
 
     def getAmount(self, curReward: float) -> float:
         if self.bonusType == BonusType.ADDITIVE:
-            return self.bonusAmount;
+            return self.bonusAmount
         if self.bonusType == BonusType.MULTIPLICATIVE:
-            return curReward * (self.bonusAmount - 1);
+            return curReward * (self.bonusAmount - 1)
         raise ValueError(f"Unknown bonus type: {self.bonusType}")
 
 def idedListToDict(xs):
@@ -125,6 +125,14 @@ def idedListToDict(xs):
         if x.id in d:
             raise ValueError(f"Found duplicated id {x.id}")
         d[x.id] = x
+    return d
+
+def idedListToNameDict(xs):
+    d = {}
+    for x in xs:
+        if x.name in d:
+            raise ValueError(f"Found duplicated name {x.name}")
+        d[x.name] = x.id
     return d
 
 @attr.s(frozen=True, auto_attribs=True)
@@ -164,8 +172,10 @@ class GameConfig:
     playfield: PlayfieldConfig
     tiles: Dict[ConfigId, TileConfig]
     towers: Dict[ConfigId, TowerConfig]
+    nameToTowerId: Dict[str, ConfigId]
     projectiles: Dict[ConfigId, ProjectileConfig]
     monsters: Dict[ConfigId, MonsterConfig]
+    nameToMonsterId: Dict[str, ConfigId]
     misc: MiscConfig
     gameConfigData: GameConfigData
 
@@ -175,8 +185,10 @@ class GameConfig:
             playfield = gameConfigData.playfield,
             tiles = idedListToDict(gameConfigData.tiles),
             towers = idedListToDict(gameConfigData.towers),
+            nameToTowerId = idedListToNameDict(gameConfigData.towers),
             projectiles = idedListToDict(gameConfigData.projectiles),
             monsters = idedListToDict(gameConfigData.monsters),
+            nameToMonsterId = idedListToNameDict(gameConfigData.monsters),
             misc = MiscConfig.fromMiscConfigData(gameConfigData.misc),
             gameConfigData = gameConfigData
         )
