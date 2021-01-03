@@ -56,7 +56,6 @@ class BattleComputer:
         self.debug = debug
         jsonText = json.dumps(cattr.unstructure(gameConfig.gameConfigData))
         self.cppBattleComputer = CppBattleComputer(gameConfig, jsonText, gameTickSecs)
-        print(f"Made BattleComputer with seed {self.startingSeed}")
 
     def getInitialTowerStates(self, battleground: BattlegroundState) -> List[TowerState]:
         nextId = 0
