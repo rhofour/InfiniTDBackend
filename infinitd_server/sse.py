@@ -22,3 +22,6 @@ class SseQueues:
 
     def __contains__(self, item):
         return item in self.queuesByParam
+    
+    def keys(self):
+        return self.queuesByParam.keys()

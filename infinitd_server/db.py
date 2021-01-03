@@ -18,9 +18,9 @@ from infinitd_server.logger import Logger
 class Db:
     DEFAULT_DB_PATH = "data/data.db"
     SELECT_USER_STATEMENT = (
-            "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave, battleground FROM users")
+            "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave, admin, battleground FROM users")
     SELECT_USER_SUMMARY_STATEMENT = (
-            "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave FROM users")
+            "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave, admin FROM users")
 
     gameConfig: GameConfig
     userQueues: SseQueues
@@ -59,7 +59,8 @@ class Db:
                 "goldPerMinute REAL, "
                 "inBattle BOOLEAN DEFAULT 0 CHECK (inBattle == 0 || inBattle == 1), "
                 "battleground TEXT, "
-                "wave TEXT DEFAULT '[]'"
+                "wave TEXT DEFAULT '[]', "
+                "admin BOOLEAN DEFAULT 0 CHECK (admin == 0 || admin == 1)"
                 ");")
         self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS battles("
@@ -79,7 +80,8 @@ class Db:
                 accumulatedGold = row[3],
                 goldPerMinute = row[4],
                 inBattle = row[5] == 1,
-                wave = json.loads(row[6]))
+                wave = json.loads(row[6]),
+                admin = row[7] == 1)
 
     @staticmethod
     def __extractUserFromRow(row, targetClass=FrozenUser):
@@ -91,7 +93,8 @@ class Db:
                 goldPerMinute = row[4],
                 inBattle = row[5] == 1,
                 wave = json.loads(row[6]),
-                battleground = BattlegroundState.from_json(row[7]))
+                admin = row[7] == 1,
+                battleground = BattlegroundState.from_json(row[8]))
 
     def getUserSummaryByName(self, name: str) -> Optional[FrozenUserSummary]:
         res = self.conn.execute(self.SELECT_USER_SUMMARY_STATEMENT + " WHERE name = ?;", (name, )).fetchone()
@@ -134,17 +137,18 @@ class Db:
             return None
         return BattlegroundState.from_json(res[0])
 
-    def register(self, uid: str, name: str):
+    def register(self, uid: str, name: str, admin: bool = False):
         """Attempt to register a new user returning whether or not it was successful."""
         assert self.conn.in_transaction is False
         try:
             emptyBattleground = BattlegroundState.empty(self.gameConfig)
-            res = self.conn.execute("INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, battleground)"
-                    " VALUES (:uid, :name, :gold, :gold, :goldPerMinute, :battleground);",
-                    {"uid": uid, "name": name, "gold": self.gameConfig.misc.startingGold,
-                        "goldPerMinute": self.gameConfig.misc.minGoldPerMinute,
-                        "battleground": emptyBattleground.to_json(),
-                    })
+            res = self.conn.execute(
+                "INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, admin, battleground)"
+                " VALUES (:uid, :name, :gold, :gold, :goldPerMinute, :admin, :battleground);",
+                {"uid": uid, "name": name, "gold": self.gameConfig.misc.startingGold,
+                    "goldPerMinute": self.gameConfig.misc.minGoldPerMinute,
+                    "admin": admin, "battleground": emptyBattleground.to_json(),
+                })
             self.conn.commit()
         except sqlite3.IntegrityError as err:
             # This is likely because the name was already taken.
@@ -173,6 +177,17 @@ class Db:
         if name in self.bgQueues:
             battleground = self.getBattleground(name)
             await self.bgQueues.sendUpdate(name, battleground)
+
+    async def __updateAllListeners(self):
+        updateCalls = []
+        for name in self.userQueues.keys():
+            user = self.getUserSummaryByName(name)
+            updateCalls.append(self.userQueues.sendUpdate(name, user))
+        for name in self.bgQueues.keys():
+            battleground = self.getBattleground(name)
+            updateCalls.append(self.bgQueues.sendUpdate(name, battleground))
+        if updateCalls:
+            await asyncio.wait(updateCalls)
 
     async def __updateUserListeners(self, names: List[str]):
         updateCalls = []
@@ -259,6 +274,7 @@ class Db:
     def clearInBattle(self):
         assert self.conn.in_transaction is False
         self.conn.execute("UPDATE users SET inBattle = FALSE;")
+        self.conn.commit()
 
     def updateUser(self, user: MutableUser, addAwaitable: Callable[[Awaitable[None]], None]):
         "Update a User."
@@ -303,6 +319,8 @@ class Db:
             # Clear any battles where this user was attacking now that they have a different wave.
             self.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
 
+        # There's no need to commit here as the calling function will do that.
+
         if user.summaryModified:
             addAwaitable(self.__updateUserListeners([user.name]))
         if user.battlegroundModified:
@@ -334,6 +352,22 @@ class Db:
         self.conn.execute("DROP TABLE battles")
         self.conn.commit()
         self.__createTables()
+    
+    async def resetGameData(self):
+        emptyBattleground = BattlegroundState.empty(self.gameConfig)
+        self.conn.execute(
+            "UPDATE users SET battleground = :emptyBattleground, "
+            "gold = :initialGold, accumulatedGold = :initialGold,"
+            "goldPerMinute = :goldPerMinute, wave = '[]'",
+            {
+                 "emptyBattleground": emptyBattleground.to_json(),
+                 "initialGold": self.gameConfig.misc.startingGold,
+                 "goldPerMinute": self.gameConfig.misc.minGoldPerMinute,
+            })
+        # self.resetBattles()
+        self.conn.commit()
+
+        await self.__updateAllListeners()
 
 class MutableUserContext:
     db: Db

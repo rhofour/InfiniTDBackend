@@ -17,7 +17,7 @@ import test_data
 class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         Logger.setDefault(MockLogger())
-        tmp_file, tmp_path = tempfile.mkstemp()
+        _, tmp_path = tempfile.mkstemp()
         self.dbPath = tmp_path
         self.gameConfig = test_data.gameConfig
         self.game = Game(self.gameConfig, dbPath = self.dbPath)

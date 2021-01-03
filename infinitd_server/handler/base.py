@@ -1,6 +1,6 @@
 import asyncio
 from time import time
-from typing import Optional, ClassVar, Awaitable, Callable, List
+from typing import Optional, ClassVar, Awaitable, Callable, List, Dict
 
 import firebase_admin.auth
 import tornado.web
@@ -42,7 +42,7 @@ class BaseHandler(tornado.web.RequestHandler):
         self.set_header("WWW-Authenticate", 'Bearer')
         raise tornado.web.Finish()
 
-    def verifyAuthentication(self):
+    def verifyAuthentication(self) -> Optional[Dict]:
         if self.request.headers['authorization'][:7] == "Bearer ":
             token = self.request.headers['authorization'][7:]
             try:

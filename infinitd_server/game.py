@@ -22,6 +22,9 @@ class UserNotInBattleException(Exception):
 class UserHasInsufficientGoldException(Exception):
     pass
 
+class UserNotAdminException(Exception):
+    pass
+
 class UserMatchingError(Exception):
     def __init__(self, actualName: str, expectedName: str):
         self.actualName = actualName
@@ -81,8 +84,8 @@ class Game:
         # Build mutable user context
         return mutableUserContext
 
-    def register(self, uid: str, name: str) -> bool:
-        return self._db.register(uid=uid, name=name)
+    def register(self, uid: str, name: str, admin: bool = False) -> bool:
+        return self._db.register(uid=uid, name=name, admin=admin)
 
     def getBattleground(self, name: str) -> BattlegroundState:
         return self._db.getBattleground(name)
@@ -232,3 +235,9 @@ class Game:
 
     def resetBattles(self):
         self._db.resetBattles()
+
+    async def resetGameData(self, uid: str):
+        user = self._db.getUserSummaryByUid(uid)
+        if not user.admin:
+            raise UserNotAdminException()
+        await self._db.resetGameData()

@@ -30,6 +30,7 @@ from infinitd_server.handler.battle_stream import BattleStreamHandler
 from infinitd_server.handler.recorded_battle import RecordedBattleHandler
 from infinitd_server.handler.debug_logs import DebugLogsHandler
 from infinitd_server.handler.debug_battle_input import DebugBattleInputHandler
+from infinitd_server.handler.admin.reset_game import ResetGameHandler
 
 async def updateGoldEveryMinute(game: Game):
     oneMinute = timedelta(minutes=1)
@@ -66,6 +67,8 @@ def make_app(game, debug):
         (r"/battleStream/(.*)", BattleStreamHandler, dict(game=game)),
         (r"/controlBattle/(.*)", ControlBattleHandler, dict(game=game)),
         (r"/battle/(.*)/(.*)", RecordedBattleHandler, dict(game=game)),
+        # Admin actions
+        (r"/admin/resetGame", ResetGameHandler, dict(game=game)),
     ]
     debug_handlers = [
         (r"/debug/logs", DebugLogsHandler, dict(game=game)),

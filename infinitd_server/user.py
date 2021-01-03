@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import attr
 
-from infinitd_server.battleground_state import BattlegroundState
+from infinitd_server.battleground_state import BattlegroundState, BgTowersState
 from infinitd_server.game_config import ConfigId
 
 @attr.s(auto_attribs=True, eq=True)
@@ -14,8 +14,9 @@ class UserSummary:
     gold: float
     accumulatedGold: float
     goldPerMinute: float
-    inBattle: bool
     wave: List[ConfigId]
+    inBattle: bool = False
+    admin: bool = False
 
 @attr.s(auto_attribs=True, frozen=True)
 class FrozenUserSummary(UserSummary):
@@ -23,7 +24,7 @@ class FrozenUserSummary(UserSummary):
 
 @attr.s(auto_attribs=True, eq=True)
 class User(UserSummary):
-    battleground: BattlegroundState
+    battleground: BattlegroundState = BattlegroundState(towers=BgTowersState(towers=[]))
 
 @attr.s(auto_attribs=True, frozen=True)
 class FrozenUser(User):
