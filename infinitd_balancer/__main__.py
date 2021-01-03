@@ -144,11 +144,23 @@ def main():
             simpleRowOrder.append(CellPos(Row(row), Col(col)))
 
     strategies: Dict[str, FullStrategy] = {
-        'SimpleRows': FullStrategy(
+        'BalancedRows': FullStrategy(
             gameConfig,
             FixedOrderTowerPlacing(gameConfig, simpleRowOrder),
-            FixedTowerSelection(gameConfig, "Boring Tower"),
-            HomogenousWaveSelection(gameConfig, ["Lame Slime", "Green Slime"])
+            FixedTowerSelection(gameConfig, "Paper Arrow Tower"),
+            HomogenousWaveSelection(gameConfig, ["Dust Clump"])
+        ),
+        'FastRows': FullStrategy(
+            gameConfig,
+            FixedOrderTowerPlacing(gameConfig, simpleRowOrder),
+            FixedTowerSelection(gameConfig, "Poking Tower"),
+            HomogenousWaveSelection(gameConfig, ["Dust Bunny"])
+        ),
+        'SlowRows': FullStrategy(
+            gameConfig,
+            FixedOrderTowerPlacing(gameConfig, simpleRowOrder),
+            FixedTowerSelection(gameConfig, "Brick Tower"),
+            HomogenousWaveSelection(gameConfig, ["Dust Mass"])
         ),
     }
 
