@@ -20,6 +20,8 @@ class BaseHandler(tornado.web.RequestHandler):
         self.game = game
 
     def prepare(self):
+        if self.request.method == "OPTIONS":
+            return # Skip logging for options from CORS pre-flight requests.
         self.logger = Logger.getDefault()
         self.requestId = self.__class__.nextRequestId
         self.__class__.nextRequestId += 1
@@ -27,6 +29,8 @@ class BaseHandler(tornado.web.RequestHandler):
         self.logInfo("Started")
 
     def on_finish(self):
+        if self.request.method == "OPTIONS":
+            return # Skip logging for options from CORS pre-flight requests.
         self.logInfo("Finished")
 
     def set_default_headers(self):
