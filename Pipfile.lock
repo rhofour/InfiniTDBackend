@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "afe60d3a4d919e7f4c6062d1b17d8b208274dbc1c6094e5857b25b76bd2a624a"
+            "sha256": "04c48e278b13113d3093d7f0aaa510521b2c5b9bdd352907d8196201ad3b0cfe"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -185,8 +185,8 @@
             "version": "==4.5.0"
         },
         "flatbuffers": {
-            "path": "./flatbuffers/python",
-            "version": "==20201231193558"
+            "editable": true,
+            "path": "./flatbuffers/python"
         },
         "google-api-core": {
             "extras": [
@@ -344,11 +344,11 @@
         },
         "hypothesis": {
             "hashes": [
-                "sha256:6094f922c1d2bef808b8e6cf3ab8cdb8ad76faa12519a25ac4250eed524e25c0",
-                "sha256:6dfc4c233f3903f1524242c1e1c92b5e06fb4b689d3fd2abbd22783af25d3c27"
+                "sha256:c53dacd3951092b02f6247214aae5f41054509ff5c68448deeb1b825c75f2712",
+                "sha256:f30426f0923e1cf12b1bf9799394dcba96858fd4af5323f19cce016685c3fe16"
             ],
             "index": "pypi",
-            "version": "==5.43.4"
+            "version": "==5.46.0"
         },
         "idna": {
             "hashes": [
@@ -607,10 +607,16 @@
         },
         "pytype": {
             "hashes": [
-                "sha256:53803f0f1fadf4923efc88a0bd0cfa4c242d2fa3f04421b6f8ab4d658ffd2b90"
+                "sha256:0891b318c298d0c71af80f9cd3ef71dc62569cbcab116a4ab2959d1a775b178d",
+                "sha256:0ac0719df93cb873f2ff3d7dc01c595650caed4ec737e0629eeae9b172a87fe9",
+                "sha256:7bafb46f6960a41aefead4c96e577c0d1b2878b254e7590b52b298391cc4dda2",
+                "sha256:aefea50cdc759efec3cfe401388fdf6b67347bf71e26e645d965db34a92c392f",
+                "sha256:e66a9fa0ede2d089360f628fb383c2d9af60fd51654d3c470921002d374a4628",
+                "sha256:ec4a7dba0d96620a602e4ac3f4fedbb21094369f2a40d8c08bd835647305025e",
+                "sha256:f28cb933fc9c36f4f01215c16a6157520ce05f54fd77637d38c1264e3db2db8d"
             ],
             "index": "pypi",
-            "version": "==2020.2.6"
+            "version": "==2020.12.23"
         },
         "pytz": {
             "hashes": [
