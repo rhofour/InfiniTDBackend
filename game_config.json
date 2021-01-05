@@ -37,7 +37,7 @@
   "towers": [
     {
       "id": 0,
-      "url": "static/CrappyTowerSmall.png",
+      "url": "static/PaperArrow.png",
       "name": "Paper Arrow Tower",
       "cost": 1.0,
       "firingRate": 0.5,
@@ -48,65 +48,90 @@
     },
     {
       "id": 1,
-      "url": "static/CrappyTower.png",
+      "url": "static/Poke.png",
       "name": "Poking Tower",
       "cost": 2.0,
       "firingRate": 2.0,
       "range": 1.5,
       "damage": 1.5,
       "projectileSpeed": 2.0,
-      "projectileId": 0
+      "projectileId": 1
     },
     {
       "id": 2,
-      "url": "static/CrappyTower.png",
+      "url": "static/Brick.png",
       "name": "Brick Tower",
       "cost": 4.0,
       "firingRate": 0.25,
       "range": 2.5,
       "damage": 15.0,
       "projectileSpeed": 1.0,
-      "projectileId": 0
+      "projectileId": 2
     },
     {
       "id": 3,
-      "url": "static/CrappyTowerSmall.png",
+      "url": "static/BambooArrow.png",
       "name": "Bamboo Arrow Tower",
       "cost": 10.0,
       "firingRate": 0.75,
       "range": 3.5,
       "damage": 4.0,
       "projectileSpeed": 2.0,
-      "projectileId": 0
+      "projectileId": 3
     },
     {
       "id": 4,
-      "url": "static/CrappyTower.png",
+      "url": "static/Slap.png",
       "name": "Slapping Tower",
       "cost": 20.0,
       "firingRate": 2.5,
       "range": 1.5,
       "damage": 6.0,
       "projectileSpeed": 2.0,
-      "projectileId": 0
+      "projectileId": 4
     },
     {
       "id": 5,
-      "url": "static/CrappyTower.png",
+      "url": "static/BowlingBall.png",
       "name": "Bowling Ball Tower",
       "cost": 20.0,
       "firingRate": 0.25,
       "range": 3.0,
       "damage": 50.0,
       "projectileSpeed": 1.0,
-      "projectileId": 0
+      "projectileId": 5
     }
   ],
   "projectiles": [
     {
       "id": 0,
-      "url": "static/CrappyBullet.png",
-      "size": 32
+      "url": "static/PaperArrow.png",
+      "size": 64
+    },
+    {
+      "id": 1,
+      "url": "static/Poke.png",
+      "size": 48
+    },
+    {
+      "id": 2,
+      "url": "static/Brick.png",
+      "size": 48
+    },
+    {
+      "id": 3,
+      "url": "static/BambooArrow.png",
+      "size": 64
+    },
+    {
+      "id": 4,
+      "url": "static/Slap.png",
+      "size": 48
+    },
+    {
+      "id": 5,
+      "url": "static/BowlingBall.png",
+      "size": 48
     }
   ],
   "monsters": [
