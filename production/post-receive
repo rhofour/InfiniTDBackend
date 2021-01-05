@@ -39,7 +39,7 @@ do
 
         echo "Update submodules"
         # First, ensure the submodules are synced from .gitmodules.
-        git --work-tree=$deployDir --git-dir=$gitDir submodule sync
+        git --work-tree=$deployDir --git-dir=$gitDir submodule sync --recursive
         # Then, actually grab them.
         git --work-tree=$deployDir --git-dir=$gitDir submodule update --init --recursive
 

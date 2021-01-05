@@ -257,7 +257,7 @@ class BattleResults:
                 configId = configId,
                 numDefeated = numDefeated,
                 numSent = numSent)
-        monstersDefeatedVector = builder.EndVector(len(monstersDefeated))
+        monstersDefeatedVector = builder.EndVector()
         MonstersDefeatedFb.MonstersDefeatedFbStart(builder)
         MonstersDefeatedFb.MonstersDefeatedFbAddMonstersDefeated(builder, monstersDefeatedVector)
         return MonstersDefeatedFb.MonstersDefeatedFbEnd(builder)
@@ -299,7 +299,7 @@ class BattleResults:
         BattleResultsFb.BattleResultsFbStartBonusesVector(builder, len(self.bonuses))
         for bonus in reversed(self.bonuses):
             builder.PrependUint16(bonus)
-        bonusesVector = builder.EndVector(len(self.bonuses))
+        bonusesVector = builder.EndVector()
 
         BattleResultsFb.BattleResultsFbStart(builder)
         BattleResultsFb.BattleResultsFbAddMonstersDefeated(builder, monstersDefeated)
@@ -347,7 +347,7 @@ class Battle:
         BattleEventsFb.BattleEventsFbStartEventsVector(builder, numEvents)
         for fbEventOffset in fbEventOffsets:
             builder.PrependUOffsetTRelative(fbEventOffset)
-        eventsVector = builder.EndVector(numEvents)
+        eventsVector = builder.EndVector()
 
         BattleEventsFb.BattleEventsFbStart(builder)
         BattleEventsFb.BattleEventsFbAddEvents(builder, eventsVector)
