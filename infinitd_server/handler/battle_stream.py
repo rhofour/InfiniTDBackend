@@ -9,7 +9,7 @@ class BattleStreamHandler(SseStreamHandler):
         self.queues = game.battleQueues
 
     async def initialState(self, name: str):
-        self.logInfo(f"Attemting to stream battle: {name}")
+        self.logInfo(f"Attempting to stream battle: {name}")
         initialState = self.game.joinBattle(name)
         self.logInfo(f"Initial state: {initialState}")
         return initialState
