@@ -1,5 +1,6 @@
 import asyncio
 from time import time
+import traceback
 from typing import Optional, ClassVar, Awaitable, Callable, List, Dict
 
 import firebase_admin.auth
@@ -41,6 +42,14 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def options(self, *args):
         pass
+    
+    def write_error(self, status_code: int, **kwargs):
+        if kwargs["exc_info"]:
+            # Automatically log uncaught exceptions in request handlers as errors with tracebacks.
+            etype, value, tb = kwargs["exc_info"]
+            stacktraceMsg = ''.join(traceback.format_exception(etype, value, tb, limit=3))
+            self.logError(f"{status_code} error: {stacktraceMsg}")
+        super().write_error(status_code, **kwargs)
 
     def reply401(self):
         self.set_status(401) # Unauthorized
