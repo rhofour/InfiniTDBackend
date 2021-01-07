@@ -48,13 +48,18 @@ class Logger:
         );""")
         self.conn.commit()
 
-    def getLogs(self) -> List[LogEntry]:
+    def getLogs(self, minVerbosity=0, maxVerbosity=3) -> List[LogEntry]:
         res = self.conn.execute("""
         SELECT time, uid, requestId, handler, msg, verbosity
         FROM logs
+        WHERE TRUE
+            AND verbosity >= :minVerbosity AND verbosity <= :maxVerbosity
         ORDER BY time DESC
         LIMIT 100
-        """)
+        """, {
+            'minVerbosity': minVerbosity,
+            'maxVerbosity': maxVerbosity,
+        })
         def extractLogEntry(row) -> LogEntry:
             return LogEntry(
                     time = row[0],

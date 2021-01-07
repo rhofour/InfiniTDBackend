@@ -15,6 +15,7 @@ class BaseHandler(tornado.web.RequestHandler):
     game: Game
     requestId: int
     nextRequestId: ClassVar[int] = 0
+    uid: Optional[str] = None
 
     def initialize(self, game):
         self.game = game
@@ -50,7 +51,10 @@ class BaseHandler(tornado.web.RequestHandler):
         if self.request.headers['authorization'][:7] == "Bearer ":
             token = self.request.headers['authorization'][7:]
             try:
-                return firebase_admin.auth.verify_id_token(token)
+                decodedToken = firebase_admin.auth.verify_id_token(token)
+                if decodedToken["uid"]:
+                    self.uid = decodedToken["uid"]
+                return decodedToken
             except Exception as e:
                 self.logWarn(f"Authorization error: {e}")
         self.reply401()
@@ -65,20 +69,20 @@ class BaseHandler(tornado.web.RequestHandler):
                 IOLoop.current().add_callback(awaitCallback)
             return self.game.getMutableUserContext(uid = uid, expectedName = expectedName, addAwaitable = addAwaitable)
         except UserMatchingError as e:
-            self.logWarn(str(e), uid=uid)
+            self.logWarn(str(e))
             self.set_status(403) # Forbidden
             raise tornado.web.Finish()
         except ValueError as e:
-            self.logWarn(str(e), uid=uid)
+            self.logWarn(str(e))
             self.set_status(404) # Not found
             raise tornado.web.Finish()
 
     # Logging methods
-    def logInfo(self, msg: str, uid: Optional[str] = None):
-        self.logger.info(self.__class__.__name__, self.requestId, msg, uid=uid)
+    def logInfo(self, msg: str):
+        self.logger.info(self.__class__.__name__, self.requestId, msg, uid=self.uid)
 
-    def logWarn(self, msg: str, uid: Optional[str] = None):
-        self.logger.warn(self.__class__.__name__, self.requestId, msg, uid=uid)
+    def logWarn(self, msg: str):
+        self.logger.warn(self.__class__.__name__, self.requestId, msg, uid=self.uid)
 
-    def logError(self, msg: str, uid: Optional[str] = None):
-        self.logger.error(self.__class__.__name__, self.requestId, msg, uid=uid)
+    def logError(self, msg: str):
+        self.logger.error(self.__class__.__name__, self.requestId, msg, uid=self.uid)

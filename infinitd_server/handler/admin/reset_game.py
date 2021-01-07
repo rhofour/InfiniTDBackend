@@ -12,7 +12,7 @@ class ResetGameHandler(BaseHandler):
         try:
             await self.game.resetGameData(uid)
         except UserNotAdminException:
-            self.logWarn("Game reset attempted by non-admin user.", uid=uid)
+            self.logWarn("Game reset attempted by non-admin user.")
             self.set_status(403) # Forbidden
             raise tornado.web.Finish()
-        self.logInfo("Game reset successfully.", uid=uid)
+        self.logInfo("Game reset successfully.")

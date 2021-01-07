@@ -29,12 +29,12 @@ class WaveHandler(BaseHandler):
             try:
                 self.game.addToWave(user, monsterId=monsterId)
             except ValueError as e:
-                self.logWarn("Wave ValueError: " + repr(e), uid=user.uid)
+                self.logWarn("Wave ValueError: " + repr(e))
                 self.set_status(400) # Bad request
                 self.write(str(e))
                 return
             except UserInBattleException  as e:
-                self.logWarn("Wave UserInBattleException: " + repr(e), uid=user.uid)
+                self.logWarn("Wave UserInBattleException: " + repr(e))
                 self.set_status(409) # Conflict
                 self.write(str(e))
                 return
@@ -48,7 +48,7 @@ class WaveHandler(BaseHandler):
             try:
                 self.game.clearWave(user)
             except (ValueError, UserInBattleException)  as e:
-                self.logWarn("Wave DELETE error: " + repr(e), uid=user.uid)
+                self.logWarn("Wave DELETE error: " + repr(e))
                 self.set_status(404) # Not found
                 self.write(str(e))
                 return
