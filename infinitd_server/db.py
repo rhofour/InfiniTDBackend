@@ -160,16 +160,15 @@ class Db:
         return True
 
     async def accumulateGold(self):
-        self.enterTransaction()
         """Updates gold and accumulatedGold for every user based on goldPerMinute."""
-        res = self.conn.execute("SELECT name FROM users WHERE inBattle == 0;")
-        namesUpdated = [row[0] for row in res]
-        self.conn.execute("""
-        UPDATE USERS SET
-            accumulatedGold = accumulatedGold + goldPerMinute,
-            gold = gold + goldPerMinute
-        WHERE inBattle == 0;""");
-        self.leaveTransaction()
+        with self.transactionContext():
+            res = self.conn.execute("SELECT name FROM users WHERE inBattle == 0;")
+            namesUpdated = [row[0] for row in res]
+            self.conn.execute("""
+            UPDATE USERS SET
+                accumulatedGold = accumulatedGold + goldPerMinute,
+                gold = gold + goldPerMinute
+            WHERE inBattle == 0;""");
 
         await self.__updateUserListeners(namesUpdated)
 
@@ -340,7 +339,7 @@ class Db:
         try:
             yield
         finally:
-            self.exitTransaction()
+            self.leaveTransaction()
 
     def getMutableUserContext(self, uid: str, addAwaitable) -> Optional['MutableUserContext']:
         user = self.getUnfrozenUserByUid(uid)

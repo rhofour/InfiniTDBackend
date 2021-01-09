@@ -39,7 +39,7 @@ class Logger:
     def __create_tables(self):
         self.conn.execute("""
         CREATE TABLE IF NOT EXISTS logs(
-            time TEXT,
+            time DATETIME DEFAULT(STRFTIME('%Y-%m-%d %H:%M:%f', 'NOW')),
             uid TEXT,
             requestId INTEGER,
             handler TEXT,
@@ -85,8 +85,8 @@ class Logger:
             timeStr = strftime("%a %H:%M:%S")
             print(f"{timeStr} {handler} {requestId}: {msg}")
         self.conn.execute(
-                "INSERT INTO logs (time, uid, requestId, handler, msg, verbosity) "
-                "VALUES (datetime('now'), :uid, :requestId, :handler, :msg, :verbosity);",
+                "INSERT INTO logs (uid, requestId, handler, msg, verbosity) "
+                "VALUES (:uid, :requestId, :handler, :msg, :verbosity);",
                 {
                     "uid": uid if uid else "NULL",
                     "requestId": requestId,
