@@ -11,6 +11,27 @@ using rapidjson::Document;
 using rapidjson::Value;
 using rapidjson::SizeType;
 
+double GetDoubleOrDie(const Value& val, const char* fieldName) {
+  Value::ConstMemberIterator itr = val.FindMember(fieldName);
+  assert(itr != val.MemberEnd());
+  assert(itr->value.IsDouble());
+  return itr->value.GetDouble();
+}
+
+int GetIntOrDie(const Value& val, const char* fieldName) {
+  Value::ConstMemberIterator itr = val.FindMember(fieldName);
+  assert(itr != val.MemberEnd());
+  assert(itr->value.IsInt());
+  return itr->value.GetInt();
+}
+
+uint16_t GetUintOrDie(const Value& val, const char* fieldName) {
+  Value::ConstMemberIterator itr = val.FindMember(fieldName);
+  assert(itr != val.MemberEnd());
+  assert(itr->value.IsUint());
+  return itr->value.GetUint();
+}
+
 class PlayfieldConfig {
  public:
   int numRows;
@@ -21,12 +42,12 @@ class PlayfieldConfig {
   PlayfieldConfig() {}
   PlayfieldConfig(const Value &val) {
     assert(val.IsObject());
-    this->numRows = val["numRows"].GetInt();
-    this->numCols = val["numCols"].GetInt();
-    this->enemyEnter = val["monsterEnter"]["row"].GetInt() * numCols +
-      val["monsterEnter"]["col"].GetInt();
-    this->enemyExit = val["monsterExit"]["row"].GetInt() * numCols +
-      val["monsterExit"]["col"].GetInt();
+    this->numRows = GetIntOrDie(val, "numRows");
+    this->numCols = GetIntOrDie(val, "numCols");
+    this->enemyEnter = GetIntOrDie(val["monsterEnter"], "row") * numCols +
+      GetIntOrDie(val["monsterEnter"], "col");
+    this->enemyExit = GetIntOrDie(val["monsterExit"], "row") * numCols +
+      GetIntOrDie(val["monsterExit"], "col");
   }
 };
 
@@ -36,15 +57,15 @@ class TowerConfig {
   float range;
   float damage;
   float projectileSpeed;
-  int projectileId;
+  uint16_t id;
 
   TowerConfig(const Value& val) {
     assert(val.IsObject());
-    this->firingRate = val["firingRate"].GetDouble();
-    this->range = val["range"].GetDouble();
-    this->damage = val["damage"].GetDouble();
-    this->projectileSpeed = val["projectileSpeed"].GetDouble();
-    this->projectileId = val["projectileId"].GetInt();
+    this->firingRate = GetDoubleOrDie(val, "firingRate");
+    this->range = GetDoubleOrDie(val, "range");
+    this->damage = GetDoubleOrDie(val, "damage");
+    this->projectileSpeed = GetDoubleOrDie(val, "projectileSpeed");
+    this->id = GetUintOrDie(val, "id");
   }
 };
 
@@ -58,19 +79,18 @@ class EnemyConfig {
 
   EnemyConfig(const Value& val) {
     assert(val.IsObject());
-    this->health = val["health"].GetDouble();
-    this->speed = val["speed"].GetDouble();
-    this->bounty = val["health"].GetDouble();
-    this->size = val["health"].GetDouble();
-    this->id = val["id"].GetUint();
+    this->health = GetDoubleOrDie(val, "health");
+    this->speed = GetDoubleOrDie(val, "speed");
+    this->bounty = GetDoubleOrDie(val, "bounty");
+    this->id = GetUintOrDie(val, "id");
   }
 };
 
 class GameConfig {
  public:
   PlayfieldConfig playfield;
-  unordered_map<int, const TowerConfig> towers;
-  unordered_map<int, const EnemyConfig> enemies;
+  unordered_map<uint16_t, const TowerConfig> towers;
+  unordered_map<uint16_t, const EnemyConfig> enemies;
 
   GameConfig() {}
   GameConfig(const Document& jsonDoc) {
@@ -79,12 +99,12 @@ class GameConfig {
     this->playfield = PlayfieldConfig(jsonDoc["playfield"]);
     const Value& towers = jsonDoc["towers"];
     for (SizeType i = 0; i < towers.Size(); i++) {
-      const int id = towers[i]["id"].GetInt();
+      const uint16_t id = GetUintOrDie(towers[i], "id");
       this->towers.insert({id, TowerConfig(towers[i])});
     }
     const Value& enemies = jsonDoc["monsters"];
     for (SizeType i = 0; i < enemies.Size(); i++) {
-      const int id = enemies[i]["id"].GetUint();
+      const uint16_t id = GetUintOrDie(enemies[i], "id");
       this->enemies.insert({id, EnemyConfig(enemies[i])});
     }
   }

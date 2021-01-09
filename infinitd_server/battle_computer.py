@@ -9,7 +9,7 @@ import flatbuffers
 
 from infinitd_server.battle import ObjectType, EventType, MoveEvent, DeleteEvent, DamageEvent, BattleResults, Battle, FpCellPos, BattleEvent, FpRow, FpCol, BattleCalcResults
 from infinitd_server.battleground_state import BattlegroundState, BgTowerState
-from infinitd_server.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ProjectileConfig, ConfigId, MonstersDefeated
+from infinitd_server.game_config import GameConfig, TowerConfig, CellPos, MonsterConfig, ConfigId, MonstersDefeated
 from infinitd_server.paths import PathMap, makePathMap, compressPath
 from infinitd_server.cpp_battle_computer.battle_computer import BattleComputer as CppBattleComputer
 import  InfiniTDFb.BattleCalcResultsFb as BattleCalcResultsFb

@@ -73,7 +73,6 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
             st.integers(0, len(possibleMonsterIds)-1),
             min_size=1))
         wave: List[ConfigId] = [possibleMonsterIds[i] for i in monsterIndices]
-        print("Wave: ", wave)
 
         battleComputer = BattleComputer(gameConfig = self.gameConfig)
 
@@ -117,6 +116,8 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                     projFiredFrom[event.startPos].append(event)
                 if event.id not in objDataById:
                     objDataById[event.id] = ObjectData(configId=event.configId, objType=event.objType)
+                    if event.objType == ObjectType.MONSTER:
+                        enemiesInOrder.append(event.id)
                 else:
                     # Ensure config ID and object type don't change for any objects.
                     self.assertEqual(event.configId, objDataById[event.id].configId)
@@ -177,7 +178,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 self.assertAlmostEqual(towerConfig.projectileSpeed, projSpeed, places=3)
 
                 # Check that projectile config ID matches.
-                self.assertEqual(towerConfig.projectileId, event.configId)
+                self.assertEqual(towerConfig.id, event.configId)
                 # pytype: enable=attribute-error
 
         enemiesSeen = 0

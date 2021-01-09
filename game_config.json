@@ -44,7 +44,8 @@
       "range": 3.0,
       "damage": 2.0,
       "projectileSpeed": 2.0,
-      "projectileId": 0
+      "projectileUrl": "static/PaperArrow.png",
+      "projectileSize": 64
     },
     {
       "id": 1,
@@ -55,7 +56,8 @@
       "range": 1.5,
       "damage": 1.5,
       "projectileSpeed": 2.0,
-      "projectileId": 1
+      "projectileUrl": "static/Poke.png",
+      "projectileSize": 48
     },
     {
       "id": 2,
@@ -66,7 +68,8 @@
       "range": 2.5,
       "damage": 15.0,
       "projectileSpeed": 1.0,
-      "projectileId": 2
+      "projectileUrl": "static/Brick.png",
+      "projectileSize": 48
     },
     {
       "id": 3,
@@ -77,7 +80,8 @@
       "range": 3.5,
       "damage": 4.0,
       "projectileSpeed": 2.0,
-      "projectileId": 3
+      "projectileUrl": "static/BambooArrow.png",
+      "projectileSize": 64
     },
     {
       "id": 4,
@@ -88,7 +92,8 @@
       "range": 1.5,
       "damage": 6.0,
       "projectileSpeed": 2.0,
-      "projectileId": 4
+      "projectileUrl": "static/Slap.png",
+      "projectileSize": 48
     },
     {
       "id": 5,
@@ -99,39 +104,8 @@
       "range": 3.0,
       "damage": 50.0,
       "projectileSpeed": 1.0,
-      "projectileId": 5
-    }
-  ],
-  "projectiles": [
-    {
-      "id": 0,
-      "url": "static/PaperArrow.png",
-      "size": 64
-    },
-    {
-      "id": 1,
-      "url": "static/Poke.png",
-      "size": 48
-    },
-    {
-      "id": 2,
-      "url": "static/Brick.png",
-      "size": 48
-    },
-    {
-      "id": 3,
-      "url": "static/BambooArrow.png",
-      "size": 64
-    },
-    {
-      "id": 4,
-      "url": "static/Slap.png",
-      "size": 48
-    },
-    {
-      "id": 5,
-      "url": "static/BowlingBall.png",
-      "size": 48
+      "projectileUrl": "static/BowlingBall.png",
+      "projectileSize": 48
     }
   ],
   "monsters": [

@@ -187,7 +187,7 @@ void FireTowers(float gameTime, vector<TowerState> &towers, vector<EnemyState> &
       MoveEventFbT moveEvent;
       moveEvent.obj_type = ObjectTypeFb::ObjectTypeFb_PROJECTILE;
       moveEvent.id = nextId++;
-      moveEvent.config_id = tower.config.projectileId;
+      moveEvent.config_id = tower.config.id;
       moveEvent.start_time = tower.lastFired;
       moveEvent.end_time = gameTime;
       moveEvent.start_pos = tower.pos.toFp();
@@ -229,7 +229,6 @@ string CppBattleComputer::ComputeBattle(
     vector<int> wave,
     vector<vector<CppCellPos>> paths) {
   const int numRows = this->gameConfig.playfield.numRows;
-  const int numCols = this->gameConfig.playfield.numCols;
   CppCellPos enemyEnter(
     this->gameConfig.playfield.enemyEnter / numRows,
     this->gameConfig.playfield.enemyEnter % numRows
