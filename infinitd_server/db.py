@@ -326,7 +326,6 @@ class Db:
             addAwaitable(self.__updateBattlegroundListeners(user.name))
 
     def enterTransaction(self):
-        assert self.conn.in_transaction is False
         self.conn.execute("BEGIN IMMEDIATE")
 
     def leaveTransaction(self):

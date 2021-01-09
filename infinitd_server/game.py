@@ -175,6 +175,7 @@ class Game:
             battle = self._db.getOrMakeBattle(user.user, user.user, handler=handler, requestId=requestId)
         except BattleCalculationException as e:
             self._db.enterTransaction()
+            # Prevent a user from getting stuck in a battle
             user.inBattle = False
             raise e
 
