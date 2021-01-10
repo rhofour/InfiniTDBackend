@@ -33,7 +33,10 @@ class UserMatchingError(Exception):
     def __str__(self):
         return f"Expected username {self.expectedName}, got username {self.actualName}."
 
+GOLD_EPSILON = 0.09 # Handle floating point errors by being slightly lenient on the client
+
 class Game:
+
     gameConfig: GameConfig
     battleQueues: SseQueues
     battlegroundQueues: SseQueues
@@ -99,7 +102,7 @@ class Game:
         if user.inBattle:
             raise UserInBattleException()
 
-        if user.gold < towerConfig.cost:
+        if user.gold + GOLD_EPSILON < towerConfig.cost:
             raise UserHasInsufficientGoldException(
                     f"{towerConfig.name} costs {towerConfig.cost}, but {user.name} only has {user.gold} gold.")
 
