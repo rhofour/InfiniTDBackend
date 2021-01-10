@@ -44,8 +44,18 @@ class BuildHandler(BaseHandler):
 
             try:
                 self.game.buildTower(user = user, row = row, col = col, towerId = towerId)
-            except (ValueError, UserInBattleException, UserHasInsufficientGoldException) as e:
+            except UserInBattleException as e:
                 self.logInfo("BuildHandler error: " + repr(e))
+                self.set_status(409) # Conflict
+                self.write("Cannot build while in battle.")
+                return
+            except UserHasInsufficientGoldException as e:
+                self.logInfo("BuildHandler error: " + repr(e))
+                self.set_status(409) # Conflict
+                self.write("Insufficient gold to build tower.")
+                return
+            except ValueError as e:
+                self.logWarn("BuildHandler error: " + repr(e))
                 self.set_status(409) # Conflict
                 self.write(str(e))
                 return
