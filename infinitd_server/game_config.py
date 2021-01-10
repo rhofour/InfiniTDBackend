@@ -66,6 +66,7 @@ class TowerConfig(IdentifiedImage):
     projectileSpeed: float
     projectileUrl: Url
     projectileSize: int
+    projectileRotate: bool = False
 
 @attr.s(frozen=True, auto_attribs=True)
 class MonsterConfig(IdentifiedImage):

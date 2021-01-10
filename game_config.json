@@ -45,7 +45,8 @@
       "damage": 2.0,
       "projectileSpeed": 2.0,
       "projectileUrl": "static/PaperArrow.png",
-      "projectileSize": 64
+      "projectileSize": 64,
+      "projectileRotate": true
     },
     {
       "id": 1,
@@ -57,7 +58,8 @@
       "damage": 1.5,
       "projectileSpeed": 2.0,
       "projectileUrl": "static/Poke.png",
-      "projectileSize": 48
+      "projectileSize": 48,
+      "projectileRotate": true
     },
     {
       "id": 2,
@@ -81,7 +83,8 @@
       "damage": 4.0,
       "projectileSpeed": 2.0,
       "projectileUrl": "static/BambooArrow.png",
-      "projectileSize": 64
+      "projectileSize": 64,
+      "projectileRotate": true
     },
     {
       "id": 4,
@@ -93,7 +96,8 @@
       "damage": 6.0,
       "projectileSpeed": 2.0,
       "projectileUrl": "static/Slap.png",
-      "projectileSize": 48
+      "projectileSize": 48,
+      "projectileRotate": true
     },
     {
       "id": 5,
