@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from typing import List, Optional
 from copy import deepcopy
+import sqlite3
 
 import attr
 
@@ -33,11 +34,13 @@ class FrozenUser(User):
 class MutableUser:
     _originalUser: User
     _user: User
+    conn: Optional[sqlite3.Connection]
 
     # Should only be made from MutableUserContext.
-    def __init__(self, user: User):
+    def __init__(self, user: User, conn: Optional[sqlite3.Connection]):
         super(MutableUser, self).__setattr__('_originalUser', deepcopy(user))
         super(MutableUser, self).__setattr__('_user', deepcopy(user))
+        super(MutableUser, self).__setattr__('conn', conn)
 
     @property
     def battlegroundModified(self):
@@ -62,6 +65,8 @@ class MutableUser:
     def __getattr__(self, name):
         if name == "user": # Make user property read-only
             return self._user
+        if name == "conn":
+            return self.conn
         return getattr(self._user, name)
 
     def __setattr__(self, name, value):

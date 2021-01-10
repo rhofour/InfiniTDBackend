@@ -17,7 +17,7 @@ class TestMutableUser(unittest.TestCase):
                 wave = [],
                 battleground = self.battleground,
                 )
-        self.mutableUser = MutableUser(self.user)
+        self.mutableUser = MutableUser(self.user, None)
 
     def test_noChange(self):
         self.assertFalse(self.mutableUser.battlegroundModified)

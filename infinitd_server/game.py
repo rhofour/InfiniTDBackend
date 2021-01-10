@@ -169,21 +169,23 @@ class Game:
             awaitables.append(a)
         self._db.updateUser(user, addAwaitable=addAwaitable)
         await asyncio.wait(awaitables)
-        self._db.leaveTransaction()
+        self._db.leaveTransaction(user.conn)
 
         try:
             battle = self._db.getOrMakeBattle(user.user, user.user, handler=handler, requestId=requestId)
         except BattleCalculationException as e:
-            self._db.enterTransaction()
+            self._db.enterTransaction(user.conn)
             # Prevent a user from getting stuck in a battle
             user.inBattle = False
             raise e
 
         # We need this because the user context is expecting to be in a
         # transaction at the end.
-        self._db.enterTransaction()
+        self._db.enterTransaction(user.conn)
+
         async def setUserNotInBattleCallback():
             await self._db.setUserNotInBattle(uid=user.uid, name=user.name)
+
         async def updateWithBattleResults(results: BattleResults):
             awaitables = []
             userContext = self._db.getMutableUserContext(user.uid, lambda x: awaitables.append(x))
