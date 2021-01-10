@@ -207,8 +207,12 @@ class Game:
                 endCallback = setUserNotInBattleCallback,
                 handler = handler, requestId = requestId)
 
+    def getBattle(self, attacker: FrozenUserSummary, defender: FrozenUserSummary) -> Optional[Battle]:
+        """Attempts to get a battle if it exists."""
+        with self._db.makeConnection() as conn:
+            return self._db.getBattle(attacker, defender, conn)
+
     def getOrMakeRecordedBattle(self, attackerName: str, defenderName: str, handler: str, requestId: int) -> Battle:
-        self._db.enterTransaction()
         attacker = self._db.getUserSummaryByName(attackerName)
         if attacker is None:
             raise ValueError(f"Unknown attacker: {attackerName}")
@@ -217,7 +221,6 @@ class Game:
             raise ValueError(f"Unknown defender: {defenderName}")
         battle = self._db.getOrMakeBattle(attackingUser = attacker, defendingUser= defender,
                 handler = handler, requestId = requestId)
-        self._db.leaveTransaction()
         return battle
 
     async def stopBattle(self, user: MutableUser):

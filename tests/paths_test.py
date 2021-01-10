@@ -20,8 +20,7 @@ class TestGetRandomPath(unittest.TestCase):
 
         for i in range(10):
             with self.subTest(seed=i):
-                path = pathMap.getRandomPath(
-                        start, Random(i)) # pytype: disable=attribute-error
+                path = pathMap.getRandomPath(start, Random(i)) # pytype: disable=attribute-error
                 self.assertEqual(len(path), 3)
                 self.assertEqual(path[0], start)
                 self.assertEqual(path[-1], end)
@@ -43,8 +42,7 @@ class TestGetRandomPath(unittest.TestCase):
 
         for i in range(10):
             with self.subTest(seed=i):
-                path = pathMap.getRandomPath(
-                        start, Random(i)) # pytype: disable=attribute-error
+                path = pathMap.getRandomPath(start, Random(i)) # pytype: disable=attribute-error
                 self.assertEqual(len(path), 9)
                 self.assertEqual(path[0], start)
                 self.assertEqual(path[-1], end)
@@ -70,8 +68,7 @@ class TestGetRandomPath(unittest.TestCase):
 
         for i in range(10):
             with self.subTest(seed=i):
-                path = pathMap.getRandomPath(
-                        start, Random(i)) # pytype: disable=attribute-error
+                path = pathMap.getRandomPath(start, Random(i)) # pytype: disable=attribute-error
                 self.assertEqual(len(path), 9)
                 self.assertEqual(path[0], start)
                 self.assertEqual(path[-1], end)

@@ -24,6 +24,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
         self.initialBattleground = BattlegroundState.empty(self.gameConfig)
         self.initialBattleground.towers.towers[0][1] = BgTowerState(2)
         self.initialBattleground.towers.towers[1][2] = BgTowerState(1)
+
         def waitOnAwaitable(x):
             asyncio.get_event_loop().run_until_complete(x)
         with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
@@ -32,6 +33,10 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
             user.goldPerMinute = 2.5
             user.battleground = self.initialBattleground
             user.wave = [0, 1, 0]
+            user.inBattle = True # So we can calculate a battle
+
+        user = self.game.getUserSummaryByName("bob")
+        self.initialBattle = self.game.getOrMakeRecordedBattle("bob", "bob", "TestResetGameData", 0)
 
         self.game.register(uid="admin_uid", name="joe", admin=True)
 
@@ -43,6 +48,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
             resp = self.fetch("/admin/resetGame", method="POST", allow_nonstandard_methods=True)
         battleground = self.game.getBattleground("bob")
         user = self.game.getUserSummaryByName("bob")
+        battle = self.game.getBattle(user, user)
 
         self.assertEqual(resp.code, 200)
         expectedBg = BattlegroundState.empty(self.gameConfig)
@@ -51,6 +57,8 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(user.accumulatedGold, 100) # pytype: disable=attribute-error
         self.assertEqual(user.goldPerMinute, 1.0) # pytype: disable=attribute-error
         self.assertEqual(user.wave, []) # pytype: disable=attribute-error
+        self.assertFalse(user.inBattle)
+        self.assertIsNone(battle)
 
     def test_nonAdminForbidden(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
@@ -58,6 +66,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
             resp = self.fetch("/admin/resetGame", method="POST", allow_nonstandard_methods=True)
         battleground = self.game.getBattleground("bob")
         user = self.game.getUserSummaryByName("bob")
+        battle = self.game.getBattle(user, user)
 
         self.assertEqual(resp.code, 403)
         self.assertEqual(battleground, self.initialBattleground)
@@ -65,6 +74,8 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(user.accumulatedGold, 110) # pytype: disable=attribute-error
         self.assertEqual(user.goldPerMinute, 2.5) # pytype: disable=attribute-error
         self.assertEqual(user.wave, [0, 1, 0]) # pytype: disable=attribute-error
+        self.assertTrue(user.inBattle)
+        self.assertEqual(battle, self.initialBattle)
 
     def tearDown(self):
         super().tearDown()

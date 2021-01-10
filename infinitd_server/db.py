@@ -232,6 +232,22 @@ class Db:
             conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid;", { "uid": uid })
         await self.__updateUserListeners([name])
 
+    def getBattle(self, attackingUser: FrozenUserSummary, defendingUser: FrozenUserSummary, conn: sqlite3.Connection) -> Optional[Battle]:
+        res = conn.execute(
+            "SELECT events, results FROM battles "
+            "WHERE attacking_uid = :attackingUid AND defending_uid = :defendingUid;",
+            { "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid }
+        ).fetchone()
+
+        if res is None:
+            return None
+
+        battleName = f"vs. {attackingUser.name}"
+        events = Battle.decodeEventsFb(res[0])
+        results = BattleResults.decodeFb(res[1])
+        battle = Battle(events = events, name = battleName, results = results)
+        return battle
+
     def getOrMakeBattle(self, attackingUser: UserSummary, defendingUser: User, handler: str, requestId: int) -> Battle:
         """Returns a battle between attackingUser and defendingUser, generating it if necessary"""
         # TODO: Figure out how to prevent the attacker's wave or the defender's battleground from changing
@@ -241,18 +257,10 @@ class Db:
         assert(attackingUser.uid == defendingUser.uid and attackingUser.inBattle)
 
         with self.makeConnection() as conn:
-            res = conn.execute(
-                "SELECT events, results FROM battles "
-                "WHERE attacking_uid = :attackingUid AND defending_uid = :defendingUid;",
-                { "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid }
-            ).fetchone()
-            battleName = f"vs. {attackingUser.name}"
-            if res: # Battle exists
-                self.logger.info(handler, requestId, f"Found battle: {defendingUser.name} vs {attackingUser.name}")
-                events = Battle.decodeEventsFb(res[0])
-                results = BattleResults.decodeFb(res[1])
-                battle = Battle(events = events, name = battleName, results = results)
-                return battle
+            existingBattle = self.getBattle(attackingUser, defendingUser, conn)
+            if existingBattle: # Battle exists
+                self.logger.info(handler, requestId, f"Found battle: {existingBattle.name}")
+                return existingBattle
             else: # Calculate a new battle
                 self.logger.info(handler, requestId, f"Calculating new battle: {defendingUser.name} vs {attackingUser.name}")
                 battleground = defendingUser.battleground
@@ -262,6 +270,7 @@ class Db:
                 events = Battle.decodeEventsFb(battleCalcResults.fb.EventsAsNumpy().tobytes())
                 #eventsFb = battleCalcResults.fb.EventsNestedRoot()
                 #events = Battle.decodeEventsFb(eventsFb._tab.Bytes, eventsFb._tab.Pos)
+                battleName = f"vs. {attackingUser.name}"
                 battle = Battle(events = events, name = battleName,
                         results = battleCalcResults.results)
                 conn.execute(
@@ -358,13 +367,14 @@ class Db:
             conn.execute(
                 "UPDATE users SET battleground = :emptyBattleground, "
                 "gold = :initialGold, accumulatedGold = :initialGold,"
-                "goldPerMinute = :goldPerMinute, wave = '[]'",
-                {
+                "goldPerMinute = :goldPerMinute, wave = '[]',"
+                "inBattle = 0"
+                , {
                     "emptyBattleground": emptyBattleground.to_json(),
                     "initialGold": self.gameConfig.misc.startingGold,
                     "goldPerMinute": self.gameConfig.misc.minGoldPerMinute,
                 })
-            self.resetBattles() # TODO: Test for this.
+            self.resetBattles()
 
         await self.__updateAllListeners()
 
