@@ -43,15 +43,13 @@ class MonsterState:
     distTraveled: float = 0.0
 
 class BattleComputer:
-    startingSeed: int
     gameConfig: GameConfig
     gameTickSecs: float # Period of the gameplay clock
     debug: bool
     cppBattleComputer: CppBattleComputer
 
-    def __init__(self, gameConfig: GameConfig, seed: int = 42, gameTickSecs: float = 0.01, debug = False):
+    def __init__(self, gameConfig: GameConfig, gameTickSecs: float = 0.01, debug = False):
         self.gameConfig = gameConfig
-        self.startingSeed = seed
         self.gameTickSecs = gameTickSecs
         self.debug = debug
         jsonText = json.dumps(cattr.unstructure(gameConfig.gameConfigData))
@@ -107,8 +105,18 @@ class BattleComputer:
         if not pathMap:
             raise ValueError("Cannot compute battle with no path.")
 
+        # Make any changes to the wave or towers change the paths enemies take.
+        flattenedBattleground = []
+        for row in battleground.towers.towers:
+            for maybeTower in row:
+                if maybeTower is None:
+                    flattenedBattleground.append(-1)
+                else:
+                    flattenedBattleground.append(maybeTower.id)
+        battlegroundWaveTuple = (tuple(flattenedBattleground), tuple(wave))
+        print(battlegroundWaveTuple)
+        rand = Random(hash(battlegroundWaveTuple))
         # Calculate paths for all enemies ahead of time.
-        rand = Random(self.startingSeed)
         paths = []
         for _ in wave:
             paths.append(compressPath(pathMap.getRandomPath(
