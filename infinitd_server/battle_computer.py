@@ -114,7 +114,6 @@ class BattleComputer:
                 else:
                     flattenedBattleground.append(maybeTower.id)
         battlegroundWaveTuple = (tuple(flattenedBattleground), tuple(wave))
-        print(battlegroundWaveTuple)
         rand = Random(hash(battlegroundWaveTuple))
         # Calculate paths for all enemies ahead of time.
         paths = []

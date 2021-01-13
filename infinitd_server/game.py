@@ -222,7 +222,7 @@ class Game:
         defender = self._db.getUserByName(defenderName)
         if defender is None:
             raise ValueError(f"Unknown defender: {defenderName}")
-        battle = self._db.getOrMakeBattle(attackingUser = attacker, defendingUser= defender,
+        battle = self._db.getOrMakeBattle(attacker = attacker, defender = defender,
                 handler = handler, requestId = requestId)
         return battle
 

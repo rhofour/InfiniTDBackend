@@ -248,41 +248,54 @@ class Db:
         battle = Battle(events = events, name = battleName, results = results)
         return battle
 
-    def getOrMakeBattle(self, attackingUser: UserSummary, defendingUser: User, handler: str, requestId: int) -> Battle:
-        """Returns a battle between attackingUser and defendingUser, generating it if necessary"""
-        # TODO: Figure out how to prevent the attacker's wave or the defender's battleground from changing
-        # while this runs.
-
-        # This is currently only safe when they are the same user and already marked in a battle.
-        assert(attackingUser.uid == defendingUser.uid and attackingUser.inBattle)
+    def getOrMakeBattle(self, attacker: UserSummary, defender: User, handler: str, requestId: int) -> Battle:
+        """Returns a battle between attacker and defender, generating it if necessary"""
 
         with self.makeConnection() as conn:
-            existingBattle = self.getBattle(attackingUser, defendingUser, conn)
+            existingBattle = self.getBattle(attacker, defender, conn)
             if existingBattle: # Battle exists
                 self.logger.info(handler, requestId, f"Found battle: {existingBattle.name}")
                 return existingBattle
-            else: # Calculate a new battle
-                self.logger.info(handler, requestId, f"Calculating new battle: {defendingUser.name} vs {attackingUser.name}")
-                battleground = defendingUser.battleground
-                if battleground is None: # This should be impossible since we know the user exists.
-                    raise ValueError(f"Cannot find battleground for {defendingUser.name}")
-                battleCalcResults = self.battleComputer.computeBattle(battleground, attackingUser.wave)
-                events = Battle.decodeEventsFb(battleCalcResults.fb.EventsAsNumpy().tobytes())
-                #eventsFb = battleCalcResults.fb.EventsNestedRoot()
-                #events = Battle.decodeEventsFb(eventsFb._tab.Bytes, eventsFb._tab.Pos)
-                battleName = f"vs. {attackingUser.name}"
-                battle = Battle(events = events, name = battleName,
-                        results = battleCalcResults.results)
+
+        # Calculate a new battle
+        self.logger.info(handler, requestId, f"Calculating new battle: {defender.name} vs {attacker.name}")
+        if defender.battleground is None: # This should be impossible since we know the user exists.
+            raise ValueError(f"Cannot find battleground for {defender.name}")
+        battleCalcResults = self.battleComputer.computeBattle(defender.battleground, attacker.wave)
+        events = Battle.fbToEvents(battleCalcResults.fb.EventsNestedRoot())
+        battleName = f"vs. {attacker.name}"
+        battle = Battle(events = events, name = battleName,
+                results = battleCalcResults.results)
+        # Check if attacker wave or defender battleground changed since the start.
+        with self.makeConnection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            safeToWrite = True
+            latestAttacker = self.getUserSummaryByUid(attacker.uid)
+            if latestAttacker.wave != attacker.wave:
+                safeToWrite = False
+                self.logger.info(handler, requestId, f"Attacker {attacker.name}'s wave has changed. Recalculating.")
+            if safeToWrite:
+                latestDefender = self.getUserByUid(defender.uid)
+                if latestDefender.battleground != defender.battleground:
+                    safeToWrite = False
+                    self.logger.info(handler, requestId, f"Defender {defender.name}'s battleground has changed. Recalculating.")
+            if safeToWrite:
+                # We can safely write the battle.
                 conn.execute(
                     "INSERT into battles (attacking_uid, defending_uid, events, results) "
                     "VALUES (:attackingUid, :defendingUid, :events, :results);",
                     {
-                        "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid,
+                        "attackingUid": attacker.uid, "defendingUid": defender.uid,
                         "events": battleCalcResults.fb.EventsAsNumpy().tobytes(),
                         "results": battleCalcResults.results.encodeFb(),
                     }
                 )
                 return battle
+
+        # If we've gotten here it means either the attacking wave or defending battleground changed.
+        # Retry with the latest attacker and defender information.
+        return self.getOrMakeBattle(attacker=latestAttacker, defender=latestDefender,
+            handler=handler, requestId=requestId)
 
     def clearInBattle(self):
         with self.makeConnection() as conn:
