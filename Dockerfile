@@ -26,4 +26,7 @@ COPY static ${PROJECT_DIR}/static
 RUN make all
 
 EXPOSE 8794/tcp
-CMD ["pipenv", "run", "python", "-u", "-m", "infinitd_server", "--verbosity=2", "--reset-battles", "--debug"]
+ENV DOMAIN=infinitd.rofer.me
+CMD [   "pipenv", "run", "python", "-u", "-m", "infinitd_server", "--verbosity=2", "--reset-battles", \
+        "--debug", "--ssl_cert", "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem", \
+        "--ssl_key", "/etc/letsencrypt/live/${DOMAIN}/privkey.pem" ]

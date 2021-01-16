@@ -51,6 +51,10 @@ do
             echo "Podman : Build failed, aborting"
         fi
 
+        echo "update service file"
+        cp $deployDir/production/$systemdUnit ~/.config/systemd/user/$systemdUnit
+        systemctl --user daemon-reload
+
         echo "restart $systemdUnit"
         systemctl --user restart $systemdUnit
 

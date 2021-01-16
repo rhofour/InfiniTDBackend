@@ -4,6 +4,7 @@ import os
 from random import randrange
 import json
 from datetime import datetime, timedelta
+import ssl
 
 import cattr
 import tornado.web
@@ -52,6 +53,7 @@ def make_app(game, debug):
     firebase_admin.initialize_app(cred)
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "../static"),
+        "debug": debug,
     }
     prod_handlers = [
         (r"/users", UsersHandler, dict(game=game)),
@@ -82,6 +84,8 @@ async def main():
     parser.add_argument('-v', '--verbosity', action="store", type=int, default=0)
     parser.add_argument('-p', '--port', action="store", type=int, default=8794)
     parser.add_argument('--reset-battles', action="store_true")
+    parser.add_argument('--ssl_cert', action="store", type=str, default="localhost.crt")
+    parser.add_argument('--ssl_key', action="store", type=str, default="localhost.key")
     args = parser.parse_args()
 
     with open('game_config.json') as gameConfigFile:
@@ -96,8 +100,23 @@ async def main():
     if args.reset_battles:
         game.resetBattles()
     app = make_app(game, args.debug)
-    app.listen(args.port)
-    logger.info("startup", -1, f"Listening on port {args.port}.")
+    useSsl = True
+    if args.ssl_cert == "":
+        logger.info("startup", -1, "No SSL certificate found. Running HTTP only.")
+        useSsl = False
+    if args.ssl_key == "":
+        logger.info("startup", -1, "No SSL key found. Running HTTP only.")
+        useSsl = False
+    if useSsl:
+        sslContext = {
+            "certfile": args.ssl_cert,
+            "keyfile": args.ssl_key,
+        }
+        app.listen(args.port, ssl_options=sslContext)
+        logger.info("startup", -1, f"Listening on port {args.port} (with SSL enabled).")
+    else:
+        app.listen(args.port)
+        logger.info("startup", -1, f"Listening on port {args.port} (without SSL enabled).")
     await updateGoldEveryMinute(game)
     # I don't think this should ever happen.
     logger.warn("shutdown", -1, "Main finished.")
