@@ -171,10 +171,10 @@ class Db:
             res = conn.execute("SELECT name FROM users WHERE inBattle == 0;")
             namesUpdated = [row[0] for row in res]
             conn.execute("""
-            UPDATE USERS SET
+            UPDATE users SET
                 accumulatedGold = accumulatedGold + goldPerMinute,
                 gold = gold + goldPerMinute
-            WHERE inBattle == 0;""");
+            WHERE inBattle == 0;""")
 
         await self.__updateUserListeners(namesUpdated)
 
@@ -207,7 +207,7 @@ class Db:
     async def setInBattle(self, name: str, inBattle: bool):
         with self.makeConnection() as conn:
             conn.execute(
-                "UPDATE users SET inBattle = :inBattle WHERE name == :name",
+                "UPDATE users SET inBattle = :inBattle WHERE name == :name;",
                 {"inBattle": inBattle, "name": name})
 
         if name in self.userQueues:
@@ -390,6 +390,16 @@ class Db:
             self.resetBattles()
 
         await self.__updateAllListeners()
+    
+    def deleteAccount(self, uid: str):
+        with self.makeConnection() as conn:
+            print(f"uid: {uid}")
+            conn.execute(
+                "DELETE FROM users WHERE uid = :uid",
+                { "uid": uid })
+            conn.execute(
+                "DELETE FROM battles WHERE attacking_uid = :uid OR defending_uid = :uid",
+                { "uid": uid })
 
 class MutableUserContext:
     db: Db

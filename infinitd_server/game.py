@@ -2,6 +2,8 @@ import asyncio
 from typing import List, Optional, Awaitable, Callable
 import math
 
+import firebase_admin.auth
+
 from infinitd_server.battle import Battle, BattleResults
 from infinitd_server.battle_computer import BattleCalculationException
 from infinitd_server.battleground_state import BattlegroundState, BgTowerState
@@ -250,3 +252,7 @@ class Game:
         if not user.admin:
             raise UserNotAdminException()
         await self._db.resetGameData()
+    
+    def deleteAccount(self, uid: str):
+        self._db.deleteAccount(uid)
+        firebase_admin.auth.delete_user(uid)
