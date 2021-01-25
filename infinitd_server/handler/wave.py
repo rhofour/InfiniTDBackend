@@ -19,15 +19,15 @@ class WaveHandler(BaseHandler):
             return
         self.logInfo(f"Got POST request for wave/{name} with data {data}")
         try:
-            monsterId = data["monsterId"]
+            monsters = data["monsters"]
         except KeyError:
-            self.logWarn(f"Missing monsterId in data: {data}")
+            self.logWarn(f"Missing monsters in data: {data}")
             self.set_status(400)
             return
 
         with self.getMutableUser(expectedName=name) as user:
             try:
-                self.game.addToWave(user, monsterId=monsterId)
+                self.game.setWave(user, monsters=monsters)
             except ValueError as e:
                 self.logWarn("Wave ValueError: " + repr(e))
                 self.set_status(400) # Bad request

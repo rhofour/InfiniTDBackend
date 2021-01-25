@@ -32,7 +32,7 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
     def test_wrongUser(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/wave/phil", method="POST", body='{"monsterId": 0}')
+            resp = self.fetch("/wave/phil", method="POST", body='{"monsters": [1]}')
 
         self.assertEqual(resp.code, 403)
 
@@ -49,19 +49,19 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
     def test_unknownMonster(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/wave/bob", method="POST", body='{"monsterId": 10}')
+            resp = self.fetch("/wave/bob", method="POST", body='{"monsters": [10]}')
 
         self.assertEqual(resp.code, 400)
 
     def test_successfulPost(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/wave/bob", method="POST", body='{"monsterId": 0}')
+            resp = self.fetch("/wave/bob", method="POST", body='{"monsters": [1, 0]}')
         user = self.game.getUserSummaryByName("bob")
 
         self.assertEqual(resp.code, 201)
         self.assertIsNotNone(user)
-        self.assertListEqual(user.wave, [0]) # pytype: disable=attribute-error
+        self.assertListEqual(user.wave, [1, 0]) # pytype: disable=attribute-error
 
 class TestWaveHandlerDelete(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
@@ -74,7 +74,7 @@ class TestWaveHandlerDelete(tornado.testing.AsyncHTTPTestCase):
         def waitOnAwaitable(x):
             asyncio.get_event_loop().run_until_complete(x)
         with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
-            self.game.addToWave(user, 1)
+            self.game.setWave(user, [1])
 
         return tornado.web.Application([(r"/wave/(.*)", WaveHandler, dict(game=self.game))])
 

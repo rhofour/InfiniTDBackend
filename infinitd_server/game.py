@@ -9,7 +9,7 @@ from infinitd_server.battle_computer import BattleCalculationException
 from infinitd_server.battleground_state import BattlegroundState, BgTowerState
 from infinitd_server.battle_coordinator import BattleCoordinator
 from infinitd_server.db import Db, MutableUserContext
-from infinitd_server.game_config import GameConfig
+from infinitd_server.game_config import GameConfig, ConfigId
 from infinitd_server.logger import Logger
 from infinitd_server.sse import SseQueues
 from infinitd_server.user import User, FrozenUser, FrozenUserSummary, MutableUser
@@ -90,7 +90,10 @@ class Game:
         return mutableUserContext
 
     def register(self, uid: str, name: str, admin: bool = False) -> bool:
-        return self._db.register(uid=uid, name=name, admin=admin)
+        # Require name to be between 2-15 characters
+        if len(name) < 2 or len(name) > 15:
+            raise ValueError(f"Name must have between 2-15 character. {name} contains {len(name)}.")
+        self._db.register(uid=uid, name=name, admin=admin)
 
     def getBattleground(self, name: str) -> BattlegroundState:
         return self._db.getBattleground(name)
@@ -141,16 +144,13 @@ class Game:
         user.gold += sellAmount
         user.accumulatedGold += sellAmount
 
-    def addToWave(self, user: MutableUser, monsterId: int):
-        try:
-            monsterConfig = self.gameConfig.monsters[monsterId]
-        except KeyError:
-            raise ValueError(f"Invalid monster ID {monsterId}")
+    def setWave(self, user: MutableUser, monsters: List[ConfigId]):
+        for monsterId in monsters:
+            # Check every monster ID is known.
+            if monsterId not in self.gameConfig.monsters:
+                raise ValueError(f"Invalid monster ID {monsterId}")
 
-        if user.inBattle:
-            raise UserInBattleException()
-
-        user.wave.append(monsterId)
+        user.wave = monsters
 
     def clearWave(self, user: MutableUser):
         if user.inBattle:

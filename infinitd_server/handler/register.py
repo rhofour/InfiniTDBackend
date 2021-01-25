@@ -7,7 +7,9 @@ class RegisterHandler(BaseHandler):
     def post(self, name):
         self.logInfo("Got request for register/" + name)
         decoded_token = self.verifyAuthentication()
-        if (self.game.register(uid=decoded_token["uid"], name=name)):
-            self.set_status(201); # CREATED
-        else:
-            self.set_status(412); # Precondition Failed (assume name is already used)
+        try:
+            self.game.register(uid=decoded_token["uid"], name=name)
+            self.set_status(201) # CREATED
+        except ValueError as e:
+            self.set_status(412) # Precondition Failed (assume name is already used)
+            self.write(str(e))

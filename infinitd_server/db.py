@@ -159,11 +159,10 @@ class Db:
         except sqlite3.IntegrityError as err:
             # This is likely because the name was already taken.
             self.logger.warn("DB", -1, f"IntegrityError when registering a new user: {err}", uid=uid)
-            return False
+            raise ValueError(f"Username {name} is already taken.")
         except sqlite3.DatabaseError as err:
             self.logger.warn("DB", -1, f"DatabaseError when registering a new user: {err}", uid=uid)
-            return False
-        return True
+            raise err
 
     async def accumulateGold(self):
         """Updates gold and accumulatedGold for every user based on goldPerMinute."""
