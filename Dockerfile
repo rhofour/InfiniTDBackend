@@ -17,7 +17,7 @@ COPY Pipfile Pipfile.lock ${PROJECT_DIR}
 RUN pipenv install --deploy
 
 # Copy remaining project files.
-COPY setup.py README.rst game_config.json ${PROJECT_DIR}
+COPY setup.py README.md game_config.json ${PROJECT_DIR}
 COPY infinitd_server ${PROJECT_DIR}/infinitd_server
 COPY static ${PROJECT_DIR}/static
 
