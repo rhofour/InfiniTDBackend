@@ -64,7 +64,7 @@ def make_app(game, debug):
         (r"/register/(.*)", RegisterHandler, dict(game=game)),
         (r"/gameConfig", GameConfigHandler, dict(game=game)),
         (r"/battlegroundStream/(.*)", BattlegroundStreamHandler, dict(game=game)),
-        (r"/build/(.*)/([0-9]*)/([0-9]*)", BuildHandler, dict(game=game)),
+        (r"/build/(.*)", BuildHandler, dict(game=game)),
         (r"/sell/(.*)/([0-9]*)/([0-9]*)", SellHandler, dict(game=game)),
         (r"/wave/(.*)", WaveHandler, dict(game=game)),
         (r"/battleStream/(.*)", BattleStreamHandler, dict(game=game)),

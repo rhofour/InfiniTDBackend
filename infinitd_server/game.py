@@ -1,4 +1,5 @@
 import asyncio
+import copy
 from typing import List, Optional, Awaitable, Callable
 import math
 
@@ -98,32 +99,46 @@ class Game:
     def getBattleground(self, name: str) -> BattlegroundState:
         return self._db.getBattleground(name)
 
-    def buildTower(self, user: MutableUser, row: int, col: int, towerId: int):
-        try:
-            towerConfig = self.gameConfig.towers[towerId]
-        except IndexError:
-            raise ValueError(f"Invalid tower ID {towerId}")
-
+    def buildTowers(self, user: MutableUser, rows: int, cols: int, towerIds: int):
         if user.inBattle:
             raise UserInBattleException()
 
-        if user.gold + GOLD_EPSILON < towerConfig.cost:
+        totalCost = 0.0
+        newBattleground = copy.deepcopy(user.battleground)
+        n = len(rows)
+        for i in range(n):
+            # Assumes rows, cols, and towerIds are all the same length.
+            row = rows[i]
+            if row < 0 or row >= self.gameConfig.playfield.numRows:
+                raise ValueError(f"Got invalid row value {row}.")
+            col = cols[i]
+            if col < 0 or col >= self.gameConfig.playfield.numCols:
+                raise ValueError(f"Got invalid row value {col}.")
+            towerId = towerIds[i]
+            try:
+                towerConfig = self.gameConfig.towers.get(towerId)
+            except KeyError:
+                raise ValueError(f"Got invalid tower ID {towerId}.")
+            totalCost += towerConfig.cost
+            # Be sure to check newBattleground to catch duplicate towers in a request
+            existingTower = newBattleground.towers.towers[row][col]
+            if existingTower:
+                existingTowerName = self.gameConfig.towers[existingTower.id].name
+                raise ValueError(f"{existingTowerName} already exists at row {row}, col {col}.")
+            newBattleground.towers.towers[row][col] = BgTowerState(towerId)
+
+        if user.gold + GOLD_EPSILON < totalCost:
             raise UserHasInsufficientGoldException(
-                    f"{towerConfig.name} costs {towerConfig.cost}, but {user.name} only has {user.gold} gold.")
-
-        existingTower = user.battleground.towers.towers[row][col]
-        if existingTower:
-            existingTowerName = self.gameConfig.towers[existingTower.id].name
-            raise ValueError(f"{existingTowerName} already exists at row {row}, col {col}.")
-
-        user.battleground.towers.towers[row][col] = BgTowerState(towerId)
-        user.gold -= towerConfig.cost
+                    f"{n} towers cost {totalCost}, but {user.name} only has {user.gold} gold.")
 
         # Check if there is still a path from start to exit.
-        blocked = not pathExists(user.battleground, self.gameConfig.playfield.monsterEnter, self.gameConfig.playfield.monsterExit)
+        blocked = not pathExists(newBattleground, self.gameConfig.playfield.monsterEnter, self.gameConfig.playfield.monsterExit)
         if blocked:
-            user.reset() # Prevent us from writing back the changed user.
             raise ValueError(f"Building at {row}, {col} would block the path.")
+
+        # Actually change the user
+        user.gold -= totalCost
+        user.battleground = newBattleground
 
     def sellTower(self, user: MutableUser, row: int, col: int):
         if user.inBattle:

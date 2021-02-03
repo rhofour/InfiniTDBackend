@@ -25,19 +25,19 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
         self.game.register(uid="test_uid", name="bob")
 
-        return tornado.web.Application([
-            (r"/build/(.*)/([0-9]*)/([0-9]*)", BuildHandler,
-                dict(game=self.game))
-            ])
+        return tornado.web.Application([ (r"/build/(.*)", BuildHandler, dict(game=self.game)) ])
 
     def tearDown(self):
         super().tearDown()
         os.remove(self.dbPath)
 
-    def test_successfulBuild(self):
+    def test_successfulBuild1(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/build/bob/0/1", method="POST", body='{"towerId": 0}')
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [0], "cols": [1], "towerIds": [0]}')
         battleground = self.game.getBattleground("bob")
         user = self.game.getUserSummaryByName("bob")
 
@@ -48,20 +48,42 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertIsNotNone(user)
         self.assertEqual(user.gold, 99) # pytype: disable=attribute-error
 
+    def test_successfulBuild3(self):
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [0,1,2], "cols": [1,1,1], "towerIds": [0,0,0]}')
+        battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 201)
+        expectedBg = BattlegroundState.empty(self.gameConfig)
+        expectedBg.towers.towers[0][1] = BgTowerState(0)
+        expectedBg.towers.towers[1][1] = BgTowerState(0)
+        expectedBg.towers.towers[2][1] = BgTowerState(0)
+        self.assertEqual(battleground, expectedBg)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.gold, 97) # pytype: disable=attribute-error
+
     def test_noBody(self):
-        resp = self.fetch("/build/bob/0/1", method="POST", allow_nonstandard_methods=True)
+        resp = self.fetch("/build/bob", method="POST", allow_nonstandard_methods=True)
 
         self.assertEqual(resp.code, 400)
 
     def test_wrongBody(self):
-        resp = self.fetch("/build/bob/0/1", method="POST", body='{"wrongKey": 83}')
+        resp = self.fetch("/build/bob", method="POST", body='{"wrongKey": 83}')
 
         self.assertEqual(resp.code, 400)
 
     def test_wrongUser(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/build/phil/1/1", method="POST", body='{"towerId": 0}')
+            resp = self.fetch(
+                "/build/phil",
+                method="POST",
+                body='{"rows": [1], "cols": [1], "towerIds": [0]}')
         battleground = self.game.getBattleground("bob")
 
         self.assertEqual(resp.code, 403)
@@ -70,36 +92,91 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
     def test_outOfBounds(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/build/bob/6/2", method="POST", body='{"towerId": 0}')
-            resp2 = self.fetch("/build/bob/3/3", method="POST", body='{"towerId": 0}')
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [6], "cols": [2], "towerIds": [0]}')
+            resp2 = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [3], "cols": [3], "towerIds": [0]}')
         battleground = self.game.getBattleground("bob")
 
-        self.assertEqual(resp.code, 404)
-        self.assertEqual(resp2.code, 404)
+        self.assertEqual(resp.code, 409)
+        self.assertEqual(resp2.code, 409)
         self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
 
     def test_insufficientGold(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/build/bob/1/2", method="POST", body='{"towerId": 1}')
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [1], "cols": [2], "towerIds": [1]}')
         battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
 
         self.assertEqual(resp.code, 409)
         self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
+        self.assertEqual(user.gold, 100)
+
+    def test_insufficientGoldMultiple(self):
+        def waitOnAwaitable(x):
+            asyncio.get_event_loop().run_until_complete(x)
+        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+            user.gold = 2
+
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [1,2,3], "cols": [1,1,1], "towerIds": [0,0,0]}')
+        battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 409)
+        self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
+        self.assertEqual(user.gold, 2)
 
     def test_alreadyExists(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             # This should succeed
-            resp = self.fetch("/build/bob/2/1", method="POST", body='{"towerId": 0}')
+            self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [2], "cols": [1], "towerIds": [0]}')
             # This should fail because there already is a tower there
-            resp2 = self.fetch("/build/bob/2/1", method="POST", body='{"towerId": 2}')
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [2], "cols": [1], "towerIds": [2]}')
         battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
 
-        self.assertEqual(resp2.code, 409)
+        self.assertEqual(resp.code, 409)
         expectedBg = BattlegroundState.empty(self.gameConfig)
         expectedBg.towers.towers[2][1] = BgTowerState(0)
         self.assertEqual(battleground, expectedBg)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.gold, 99) # pytype: disable=attribute-error
+
+    def test_alreadyExistsInRequest(self):
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            # This should fail because we're trying to build the same tower twice in one request.
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [2,2], "cols": [1,1], "towerIds": [0,2]}')
+        battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 409)
+        self.assertEqual(battleground, BattlegroundState.empty(self.gameConfig))
+        self.assertIsNotNone(user)
+        self.assertEqual(user.gold, 100) # pytype: disable=attribute-error
 
     def test_blocksPath(self):
         def waitOnAwaitable(x):
@@ -111,7 +188,10 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
-            resp = self.fetch("/build/bob/0/1", method="POST", body='{"towerId": 0}')
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [0], "cols": [1], "towerIds": [0]}')
         battleground = self.game.getBattleground("bob")
         user = self.game.getUserSummaryByName("bob")
 
@@ -119,3 +199,20 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(battleground, expectedBattleground)
         self.assertIsNotNone(user)
         self.assertEqual(user.gold, expectedGold) # pytype: disable=attribute-error
+
+    def test_blocksPathMultiple(self):
+        initialUser = self.game.getUserSummaryByName("bob")
+        expectedBattleground = self.game.getBattleground("bob")
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch(
+                "/build/bob",
+                method="POST",
+                body='{"rows": [1, 0], "cols": [0, 1], "towerIds": [0, 0]}')
+        battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 409)
+        self.assertEqual(battleground, expectedBattleground)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.gold, initialUser.gold) # pytype: disable=attribute-error
