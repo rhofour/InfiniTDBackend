@@ -160,6 +160,9 @@ class Game:
         user.accumulatedGold += sellAmount
 
     def setWave(self, user: MutableUser, monsters: List[ConfigId]):
+        if user.inBattle:
+            raise UserInBattleException()
+
         if len(monsters) >= 500:
             raise ValueError(f"Wave contains {len(monsters)} which is greater than the maximum of 500.")
 

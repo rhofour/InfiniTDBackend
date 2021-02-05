@@ -77,6 +77,20 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
         self.assertIsNotNone(user)
         self.assertListEqual(user.wave, []) # pytype: disable=attribute-error
 
+    def test_userInBattle(self):
+        def waitOnAwaitable(x):
+            asyncio.get_event_loop().run_until_complete(x)
+        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+            user.inBattle = True
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch("/wave/bob", method="POST", body='{"monsters": [1, 0]}')
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 409)
+        self.assertIsNotNone(user)
+        self.assertListEqual(user.wave, []) # pytype: disable=attribute-error
+
 class TestWaveHandlerDelete(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
         tmp_file, tmp_path = tempfile.mkstemp()
