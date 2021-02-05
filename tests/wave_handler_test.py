@@ -50,8 +50,11 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = {"uid": "test_uid"}
             resp = self.fetch("/wave/bob", method="POST", body='{"monsters": [10]}')
+        user = self.game.getUserSummaryByName("bob")
 
         self.assertEqual(resp.code, 400)
+        self.assertIsNotNone(user)
+        self.assertListEqual(user.wave, []) # pytype: disable=attribute-error
 
     def test_successfulPost(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
@@ -62,6 +65,17 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(resp.code, 201)
         self.assertIsNotNone(user)
         self.assertListEqual(user.wave, [1, 0]) # pytype: disable=attribute-error
+
+    def test_tooMany(self):
+        enormousWave = [0] * 1000
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = {"uid": "test_uid"}
+            resp = self.fetch("/wave/bob", method="POST", body=f'{{"monsters": {enormousWave}}}')
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 400)
+        self.assertIsNotNone(user)
+        self.assertListEqual(user.wave, []) # pytype: disable=attribute-error
 
 class TestWaveHandlerDelete(tornado.testing.AsyncHTTPTestCase):
     def get_app(self):
