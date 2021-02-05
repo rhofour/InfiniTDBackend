@@ -29,6 +29,8 @@ using InfiniTDFb::CreateMonstersDefeatedFb;
 using InfiniTDFb::CreateBattleEventFb;
 using InfiniTDFb::CreateBattleCalcResultsFb;
 
+const float kMaxGameTime = 600.0; // Limit battles to no more than 10 minutes.
+
 CppBattleComputer::CppBattleComputer(std::string jsonText, float gameTickSecs_) :
     gameTickSecs(gameTickSecs_) {
   Document d;
@@ -257,7 +259,7 @@ string CppBattleComputer::ComputeBattle(
     uint16_t ticks = -1; // This will be equal to 0 in the first loop.
     vector<EnemyState> spawnedEnemies;
 
-    while (!unspawnedEnemies.empty() || !spawnedEnemies.empty()) {
+    while (gameTime < kMaxGameTime && (!unspawnedEnemies.empty() || !spawnedEnemies.empty())) {
       // Advance time
       ticks++;
       gameTime = ticks * this->gameTickSecs;
