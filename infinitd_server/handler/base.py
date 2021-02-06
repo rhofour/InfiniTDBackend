@@ -28,6 +28,7 @@ class BaseHandler(tornado.web.RequestHandler):
         self.requestId = self.__class__.nextRequestId
         self.__class__.nextRequestId += 1
 
+        self.checkForUid()
         self.logInfo("Started")
 
     def on_finish(self):
@@ -56,21 +57,29 @@ class BaseHandler(tornado.web.RequestHandler):
         self.set_header("WWW-Authenticate", 'Bearer')
         raise tornado.web.Finish()
 
-    def verifyAuthentication(self) -> Optional[Dict]:
+    def checkForUid(self):
+        if 'authorization' not in self.request.headers:
+            return
         if self.request.headers['authorization'][:7] == "Bearer ":
             token = self.request.headers['authorization'][7:]
             try:
                 decodedToken = firebase_admin.auth.verify_id_token(token)
                 if decodedToken["uid"]:
                     self.uid = decodedToken["uid"]
-                return decodedToken
             except Exception as e:
                 self.logWarn(f"Authorization error: {e}")
-        self.reply401()
+
+    def verifyAuthentication(self) -> str:
+        """verifyAuthentication sends a 401 if a user is not correctly authenticated.
+        
+        Returns the users UID.
+        """
+        if self.uid is None:
+            self.reply401()
+        return self.uid
 
     def getMutableUser(self, expectedName: str) -> MutableUserContext:
-        decodedToken = self.verifyAuthentication()
-        uid = decodedToken["uid"]
+        uid = self.verifyAuthentication()
         try:
             def addAwaitable(a: Awaitable[None]):
                 async def awaitCallback():

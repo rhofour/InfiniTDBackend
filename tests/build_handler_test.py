@@ -33,7 +33,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_successfulBuild1(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch(
                 "/build/bob",
                 method="POST",
@@ -50,7 +50,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_successfulBuild3(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch(
                 "/build/bob",
                 method="POST",
@@ -79,7 +79,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_wrongUser(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch(
                 "/build/phil",
                 method="POST",
@@ -91,7 +91,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_outOfBounds(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch(
                 "/build/bob",
                 method="POST",
@@ -108,7 +108,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_insufficientGold(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch(
                 "/build/bob",
                 method="POST",
@@ -127,7 +127,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
             user.gold = 2
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch(
                 "/build/bob",
                 method="POST",
@@ -141,7 +141,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_alreadyExists(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             # This should succeed
             self.fetch(
                 "/build/bob",
@@ -164,7 +164,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_alreadyExistsInRequest(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             # This should fail because we're trying to build the same tower twice in one request.
             resp = self.fetch(
                 "/build/bob",
@@ -187,7 +187,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
             expectedGold = user.gold
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch(
                 "/build/bob",
                 method="POST",
@@ -204,7 +204,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         initialUser = self.game.getUserSummaryByName("bob")
         expectedBattleground = self.game.getBattleground("bob")
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch(
                 "/build/bob",
                 method="POST",

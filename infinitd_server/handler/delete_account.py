@@ -7,8 +7,7 @@ class DeleteAccountHandler(BaseHandler):
     game: Game # See https://github.com/google/pytype/issues/652
 
     async def delete(self, name: str):
-        decodedToken = self.verifyAuthentication()
-        uid = decodedToken["uid"]
+        uid = self.verifyAuthentication()
         user = self.game.getUserSummaryByUid(uid)
         if name != user.name:
             self.logWarn(f"Got request to delete {name} from incorrect UID {uid}.")

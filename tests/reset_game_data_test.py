@@ -44,7 +44,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
     
     def test_successfulReset(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "admin_uid"}
+            mock_verify.return_value = "admin_uid"
             resp = self.fetch("/admin/resetGame", method="POST", allow_nonstandard_methods=True)
         battleground = self.game.getBattleground("bob")
         user = self.game.getUserSummaryByName("bob")
@@ -62,7 +62,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
 
     def test_nonAdminForbidden(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/admin/resetGame", method="POST", allow_nonstandard_methods=True)
         battleground = self.game.getBattleground("bob")
         user = self.game.getUserSummaryByName("bob")

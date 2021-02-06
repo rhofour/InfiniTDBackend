@@ -26,7 +26,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
     def test_successfulDelete(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify, \
                 unittest.mock.patch('firebase_admin.auth.delete_user') as mock_delete:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             mock_delete.return_value = None
             resp = self.fetch("/deleteAccount/bob", method="DELETE")
         user = self.game.getUserSummaryByName("bob")
@@ -41,7 +41,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
     def test_deletedUserCanReregister(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify, \
                 unittest.mock.patch('firebase_admin.auth.delete_user') as mock_delete:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             mock_delete.return_value = None
             self.fetch("/deleteAccount/bob", method="DELETE")
         self.game.register(uid="test_uid", name="bob")
@@ -52,7 +52,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
 
     def test_mismatchedName(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/deleteAccount/sam", method="DELETE")
         
         self.assertEqual(resp.code, 403)

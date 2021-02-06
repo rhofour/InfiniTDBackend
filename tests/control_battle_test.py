@@ -35,34 +35,34 @@ class TestControlBattleHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_successfulStart(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/controlBattle/bob", method="POST", allow_nonstandard_methods=True)
 
         self.assertEqual(resp.code, 201)
 
     def test_successfulStop(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/controlBattle/bob", method="POST", allow_nonstandard_methods=True)
         self.assertEqual(resp.code, 201)
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/controlBattle/bob", method="DELETE")
         self.assertEqual(resp.code, 204)
 
     def test_successfulRestart(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/controlBattle/bob", method="POST", allow_nonstandard_methods=True)
         self.assertEqual(resp.code, 201)
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/controlBattle/bob", method="DELETE")
         self.assertEqual(resp.code, 204)
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/controlBattle/bob", method="POST", allow_nonstandard_methods=True)
         self.assertEqual(resp.code, 201)

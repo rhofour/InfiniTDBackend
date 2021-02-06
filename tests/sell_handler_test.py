@@ -36,7 +36,7 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_successfulSell(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/sell/bob/0/1", method="DELETE")
         battleground = self.game.getBattleground("bob")
         user = self.game.getUserSummaryByName("bob")
@@ -51,7 +51,7 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_wrongUser(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/sell/phil/1/1", method="DELETE")
         battleground = self.game.getBattleground("bob")
 
@@ -60,7 +60,7 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_outOfBounds(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/build/bob/4/2", method="DELETE")
             resp2 = self.fetch("/build/bob/3/3", method="DELETE")
         battleground = self.game.getBattleground("bob")
@@ -71,7 +71,7 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
 
     def test_noExistingTower(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
-            mock_verify.return_value = {"uid": "test_uid"}
+            mock_verify.return_value = "test_uid"
             resp = self.fetch("/build/bob/1/1", method="DELETE")
         battleground = self.game.getBattleground("bob")
 

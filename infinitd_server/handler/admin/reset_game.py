@@ -7,8 +7,7 @@ class ResetGameHandler(BaseHandler):
     game: Game # See https://github.com/google/pytype/issues/652
 
     async def post(self):
-        decodedToken = self.verifyAuthentication()
-        uid = decodedToken["uid"]
+        uid = self.verifyAuthentication()
         try:
             await self.game.resetGameData(uid)
         except UserNotAdminException:
