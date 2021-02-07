@@ -140,24 +140,36 @@ class Game:
         user.gold -= totalCost
         user.battleground = newBattleground
 
-    def sellTower(self, user: MutableUser, row: int, col: int):
+    def sellTowers(self, user: MutableUser, rows: List[int], cols: List[int]):
         if user.inBattle:
             raise UserInBattleException()
 
-        existingTower: BgTowerState = user.battleground.towers.towers[row][col]
-        if existingTower is None:
-            raise ValueError(f"No tower exists at row {row}, col {col}.")
-        try:
-            towerConfig = self.gameConfig.towers[existingTower.id]
-        except IndexError:
-            # This should never happen as long as the game config matches the database.
-            raise ValueError(f"Invalid tower ID {existingTower.id}")
-
-        # Actually change the user
-        user.battleground.towers.towers[row][col] = None # Does this work with the MutableUser stuff?
-        sellAmount = math.floor(towerConfig.cost * self.gameConfig.misc.sellMultiplier)
-        user.gold += sellAmount
-        user.accumulatedGold += sellAmount
+        totalAmount = 0.0
+        newBattleground = copy.deepcopy(user.battleground)
+        n = len(rows)
+        for i in range(n):
+            # Assumes rows, cols, and towerIds are all the same length.
+            row = rows[i]
+            if row < 0 or row >= self.gameConfig.playfield.numRows:
+                raise ValueError(f"Got invalid row value {row}.")
+            col = cols[i]
+            if col < 0 or col >= self.gameConfig.playfield.numCols:
+                raise ValueError(f"Got invalid row value {col}.")
+            
+            tower = user.battleground.towers.towers[row][col]
+            if tower is None:
+                raise ValueError(f"No tower exists at row {row}, col {col}.")
+            try:
+                towerConfig = self.gameConfig.towers.get(tower.id)
+            except KeyError:
+                raise ValueError(f"Found invalid tower ID {towerId} at row {col}, col {col}.")
+            totalAmount += math.floor(towerConfig.cost * self.gameConfig.misc.sellMultiplier)
+            newBattleground.towers.towers[row][col] = None
+        
+        # Actually modify the user
+        user.gold += totalAmount
+        user.accumulatedGold += totalAmount
+        user.battleground = newBattleground
 
     def setWave(self, user: MutableUser, monsters: List[ConfigId]):
         if user.inBattle:

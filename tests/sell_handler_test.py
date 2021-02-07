@@ -28,7 +28,7 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
         self.initialBattleground.towers.towers[1][2] = BgTowerState(1)
         asyncio.get_event_loop().run_until_complete(self.game.setBattleground("bob", self.initialBattleground))
 
-        return tornado.web.Application([(r"/sell/(.*)/([0-9]*)/([0-9]*)", SellHandler, dict(game=self.game))])
+        return tornado.web.Application([(r"/sell/(.*)", SellHandler, dict(game=self.game))])
 
     def tearDown(self):
         super().tearDown()
@@ -37,7 +37,7 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
     def test_successfulSell(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/sell/bob/0/1", method="DELETE")
+            resp = self.fetch("/sell/bob", method="POST", body='{"rows": [0], "cols": [1]}')
         battleground = self.game.getBattleground("bob")
         user = self.game.getUserSummaryByName("bob")
 
@@ -47,33 +47,83 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(battleground, expectedBg)
         self.assertIsNotNone(user)
         self.assertEqual(user.gold, 101) # pytype: disable=attribute-error
+        self.assertEqual(user.accumulatedGold, 101) # pytype: disable=attribute-error
 
+    def test_successfulSellBoth(self):
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = "test_uid"
+            resp = self.fetch("/sell/bob", method="POST", body='{"rows": [1, 0], "cols": [2, 1]}')
+        battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 200)
+        expectedBg = BattlegroundState.empty(self.gameConfig)
+        self.assertEqual(battleground, expectedBg)
+        self.assertIsNotNone(user)
+        self.assertEqual(user.gold, 151) # pytype: disable=attribute-error
+        self.assertEqual(user.accumulatedGold, 151) # pytype: disable=attribute-error
 
     def test_wrongUser(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/sell/phil/1/1", method="DELETE")
+            resp = self.fetch("/sell/phil", method="POST", body='{"rows": [1], "cols": [1]}')
         battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
 
         self.assertEqual(resp.code, 403)
         self.assertEqual(battleground, self.initialBattleground)
+        self.assertEqual(user.gold, 100) # pytype: disable=attribute-error
+        self.assertEqual(user.accumulatedGold, 100) # pytype: disable=attribute-error
 
     def test_outOfBounds(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/build/bob/4/2", method="DELETE")
-            resp2 = self.fetch("/build/bob/3/3", method="DELETE")
+            resp = self.fetch("/sell/bob", method="POST", body='{"rows": [4], "cols": [2]}')
+            resp2 = self.fetch("/sell/bob", method="POST", body='{"rows": [3], "cols": [3]}')
         battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
 
-        self.assertEqual(resp.code, 404)
-        self.assertEqual(resp2.code, 404)
+        self.assertEqual(resp.code, 400)
+        self.assertEqual(resp2.code, 400)
         self.assertEqual(battleground, self.initialBattleground)
+        self.assertEqual(user.gold, 100) # pytype: disable=attribute-error
+        self.assertEqual(user.accumulatedGold, 100) # pytype: disable=attribute-error
+
+    def test_outOfBounds(self):
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = "test_uid"
+            resp = self.fetch("/sell/bob", method="POST", body='{"rows": [4], "cols": [2]}')
+            resp2 = self.fetch("/sell/bob", method="POST", body='{"rows": [3], "cols": [3]}')
+        battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 400)
+        self.assertEqual(resp2.code, 400)
+        self.assertEqual(battleground, self.initialBattleground)
+        self.assertEqual(user.gold, 100) # pytype: disable=attribute-error
+        self.assertEqual(user.accumulatedGold, 100) # pytype: disable=attribute-error
+
 
     def test_noExistingTower(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/build/bob/1/1", method="DELETE")
+            resp = self.fetch("/sell/bob", method="POST", body='{"rows": [1], "cols": [1]}')
         battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
 
-        self.assertEqual(resp.code, 404)
+        self.assertEqual(resp.code, 400)
         self.assertEqual(battleground, self.initialBattleground)
+        self.assertEqual(user.gold, 100) # pytype: disable=attribute-error
+        self.assertEqual(user.accumulatedGold, 100) # pytype: disable=attribute-error
+    
+    def test_secondTowerOutOfBounds(self):
+        with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
+            mock_verify.return_value = "test_uid"
+            resp = self.fetch("/sell/bob", method="POST", body='{"rows": [0, 3], "cols": [1, 3]}')
+        battleground = self.game.getBattleground("bob")
+        user = self.game.getUserSummaryByName("bob")
+
+        self.assertEqual(resp.code, 400)
+        self.assertEqual(battleground, self.initialBattleground)
+        self.assertEqual(user.gold, 100) # pytype: disable=attribute-error
+        self.assertEqual(user.accumulatedGold, 100) # pytype: disable=attribute-error
