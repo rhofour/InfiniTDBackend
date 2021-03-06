@@ -210,7 +210,7 @@ class Game:
         self._db.leaveTransaction(user.conn)
 
         try:
-            battle = self._db.getOrMakeBattle(user.user, user.user, handler=handler, requestId=requestId)
+            battle = await self._db.getOrMakeBattle(user.user, user.user, handler=handler, requestId=requestId)
         except BattleCalculationException as e:
             self._db.enterTransaction(user.conn)
             # Prevent a user from getting stuck in a battle
@@ -250,14 +250,14 @@ class Game:
         with self._db.makeConnection() as conn:
             return self._db.getBattle(attacker, defender, conn)
 
-    def getOrMakeRecordedBattle(self, attackerName: str, defenderName: str, handler: str, requestId: int) -> Battle:
+    async def getOrMakeRecordedBattle(self, attackerName: str, defenderName: str, handler: str, requestId: int) -> Battle:
         attacker = self._db.getUserSummaryByName(attackerName)
         if attacker is None:
             raise ValueError(f"Unknown attacker: {attackerName}")
         defender = self._db.getUserByName(defenderName)
         if defender is None:
             raise ValueError(f"Unknown defender: {defenderName}")
-        battle = self._db.getOrMakeBattle(attacker = attacker, defender = defender,
+        battle = await self._db.getOrMakeBattle(attacker = attacker, defender = defender,
                 handler = handler, requestId = requestId)
         return battle
 

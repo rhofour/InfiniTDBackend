@@ -6,7 +6,8 @@ import json
 from typing import Optional, List, Callable, Awaitable
 
 from infinitd_server.battle import Battle, BattleResults
-from infinitd_server.battle_computer import BattleComputer, BattleCalculationException
+from infinitd_server.battle_computer import BattleCalculationException
+from infinitd_server.battle_computer_pool import BattleComputerPool
 from infinitd_server.battle_coordinator import BattleCoordinator
 from infinitd_server.battleground_state import BattlegroundState, BgTowerState
 from infinitd_server.user import User, UserSummary, FrozenUser, FrozenUserSummary, MutableUser
@@ -25,7 +26,7 @@ class Db:
     gameConfig: GameConfig
     userQueues: SseQueues
     bgQueues: SseQueues
-    battleComputer: BattleComputer
+    battleComputerPool: BattleComputerPool
     battleCoordinator: BattleCoordinator
     debug: bool
     dbPath: str
@@ -39,7 +40,7 @@ class Db:
         self.gameConfig = gameConfig
         self.userQueues = userQueues
         self.bgQueues = bgQueues
-        self.battleComputer = BattleComputer(gameConfig = gameConfig, debug = debug)
+        self.battleComputerPool = BattleComputerPool(gameConfig = gameConfig, debug = debug)
         self.battleCoordinator = battleCoordinator
         self.logger = Logger.getDefault()
 
@@ -247,7 +248,7 @@ class Db:
         battle = Battle(events = events, name = battleName, results = results)
         return battle
 
-    def getOrMakeBattle(self, attacker: UserSummary, defender: User, handler: str, requestId: int) -> Battle:
+    async def getOrMakeBattle(self, attacker: UserSummary, defender: User, handler: str, requestId: int) -> Battle:
         """Returns a battle between attacker and defender, generating it if necessary"""
 
         with self.makeConnection() as conn:
@@ -260,7 +261,7 @@ class Db:
         self.logger.info(handler, requestId, f"Calculating new battle: {defender.name} vs {attacker.name}")
         if defender.battleground is None: # This should be impossible since we know the user exists.
             raise ValueError(f"Cannot find battleground for {defender.name}")
-        battleCalcResults = self.battleComputer.computeBattle(defender.battleground, attacker.wave)
+        battleCalcResults = await self.battleComputerPool.computeBattle(defender.battleground, attacker.wave)
         events = Battle.fbToEvents(battleCalcResults.fb.EventsNestedRoot())
         battleName = f"vs. {attacker.name}"
         battle = Battle(events = events, name = battleName,

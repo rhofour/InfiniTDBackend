@@ -8,7 +8,6 @@ from typing import List, Dict, Union, Callable, Deque, Awaitable, Optional
 from dataclasses_json import dataclass_json
 
 from infinitd_server.battle import Battle, BattleEvent, BattleResults
-from infinitd_server.battle_computer import BattleComputer
 from infinitd_server.sse import SseQueues
 from infinitd_server.logger import Logger
 
@@ -124,7 +123,6 @@ class StreamingBattle:
             return self.pastEvents + [LiveBattleMetadata(status = BattleStatus.LIVE, time = battleTime, name = self.name)]
 
 class BattleCoordinator:
-    battleComputer: BattleComputer
     battles: Dict[str, StreamingBattle] = {}
     battleQueues: SseQueues
 

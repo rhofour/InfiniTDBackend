@@ -26,7 +26,7 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
         self.initialBattleground.towers.towers[1][2] = BgTowerState(1)
 
         def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
+            return asyncio.get_event_loop().run_until_complete(x)
         with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
             user.gold = 50
             user.accumulatedGold = 110
@@ -36,7 +36,8 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
             user.inBattle = True # So we can calculate a battle
 
         user = self.game.getUserSummaryByName("bob")
-        self.initialBattle = self.game.getOrMakeRecordedBattle("bob", "bob", "TestResetGameData", 0)
+        self.initialBattle = waitOnAwaitable(
+            self.game.getOrMakeRecordedBattle("bob", "bob", "TestResetGameData", 0))
 
         self.game.register(uid="admin_uid", name="joe", admin=True)
 

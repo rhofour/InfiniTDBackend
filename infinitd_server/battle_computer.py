@@ -74,26 +74,6 @@ class BattleComputer:
                 nextId += 1
         return towerStates
 
-    @staticmethod
-    def selectTarget(tower: TowerState, enemies: Sequence[MonsterState], gameTime: float
-            ) -> Optional[Tuple[MonsterState, float]]:
-
-        if tower.firingRadius <= 0:
-            return None
-
-        for enemy in enemies:
-            distSq = enemy.pos.distSq(tower.pos)
-            if distSq <= tower.firingRadiusSq:
-                dist = math.sqrt(distSq)
-                timeToHit = dist / tower.config.projectileSpeed
-                if gameTime - timeToHit < enemy.spawnedAt:
-                    continue # Don't allow targetting enemies before they've spawned.
-                # Assumes enemies are sorted by decreasing distTraveled so we
-                # can return the first one we can hit.
-                return (enemy, dist)
-
-        return None
-
     def computeBattle(self, battleground: BattlegroundState, wave: List[ConfigId]) -> BattleCalcResults:
         if not wave:
             raise ValueError("Cannot compute battle with empty wave.")
