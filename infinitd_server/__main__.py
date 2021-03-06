@@ -5,6 +5,7 @@ from random import randrange
 import json
 from datetime import datetime, timedelta
 import ssl
+import signal
 
 import cattr
 import tornado.web
@@ -34,27 +35,13 @@ from infinitd_server.handler.debug_logs import DebugLogsHandler
 from infinitd_server.handler.debug_battle_input import DebugBattleInputHandler
 from infinitd_server.handler.admin.reset_game import ResetGameHandler
 
-async def updateGoldEveryMinute(game: Game):
-    oneMinute = timedelta(minutes=1)
-    logger: Logger = Logger.getDefault()
-    while True:
-        startTime = datetime.now()
-        await game.accumulateGold()
-        endTime = datetime.now()
-
-        # Figure out how long we need to wait
-        waitTime = oneMinute - (endTime - startTime)
-        if waitTime.seconds > 0:
-            await asyncio.sleep(waitTime.seconds)
-        else:
-            logger.warn("updateGoldEveryMinute", -1, f"updateGoldEveryMinute is running {-waitTime} behind.")
-
 def make_app(game, debug):
     cred = credentials.Certificate("./data/privateFirebaseKey.json")
     firebase_admin.initialize_app(cred)
     settings = {
         "static_path": os.path.join(os.path.dirname(__file__), "../static"),
         "debug": debug,
+        "autoreload": False,
     }
     prod_handlers = [
         (r"/users", UsersHandler, dict(game=game)),
@@ -80,7 +67,14 @@ def make_app(game, debug):
     ]
     return tornado.web.Application(prod_handlers + debug_handlers, **settings)
 
-async def main():
+def sig_exit(signum, frame):
+    tornado.ioloop.IOLoop.instance().add_callback_from_signal(shutdown)
+
+def shutdown():
+    Logger.getDefault().info("shutdown", -1, "Shutting down.")
+    tornado.ioloop.IOLoop.instance().stop()
+
+def main():
     parser = argparse.ArgumentParser(description="Backend server for InfiniTD.")
     parser.add_argument('-d', '--debug', action="store_true")
     parser.add_argument('-v', '--verbosity', action="store", type=int, default=0)
@@ -89,6 +83,8 @@ async def main():
     parser.add_argument('--ssl_cert', action="store", type=str, default="localhost.crt")
     parser.add_argument('--ssl_key', action="store", type=str, default="localhost.key")
     args = parser.parse_args()
+
+    signal.signal(signal.SIGINT, sig_exit)
 
     with open('game_config.json') as gameConfigFile:
         gameConfigData = cattr.structure(json.loads(gameConfigFile.read()), GameConfigData)
@@ -115,16 +111,15 @@ async def main():
             "keyfile": args.ssl_key,
         }
         app.listen(args.port, ssl_options=sslContext)
-        logger.info("startup", -1, f"Listening on port {args.port} (with SSL enabled).")
+        logger.info("startup", -1, f"Listening on port {args.port} (with SSL enabled) as PID {os.getpid()}.")
     else:
         app.listen(args.port)
-        logger.info("startup", -1, f"Listening on port {args.port} (without SSL enabled).")
-    await updateGoldEveryMinute(game)
-    # I don't think this should ever happen.
-    logger.warn("shutdown", -1, "Main finished.")
+        logger.info("startup", -1, f"Listening on port {args.port} (without SSL enabled) as PID {os.getpid()}.")
+    async def accumulateGold():
+        await game.accumulateGold()
+    tornado.ioloop.PeriodicCallback(accumulateGold, 60_000).start()
+    logger.warn("startup", -1, "Startup finished.")
+    asyncio.get_event_loop().run_forever()
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("Received a keyboard interupt.")
+    main()
