@@ -326,8 +326,9 @@ class Db:
                     "name": user.name,
                     "gold": user.gold,
                     "accumulatedGold": user.accumulatedGold,
-                    "goldPerMinuteSelf": user.goldPerMinuteSelf,
-                    "goldPerMinuteOthers": user.goldPerMinuteOthers,
+                    # Unset gold per minute since battleground has changed.
+                    "goldPerMinuteSelf": 0.0,
+                    "goldPerMinuteOthers": 0.0,
                     "inBattle": user.inBattle,
                     "wave": json.dumps(user.wave),
                     "battleground": user.battleground.to_json(),
@@ -346,8 +347,9 @@ class Db:
                     "name": user.name,
                     "gold": user.gold,
                     "accumulatedGold": user.accumulatedGold,
-                    "goldPerMinuteSelf": user.goldPerMinuteSelf,
-                    "goldPerMinuteOthers": user.goldPerMinuteOthers,
+                    # Reset gold per minute if the wave has been modified.
+                    "goldPerMinuteSelf": 0 if user.waveModified else user.goldPerMinuteSelf,
+                    "goldPerMinuteOthers": 0 if user.waveModified else user.goldPerMinuteOthers,
                     "inBattle": user.inBattle,
                     "wave": json.dumps(user.wave),
                 })

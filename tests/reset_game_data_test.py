@@ -28,12 +28,14 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
         def waitOnAwaitable(x):
             return asyncio.get_event_loop().run_until_complete(x)
         with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+            # These must be set separately or they cause gold per minute to be reset.
+            user.wave = [0, 1, 0]
+            user.battleground = self.initialBattleground
+        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
             user.gold = 50
             user.accumulatedGold = 110
             user.goldPerMinuteSelf = 2.5
             user.goldPerMinuteOthers = 1.5
-            user.battleground = self.initialBattleground
-            user.wave = [0, 1, 0]
             user.inBattle = True # So we can calculate a battle
 
         user = self.game.getUserSummaryByName("bob")
