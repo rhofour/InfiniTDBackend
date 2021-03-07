@@ -22,6 +22,8 @@ class BattleStatus(Enum):
 class BattleMetadata:
     status: BattleStatus
     name: str = ""
+    attackerName: str = ""
+    defenderName: str = ""
 
 @dataclass_json
 @dataclass(frozen=False)
@@ -35,7 +37,9 @@ class StreamingBattle:
     to potentially multiple clients."""
     BUFFER_TIME_SECS: float = 0.1
     startTime: float = -1.0 # -1 signifies the battle hasn't started yet
-    name : str = ""
+    name: str = ""
+    attackerName: str = ""
+    defenderName: str = ""
     pastEvents: List[BattleEvent] = []
     futureEvents: Deque[BattleEvent]
     updateFn: Callable[[BattleUpdate], Awaitable[None]]
@@ -56,10 +60,14 @@ class StreamingBattle:
         self.futureEvents = deque(battle.events)
         self.pastEvents = []
         self.name = battle.name
+        self.attackerName = battle.attackerName
+        self.defenderName = battle.defenderName
         self.sentUpdates = 0
 
         # Let the client know a new battle is coming.
-        await self.sendUpdate(BattleMetadata(status = BattleStatus.PENDING, name = battle.name))
+        await self.sendUpdate(BattleMetadata(
+            status = BattleStatus.PENDING, name = battle.name,
+            attackerName = battle.attackerName, defenderName = battle.defenderName))
 
         # Send all events occurring in the buffer window
         numInitialEvents = 0
@@ -76,7 +84,9 @@ class StreamingBattle:
 
         # Start running
         self.startTime = time.time()
-        await self.sendUpdate(LiveBattleMetadata(status = BattleStatus.LIVE, name = battle.name, time = 0.0))
+        await self.sendUpdate(LiveBattleMetadata(
+            status = BattleStatus.LIVE, name = battle.name, time = 0.0,
+            attackerName = battle.attackerName, defenderName = battle.defenderName))
 
         while self.futureEvents:
             elapsedTime = time.time() - self.startTime
@@ -107,20 +117,29 @@ class StreamingBattle:
             await self.updateFn(battle.results)
         else:
             # Stop the battle without sending results.
-            await self.sendUpdate(BattleMetadata(status = BattleStatus.PENDING, name = battle.name))
+            await self.sendUpdate(BattleMetadata(
+                status = BattleStatus.PENDING, name = battle.name,
+                attackerName = battle.attackerName, defenderName = battle.defenderName))
 
     async def stop(self):
         self.startTime = -1.0
         self.futureEvents = deque()
-        await self.updateFn(BattleMetadata(status = BattleStatus.PENDING, name = self.name)) # Send an update to halt the battle.
+        # Send an update to halt the battle.
+        await self.updateFn(BattleMetadata(
+            status = BattleStatus.PENDING, name = self.name,
+            attackerName = self.attackerName, defenderName = self.defenderName)) 
 
     def join(self) -> List[Union[BattleEvent, BattleMetadata]]:
         """Send the new client all past events and the current time."""
         if self.startTime == -1.0:
-            return [BattleMetadata(status = BattleStatus.PENDING, name = self.name)]
+            return [BattleMetadata(
+                status = BattleStatus.PENDING, name = self.name,
+                attackerName = self.attackerName, defenderName = self.defenderName)]
         else:
             battleTime = time.time() - self.startTime
-            return self.pastEvents + [LiveBattleMetadata(status = BattleStatus.LIVE, time = battleTime, name = self.name)]
+            return self.pastEvents + [LiveBattleMetadata(
+                status = BattleStatus.LIVE, time = battleTime, name = self.name,
+                attackerName = self.attackerName, defenderName = self.defenderName)]
 
 class BattleCoordinator:
     battles: Dict[str, StreamingBattle] = {}

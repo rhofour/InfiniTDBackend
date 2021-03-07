@@ -86,11 +86,15 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
 
         # Ensure we can go from FB events to Python events and back.
         events = Battle.fbToEvents(results.fb.EventsNestedRoot())
-        battle = Battle("random test battle", events, results.results)
+        battle = Battle(
+            "random test battle", "test attacker", "test defender",
+            events, results.results)
         # Something changes here, possibly because it's not a nested FB.
         reencodedEventsBytes = battle.encodeEventsFb()
         reencodedEventsFb = BattleEventsFb.BattleEventsFb.GetRootAsBattleEventsFb(reencodedEventsBytes, 0)
-        remadeBattle = Battle("re-encoded battle", Battle.fbToEvents(reencodedEventsFb), results.results)
+        remadeBattle = Battle(
+            "re-encoded battle", "test attacker", "test defender",
+            Battle.fbToEvents(reencodedEventsFb), results.results)
         tripleEncodedEventsBytes = remadeBattle.encodeEventsFb()
         # This should stay the same.
         self.assertEqual(reencodedEventsBytes, tripleEncodedEventsBytes)
@@ -314,6 +318,8 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
     def test_oneMoveEvent(self):
         battle = Battle(
             name = "testOneEvent",
+            attackerName = "test attacker",
+            defenderName = "test defender",
             events = [
                 MoveEvent(
                     objType = ObjectType.MONSTER,
@@ -350,6 +356,8 @@ class TestBattleEventEncodingAndDecoding(unittest.TestCase):
     def test_twoEvents(self):
         battle = Battle(
             name = "testTwoEvents",
+            attackerName = "test attacker",
+            defenderName = "test defender",
             events = [
                 MoveEvent(
                     objType = ObjectType.MONSTER,

@@ -252,7 +252,12 @@ class Db:
         battleName = f"vs. {attackingUser.name}"
         events = Battle.decodeEventsFb(res[0])
         results = BattleResults.decodeFb(res[1])
-        battle = Battle(events = events, name = battleName, results = results)
+        battle = Battle(
+            events = events,
+            name = battleName,
+            attackerName = attackingUser.name,
+            defenderName = defendingUser.name,
+            results = results)
         return battle
 
     async def getOrMakeBattle(self, attacker: UserSummary, defender: User, handler: str, requestId: int) -> Battle:
@@ -271,7 +276,12 @@ class Db:
         battleCalcResults = await self.battleComputerPool.computeBattle(defender.battleground, attacker.wave)
         events = Battle.fbToEvents(battleCalcResults.fb.EventsNestedRoot())
         battleName = f"vs. {attacker.name}"
-        battle = Battle(events = events, name = battleName, results = battleCalcResults.results)
+        battle = Battle(
+            events = events,
+            name = battleName,
+            attackerName = attacker.name,
+            defenderName = defender.name,
+            results = battleCalcResults.results)
         # Check if attacker wave or defender battleground changed since the start.
         with self.makeConnection() as conn:
             conn.execute("BEGIN IMMEDIATE")

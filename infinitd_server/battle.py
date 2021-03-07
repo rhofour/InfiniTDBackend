@@ -336,6 +336,8 @@ class BattleCalcResults:
 @attr.s(frozen=True, auto_attribs=True)
 class Battle:
     name: str
+    attackerName: str
+    defenderName: str
     events: List[BattleEvent]
     results: BattleResults
 
