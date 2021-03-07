@@ -145,6 +145,7 @@
     "sellMultiplier": 0.8,
     "startingGold": 10,
     "minGoldPerMinute": 0.0,
+    "rivalRadius": 2,
     "battleBonuses": [
       {
         "id": 0,

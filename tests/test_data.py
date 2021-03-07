@@ -119,6 +119,7 @@ gameConfigData = GameConfigData(
         sellMultiplier = 0.5,
         startingGold = 100,
         minGoldPerMinute = 1.0,
+        rivalRadius = 1,
         battleBonuses = battleBonuses,
     ))
 
@@ -131,6 +132,7 @@ gameConfig2row2colData = GameConfigData(
         sellMultiplier = 0.5,
         startingGold = 100,
         minGoldPerMinute = 1.0,
+        rivalRadius = 1,
         battleBonuses = battleBonuses,
     ))
 
