@@ -237,7 +237,7 @@ class Game:
                     raise ValueError(f"Battle results has non-positive time: {results.timeSecs}.")
 
                 futureUser.addGold(results.goldPerMinute)
-                futureUser.goldPerMinute = results.goldPerMinute
+                futureUser.goldPerMinuteSelf = results.goldPerMinute
 
             await asyncio.wait(awaitables)
         self.battleCoordinator.startBattle(user.name, battle,

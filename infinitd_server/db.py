@@ -19,9 +19,9 @@ from infinitd_server.logger import Logger
 class Db:
     DEFAULT_DB_PATH = "data/data.db"
     SELECT_USER_STATEMENT = (
-            "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave, admin, battleground FROM users")
+            "SELECT name, uid, gold, accumulatedGold, goldPerMinuteSelf, goldPerMinuteOthers, inBattle, wave, admin, battleground FROM users")
     SELECT_USER_SUMMARY_STATEMENT = (
-            "SELECT name, uid, gold, accumulatedGold, goldPerMinute, inBattle, wave, admin FROM users")
+            "SELECT name, uid, gold, accumulatedGold, goldPerMinuteSelf, goldPerMinuteOthers, inBattle, wave, admin FROM users")
 
     gameConfig: GameConfig
     userQueues: SseQueues
@@ -46,25 +46,26 @@ class Db:
 
     def __createTables(self):
         with self.makeConnection() as conn:
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS users("
-                "uid TEXT PRIMARY KEY, "
-                "name TEXT UNIQUE, "
-                "gold REAL, "
-                "accumulatedGold REAL, "
-                "goldPerMinute REAL, "
-                "inBattle BOOLEAN DEFAULT 0 CHECK (inBattle == 0 || inBattle == 1), "
-                "battleground TEXT, "
-                "wave TEXT DEFAULT '[]', "
-                "admin BOOLEAN DEFAULT 0 CHECK (admin == 0 || admin == 1)"
-                ");")
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS battles("
-                "attacking_uid TEXT KEY, "
-                "defending_uid TEXT KEY, "
-                "events BLOB, "
-                "results BLOB"
-                ");")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS users(
+                uid TEXT PRIMARY KEY,
+                name TEXT UNIQUE,
+                gold REAL,
+                accumulatedGold REAL,
+                goldPerMinuteSelf REAL,
+                goldPerMinuteOthers REAL,
+                inBattle BOOLEAN DEFAULT 0 CHECK (inBattle == 0 || inBattle == 1),
+                battleground TEXT,
+                wave TEXT DEFAULT '[]',
+                admin BOOLEAN DEFAULT 0 CHECK (admin == 0 || admin == 1)
+                );""")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS battles(
+                attacking_uid TEXT KEY,
+                defending_uid TEXT KEY,
+                events BLOB,
+                results BLOB
+                );""")
     
     def makeConnection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.dbPath, isolation_level=None)
@@ -79,10 +80,11 @@ class Db:
                 uid = row[1],
                 gold = row[2],
                 accumulatedGold = row[3],
-                goldPerMinute = row[4],
-                inBattle = row[5] == 1,
-                wave = json.loads(row[6]),
-                admin = row[7] == 1)
+                goldPerMinuteSelf = row[4],
+                goldPerMinuteOthers = row[5],
+                inBattle = row[6] == 1,
+                wave = json.loads(row[7]),
+                admin = row[8] == 1)
 
     @staticmethod
     def __extractUserFromRow(row, targetClass=FrozenUser):
@@ -91,11 +93,12 @@ class Db:
                 uid = row[1],
                 gold = row[2],
                 accumulatedGold = row[3],
-                goldPerMinute = row[4],
-                inBattle = row[5] == 1,
-                wave = json.loads(row[6]),
-                admin = row[7] == 1,
-                battleground = BattlegroundState.from_json(row[8]))
+                goldPerMinuteSelf = row[4],
+                goldPerMinuteOthers = row[5],
+                inBattle = row[6] == 1,
+                wave = json.loads(row[7]),
+                admin = row[8] == 1,
+                battleground = BattlegroundState.from_json(row[9]))
 
     def getUserSummaryByName(self, name: str) -> Optional[FrozenUserSummary]:
         with self.makeConnection() as conn:
@@ -150,11 +153,15 @@ class Db:
         try:
             with self.makeConnection() as conn:
                 emptyBattleground = BattlegroundState.empty(self.gameConfig)
-                conn.execute(
-                    "INSERT INTO users (uid, name, gold, accumulatedGold, goldPerMinute, admin, battleground)"
-                    " VALUES (:uid, :name, :gold, :gold, :goldPerMinute, :admin, :battleground);",
+                conn.execute("""
+                    INSERT INTO users
+                        (uid, name, gold, accumulatedGold, goldPerMinuteSelf,
+                         goldPerMinuteOthers, admin, battleground)
+                    VALUES 
+                        (:uid, :name, :gold, :gold,
+                         :goldPerMinuteSelf, 0, :admin, :battleground);""",
                     {"uid": uid, "name": name, "gold": self.gameConfig.misc.startingGold,
-                        "goldPerMinute": self.gameConfig.misc.minGoldPerMinute,
+                        "goldPerMinuteSelf": self.gameConfig.misc.minGoldPerMinute,
                         "admin": admin, "battleground": emptyBattleground.to_json(),
                     })
         except sqlite3.IntegrityError as err:
@@ -172,8 +179,8 @@ class Db:
             namesUpdated = [row[0] for row in res]
             conn.execute("""
             UPDATE users SET
-                accumulatedGold = accumulatedGold + goldPerMinute,
-                gold = gold + goldPerMinute
+                accumulatedGold = accumulatedGold + goldPerMinuteSelf + goldPerMinuteOthers,
+                gold = gold + goldPerMinuteSelf + goldPerMinuteOthers
             WHERE inBattle == 0;""")
 
         await self.__updateUserListeners(namesUpdated)
@@ -264,8 +271,7 @@ class Db:
         battleCalcResults = await self.battleComputerPool.computeBattle(defender.battleground, attacker.wave)
         events = Battle.fbToEvents(battleCalcResults.fb.EventsNestedRoot())
         battleName = f"vs. {attacker.name}"
-        battle = Battle(events = events, name = battleName,
-                results = battleCalcResults.results)
+        battle = Battle(events = events, name = battleName, results = battleCalcResults.results)
         # Check if attacker wave or defender battleground changed since the start.
         with self.makeConnection() as conn:
             conn.execute("BEGIN IMMEDIATE")
@@ -310,34 +316,38 @@ class Db:
             return
         # Update all columns except UID.
         if user.battlegroundModified:
-            user.conn.execute(
-                    "UPDATE users SET "
-                    "name = :name, gold = :gold, accumulatedGold = :accumulatedGold, goldPerMinute = :goldPerMinute, "
-                    "inBattle = :inBattle, wave = :wave, battleground = :battleground "
-                    "where uid = :uid", {
-                        "uid": user.uid,
-                        "name": user.name,
-                        "gold": user.gold,
-                        "accumulatedGold": user.accumulatedGold,
-                        "goldPerMinute": user.goldPerMinute,
-                        "inBattle": user.inBattle,
-                        "wave": json.dumps(user.wave),
-                        "battleground": user.battleground.to_json(),
-                    })
-
-            # Clear any battles where this user was defending now that they have a new battleground.
-            user.conn.execute("DELETE from battles WHERE defending_uid = :uid", { "uid": user.uid })
-        else: # Skip updating the battleground
-            user.conn.execute(
-                "UPDATE users SET "
-                "name = :name, gold = :gold, accumulatedGold = :accumulatedGold, goldPerMinute = :goldPerMinute, "
-                "inBattle = :inBattle, wave = :wave "
-                "where uid = :uid", {
+            user.conn.execute("""
+                UPDATE users SET
+                    name = :name, gold = :gold, accumulatedGold = :accumulatedGold,
+                    goldPerMinuteSelf = :goldPerMinuteSelf, goldPerMinuteOthers = :goldPerMinuteOthers, inBattle = :inBattle,
+                    wave = :wave, battleground = :battleground
+                WHERE uid = :uid""", {
                     "uid": user.uid,
                     "name": user.name,
                     "gold": user.gold,
                     "accumulatedGold": user.accumulatedGold,
-                    "goldPerMinute": user.goldPerMinute,
+                    "goldPerMinuteSelf": user.goldPerMinuteSelf,
+                    "goldPerMinuteOthers": user.goldPerMinuteOthers,
+                    "inBattle": user.inBattle,
+                    "wave": json.dumps(user.wave),
+                    "battleground": user.battleground.to_json(),
+                })
+
+            # Clear any battles where this user was defending now that they have a new battleground.
+            user.conn.execute("DELETE from battles WHERE defending_uid = :uid", { "uid": user.uid })
+        else: # Skip updating the battleground
+            user.conn.execute("""
+                UPDATE users SET
+                    name = :name, gold = :gold, accumulatedGold = :accumulatedGold,
+                    goldPerMinuteSelf = :goldPerMinuteSelf, goldPerMinuteOthers = :goldPerMinuteOthers, inBattle = :inBattle,
+                    wave = :wave
+                WHERE uid = :uid""", {
+                    "uid": user.uid,
+                    "name": user.name,
+                    "gold": user.gold,
+                    "accumulatedGold": user.accumulatedGold,
+                    "goldPerMinuteSelf": user.goldPerMinuteSelf,
+                    "goldPerMinuteOthers": user.goldPerMinuteOthers,
                     "inBattle": user.inBattle,
                     "wave": json.dumps(user.wave),
                 })
@@ -377,15 +387,16 @@ class Db:
     async def resetGameData(self):
         emptyBattleground = BattlegroundState.empty(self.gameConfig)
         with self.makeConnection() as conn:
-            conn.execute(
-                "UPDATE users SET battleground = :emptyBattleground, "
-                "gold = :initialGold, accumulatedGold = :initialGold,"
-                "goldPerMinute = :goldPerMinute, wave = '[]',"
-                "inBattle = 0"
-                , {
+            conn.execute("""
+                UPDATE users
+                SET 
+                    battleground = :emptyBattleground, gold = :initialGold, accumulatedGold = :initialGold,
+                    goldPerMinuteSelf = :goldPerMinuteSelf, goldPerMinuteOthers = 0, wave = '[]',
+                    inBattle = 0""",
+                {
                     "emptyBattleground": emptyBattleground.to_json(),
                     "initialGold": self.gameConfig.misc.startingGold,
-                    "goldPerMinute": self.gameConfig.misc.minGoldPerMinute,
+                    "goldPerMinuteSelf": self.gameConfig.misc.minGoldPerMinute,
                 })
             self.resetBattles()
 

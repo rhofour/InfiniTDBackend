@@ -30,7 +30,8 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
         with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
             user.gold = 50
             user.accumulatedGold = 110
-            user.goldPerMinute = 2.5
+            user.goldPerMinuteSelf = 2.5
+            user.goldPerMinuteOthers = 1.5
             user.battleground = self.initialBattleground
             user.wave = [0, 1, 0]
             user.inBattle = True # So we can calculate a battle
@@ -56,7 +57,8 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(battleground, expectedBg)
         self.assertEqual(user.gold, 100) # pytype: disable=attribute-error
         self.assertEqual(user.accumulatedGold, 100) # pytype: disable=attribute-error
-        self.assertEqual(user.goldPerMinute, 1.0) # pytype: disable=attribute-error
+        self.assertEqual(user.goldPerMinuteSelf, 1.0) # pytype: disable=attribute-error
+        self.assertEqual(user.goldPerMinuteOthers, 0) # pytype: disable=attribute-error
         self.assertEqual(user.wave, []) # pytype: disable=attribute-error
         self.assertFalse(user.inBattle)
         self.assertIsNone(battle)
@@ -73,7 +75,8 @@ class TestResetGameData(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(battleground, self.initialBattleground)
         self.assertEqual(user.gold, 50) # pytype: disable=attribute-error
         self.assertEqual(user.accumulatedGold, 110) # pytype: disable=attribute-error
-        self.assertEqual(user.goldPerMinute, 2.5) # pytype: disable=attribute-error
+        self.assertEqual(user.goldPerMinuteSelf, 2.5) # pytype: disable=attribute-error
+        self.assertEqual(user.goldPerMinuteOthers, 1.5) # pytype: disable=attribute-error
         self.assertEqual(user.wave, [0, 1, 0]) # pytype: disable=attribute-error
         self.assertTrue(user.inBattle)
         self.assertEqual(battle, self.initialBattle)

@@ -14,7 +14,8 @@ class UserSummary:
     name: str
     gold: float
     accumulatedGold: float
-    goldPerMinute: float
+    goldPerMinuteSelf: float
+    goldPerMinuteOthers: float
     wave: List[ConfigId]
     inBattle: bool = False
     admin: bool = False
