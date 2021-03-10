@@ -152,6 +152,8 @@ class MiscConfig:
 
     @staticmethod
     def fromMiscConfigData(miscConfigData: MiscConfigData):
+        if miscConfigData.rivalRadius < 0:
+            raise ValueError(f"Invalid rival radius value: {miscConfigData.rivalRadius}")
         return MiscConfig(
             sellMultiplier = miscConfigData.sellMultiplier,
             startingGold = miscConfigData.startingGold,

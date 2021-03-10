@@ -15,6 +15,7 @@ from infinitd_server.game_config import GameConfig
 from infinitd_server.sse import SseQueues
 from infinitd_server.paths import pathExists
 from infinitd_server.logger import Logger
+from infinitd_server.rivals import Rivals
 
 class Db:
     DEFAULT_DB_PATH = "data/data.db"
@@ -175,7 +176,11 @@ class Db:
     async def accumulateGold(self):
         """Updates gold and accumulatedGold for every user based on goldPerMinute."""
         with self.makeConnection() as conn:
-            res = conn.execute("SELECT name FROM users WHERE inBattle == 0;")
+            res = conn.execute("""
+                SELECT name
+                FROM users
+                WHERE inBattle == 0 AND (goldPerMinuteSelf > 0 OR goldPerMinuteOthers > 0)
+                ;""")
             namesUpdated = [row[0] for row in res]
             conn.execute("""
             UPDATE users SET
@@ -416,13 +421,28 @@ class Db:
     
     def deleteAccount(self, uid: str):
         with self.makeConnection() as conn:
-            print(f"uid: {uid}")
             conn.execute(
                 "DELETE FROM users WHERE uid = :uid",
                 { "uid": uid })
             conn.execute(
                 "DELETE FROM battles WHERE attacking_uid = :uid OR defending_uid = :uid",
                 { "uid": uid })
+    
+    def getUserRivals(self, username: str) -> Rivals:
+        rivalRadius = self.gameConfig.misc.rivalRadius
+        query = "SELECT * FROM (SELECT "
+        for i in range(rivalRadius, 0, -1):
+            query += f"lag(name, {i}) OVER win as ahead_{i}, "
+        query += "name as name, "
+        for i in range(1, rivalRadius + 1):
+            query += f"lead(name, {i}) OVER win as behind_{i}, "
+        query = query[:-2]
+        query += " FROM users WINDOW win AS (ORDER BY accumulatedGold DESC)) WHERE name = :name ;"
+        with self.makeConnection() as conn:
+            res = conn.execute(query, { "name": username }).fetchone()
+        aheadRivals = [x for x in res[:rivalRadius] if x is not None]
+        behindRivals = [x for x in res[-rivalRadius:] if x is not None]
+        return Rivals(aheadRivals, behindRivals)
 
 class MutableUserContext:
     db: Db

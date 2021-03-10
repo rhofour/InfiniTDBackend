@@ -15,6 +15,7 @@ from infinitd_server.logger import Logger
 from infinitd_server.sse import SseQueues
 from infinitd_server.user import User, FrozenUser, FrozenUserSummary, MutableUser
 from infinitd_server.paths import pathExists
+from infinitd_server.rivals import Rivals
 
 class UserInBattleException(Exception):
     pass
@@ -44,6 +45,7 @@ class Game:
     battleQueues: SseQueues
     battlegroundQueues: SseQueues
     userQueues: SseQueues
+    rivalsQueues: SseQueues
     _battleCoordinator: BattleCoordinator
     _db: Db
 
@@ -55,6 +57,7 @@ class Game:
         self.battleQueues = SseQueues()
         self.battlegroundQueues = SseQueues()
         self.userQueues = SseQueues()
+        self.rivalsQueues = SseQueues()
 
         self.battleCoordinator = BattleCoordinator(self.battleQueues)
         self._db = Db(
@@ -289,3 +292,6 @@ class Game:
     def deleteAccount(self, uid: str):
         self._db.deleteAccount(uid)
         firebase_admin.auth.delete_user(uid)
+    
+    def getUserRivals(self, username: str) -> Rivals:
+        return self._db.getUserRivals(self, username)
