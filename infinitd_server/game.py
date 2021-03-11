@@ -64,6 +64,7 @@ class Game:
                 gameConfig = self.gameConfig,
                 userQueues = self.userQueues,
                 bgQueues = self.battlegroundQueues,
+                rivalsQueues = self.rivalsQueues,
                 battleCoordinator = self.battleCoordinator,
                 debug=debug,
                 dbPath = dbPath)
@@ -274,7 +275,9 @@ class Game:
         self._db.clearInBattle()
 
     async def accumulateGold(self):
+        self.logger.info("accumulate_gold", -1, "Accumulating gold")
         await self._db.accumulateGold()
+        self.logger.info("accumulate_gold", -1, "Done accumulating gold")
 
     async def setBattleground(self, name: str, newBattleground: BattlegroundState):
         """Directly sets the Battleground for a given user. For test purposes only."""
@@ -294,4 +297,4 @@ class Game:
         firebase_admin.auth.delete_user(uid)
     
     def getUserRivals(self, username: str) -> Rivals:
-        return self._db.getUserRivals(self, username)
+        return self._db.getUserRivals(username)

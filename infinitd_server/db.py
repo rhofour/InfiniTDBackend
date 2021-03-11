@@ -3,7 +3,7 @@ from contextlib import contextmanager
 import math
 import sqlite3
 import json
-from typing import Optional, List, Callable, Awaitable
+from typing import Optional, List, Callable, Awaitable, Tuple
 
 from infinitd_server.battle import Battle, BattleResults
 from infinitd_server.battle_computer import BattleCalculationException
@@ -27,13 +27,15 @@ class Db:
     gameConfig: GameConfig
     userQueues: SseQueues
     bgQueues: SseQueues
+    rivalsQuees: SseQueues
     battleComputerPool: BattleComputerPool
     battleCoordinator: BattleCoordinator
     debug: bool
     dbPath: str
 
     def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues,
-            battleCoordinator: BattleCoordinator, dbPath=None, debug=False):
+            rivalsQueues: SseQueues, battleCoordinator: BattleCoordinator,
+            dbPath=None, debug=False):
         self.debug = debug
         self.dbPath = self.DEFAULT_DB_PATH if dbPath is None else dbPath
         sqlite3.enable_callback_tracebacks(debug)
@@ -41,6 +43,7 @@ class Db:
         self.gameConfig = gameConfig
         self.userQueues = userQueues
         self.bgQueues = bgQueues
+        self.rivalsQueues = rivalsQueues
         self.battleComputerPool = BattleComputerPool(gameConfig = gameConfig, debug = debug)
         self.battleCoordinator = battleCoordinator
         self.logger = Logger.getDefault()
@@ -175,7 +178,44 @@ class Db:
 
     async def accumulateGold(self):
         """Updates gold and accumulatedGold for every user based on goldPerMinute."""
+        rivalRadius = self.gameConfig.misc.rivalRadius
+        rivals_inner_query = "(SELECT "
+        for i in range(rivalRadius, 0, -1):
+            rivals_inner_query += f"lag(name, {i}) OVER before as before_ahead_{i}, "
+            rivals_inner_query += f"lag(name, {i}) OVER after as after_ahead_{i}, "
+        rivals_inner_query += "name as name, "
+        for i in range(1, rivalRadius + 1):
+            rivals_inner_query += f"lead(name, {i}) OVER before as before_behind_{i}, "
+            rivals_inner_query += f"lead(name, {i}) OVER after as after_behind_{i}, "
+        rivals_inner_query = rivals_inner_query[:-2]
+        rivals_inner_query += """
+            FROM users
+            WINDOW
+               before AS (ORDER BY accumulatedGold DESC),
+               after AS (ORDER BY accumulatedGold + goldPerMinuteSelf + goldPerMinuteOthers DESC)
+            )"""
+        rivals_query = "SELECT "
+        for i in range(rivalRadius, 0, -1):
+            rivals_query += f"after_ahead_{i}, "
+        rivals_query += "name, "
+        for i in range(1, rivalRadius + 1):
+            rivals_query += f"after_behind_{i}, "
+        rivals_query = rivals_query[:-2]
+        rivals_query += f" FROM {rivals_inner_query} WHERE FALSE"
+        for i in range(1, rivalRadius + 1):
+            rivals_query += f" OR before_ahead_{i} != after_ahead_{i}"
+            rivals_query += f" OR before_behind_{i} != after_behind_{i}"
+        rivals_query += " OR TRUE;"
+
         with self.makeConnection() as conn:
+            res = conn.execute(rivals_query)
+            def makeRivals(row):
+                aheadRivals = [x for x in row[:rivalRadius] if x is not None]
+                behindRivals = [x for x in row[-rivalRadius:] if x is not None]
+                return Rivals(aheadRivals, behindRivals)
+
+            rivalsUpdated = [(row[rivalRadius], makeRivals(row)) for row in res]
+
             res = conn.execute("""
                 SELECT name
                 FROM users
@@ -188,6 +228,7 @@ class Db:
                 gold = gold + goldPerMinuteSelf + goldPerMinuteOthers
             WHERE inBattle == 0;""")
 
+        await self.__updateRivalsListeners(rivalsUpdated)
         await self.__updateUserListeners(namesUpdated)
 
     async def __updateBattlegroundListeners(self, name):
@@ -215,6 +256,13 @@ class Db:
         if updateCalls:
             await asyncio.wait(updateCalls)
 
+    async def __updateRivalsListeners(self, usersAndRivals: List[Tuple[str, Rivals]]):
+        updateCalls = []
+        for (name, rivals) in usersAndRivals:
+            if name in self.rivalsQueues:
+                updateCalls.append(self.rivalsQueues.sendUpdate(name, rivals))
+        if updateCalls:
+            await asyncio.wait(updateCalls)
 
     async def setInBattle(self, name: str, inBattle: bool):
         with self.makeConnection() as conn:
@@ -439,10 +487,19 @@ class Db:
         query = query[:-2]
         query += " FROM users WINDOW win AS (ORDER BY accumulatedGold DESC)) WHERE name = :name ;"
         with self.makeConnection() as conn:
+            res = conn.execute("SELECT * FROM users ORDER BY accumulatedGold DESC;")
             res = conn.execute(query, { "name": username }).fetchone()
         aheadRivals = [x for x in res[:rivalRadius] if x is not None]
         behindRivals = [x for x in res[-rivalRadius:] if x is not None]
         return Rivals(aheadRivals, behindRivals)
+    
+    def printUsers(self):
+        "Print the users table for debugging."
+        with self.makeConnection() as conn:
+            res = conn.execute(self.SELECT_USER_SUMMARY_STATEMENT + " ORDER BY accumulatedGold DESC;")
+        for row in res:
+            print(self.__extractUserSummaryFromRow(row))
+
 
 class MutableUserContext:
     db: Db
