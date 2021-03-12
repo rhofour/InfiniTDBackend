@@ -119,6 +119,38 @@ class TestDb(AsyncTestCase):
 
         missingBattles = set(self.db.findMissingBattles())
         self.assertEqual(missingBattles, set([("bob_uid", "sue_uid"), ("joe_uid", "joe_uid")]))
+    
+    def test_updateGoldPerMinuteOthers(self):
+        self.db.register(uid="bob_uid", name="bob")
+        self.db.register(uid="sue_uid", name="sue")
+        self.db.register(uid="joe_uid", name="joe")
+        # Make all the waves non-empty.
+        def waitOnAwaitable(x):
+            asyncio.get_event_loop().run_until_complete(x)
+        with self.db.getMutableUserContext("bob_uid", waitOnAwaitable) as user:
+            user.wave = [0]
+        with self.db.getMutableUserContext("sue_uid", waitOnAwaitable) as user:
+            user.wave = [0]
+        with self.db.getMutableUserContext("joe_uid", waitOnAwaitable) as user:
+            user.wave = [1]
+        with self.db.getMutableUserContext("joe_uid", waitOnAwaitable) as user:
+            user.goldPerMinuteOthers = 9.0 # To check if joe is updated or not.
+        # Add fake battles.
+        self.db.addTestBattle("sue_uid", "bob_uid", goldPerMinute=1.0)
+        self.db.addTestBattle("bob_uid", "sue_uid", goldPerMinute=2.0)
+        # Self battles should be ignored.
+        self.db.addTestBattle("sue_uid", "sue_uid", goldPerMinute=1.0)
+        self.db.addTestBattle("joe_uid", "sue_uid", goldPerMinute=3.0)
+        # No battles involve joe so they shouldn't be updated.
+
+        self.db.updateGoldPerMinuteOthers()
+
+        bob = self.db.getUserSummaryByName("bob")
+        self.assertEqual(bob.goldPerMinuteOthers, 1.0)
+        sue = self.db.getUserSummaryByName("sue")
+        self.assertEqual(sue.goldPerMinuteOthers, 5.0)
+        joe = self.db.getUserSummaryByName("joe")
+        self.assertEqual(joe.goldPerMinuteOthers, 9.0)
 
 if __name__ == "__main__":
     unittest.main()

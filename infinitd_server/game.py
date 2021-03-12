@@ -298,3 +298,13 @@ class Game:
     
     def getUserRivals(self, username: str) -> Rivals:
         return self._db.getUserRivals(username)
+    
+    async def calculateMissingBattles(self):
+        missingBattles = self._db.findMissingBattles()
+        awaitables = []
+        for (attackerUid, defenderUid) in missingBattles:
+            attacker = self._db.getUserSummaryByUid(attackerUid)
+            defender = self._db.getUserSummaryByUid(defenderUid)
+            awaitables.append(self._db.getOrMakeBattle(attacker, defender))
+        await asyncio.wait(awaitables)
+        self._db.updateGoldPerMinuteOthers()

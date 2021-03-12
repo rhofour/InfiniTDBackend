@@ -68,7 +68,8 @@ class Db:
                 attacking_uid TEXT KEY,
                 defending_uid TEXT KEY,
                 events BLOB,
-                results BLOB
+                results BLOB,
+                goldPerMinute REAL
                 );""")
     
     def makeConnection(self) -> sqlite3.Connection:
@@ -205,7 +206,6 @@ class Db:
         for i in range(1, rivalRadius + 1):
             rivals_query += f" OR before_ahead_{i} != after_ahead_{i}"
             rivals_query += f" OR before_behind_{i} != after_behind_{i}"
-        rivals_query += " OR TRUE;"
 
         with self.makeConnection() as conn:
             res = conn.execute(rivals_query)
@@ -351,12 +351,13 @@ class Db:
             if safeToWrite:
                 # We can safely write the battle.
                 conn.execute(
-                    "INSERT into battles (attacking_uid, defending_uid, events, results) "
-                    "VALUES (:attackingUid, :defendingUid, :events, :results);",
+                    "INSERT INTO battles (attacking_uid, defending_uid, events, results, goldPerMinute) "
+                    "VALUES (:attackingUid, :defendingUid, :events, :results, :goldPerMinute);",
                     {
                         "attackingUid": attacker.uid, "defendingUid": defender.uid,
                         "events": battleCalcResults.fb.EventsAsNumpy().tobytes(),
                         "results": battleCalcResults.results.encodeFb(),
+                        "goldPerMinute": battleCalcResults.results.goldPerMinute,
                     }
                 )
                 return battle
@@ -533,17 +534,58 @@ class Db:
         missingBattleUids = [(row[0], row[1]) for row in res]
         return missingBattleUids
     
-    def addTestBattle(self, attackingUid, defendingUid):
+    def addTestBattle(self, attackingUid, defendingUid, goldPerMinute = 0.0):
         with self.makeConnection() as conn:
             conn.execute(
-                "INSERT into battles (attacking_uid, defending_uid, events, results) "
-                "VALUES (:attackingUid, :defendingUid, :events, :results);",
+                "INSERT INTO battles (attacking_uid, defending_uid, events, results, goldPerMinute) "
+                "VALUES (:attackingUid, :defendingUid, :events, :results, :goldPerMinute);",
                 {
                     "attackingUid": attackingUid, "defendingUid": defendingUid,
                     "events": b"",
                     "results": b"",
+                    "goldPerMinute": goldPerMinute,
                 }
             )
+
+    def updateGoldPerMinuteOthers(self):
+        "Update goldPerMinuteOthers for all users."
+        with self.makeConnection() as conn:
+            conn.execute("""
+                WITH new_values AS (
+                    WITH users_and_ranks AS (
+                        SELECT
+                            uid,
+                            row_number() OVER (ORDER BY accumulatedGold DESC) as rank,
+                            wave = "[]" as empty_wave
+                        FROM
+                            users
+                        WHERE
+                            inBattle = FALSE
+                    )
+                    SELECT
+                        defending_uid,
+                        SUM(goldPerMinute) as newGoldPerMinuteOthers
+                    FROM
+                        (SELECT
+                            u1.uid as attacking_uid, 
+                            u2.uid as defending_uid
+                        FROM
+                            users_and_ranks as u1, users_and_ranks as u2
+                        WHERE TRUE
+                            AND u1.uid != u2.uid
+                            AND abs(u1.rank - u2.rank) <= :rivalRadius
+                            AND u1.empty_wave = FALSE
+                        ) LEFT JOIN
+                        battles USING (attacking_uid, defending_uid)
+                    WHERE
+                        goldPerMinute > 0
+                    GROUP BY defending_uid
+                )
+                UPDATE users
+                SET goldPerMinuteOthers = new_values.newGoldPerMinuteOthers
+                FROM new_values
+                WHERE new_values.defending_uid = users.uid
+            ;""", { "rivalRadius": self.gameConfig.misc.rivalRadius })
 
 
 class MutableUserContext:
