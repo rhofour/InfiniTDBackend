@@ -120,8 +120,18 @@ def main():
     async def accumulateGold():
         await game.accumulateGold()
     tornado.ioloop.PeriodicCallback(accumulateGold, 60_000).start()
-    logger.warn("startup", -1, "Startup finished.")
-    asyncio.get_event_loop().run_forever()
+    async def schedulePeriodicCallbackIn(seconds: float, callback, period: float):
+        await asyncio.sleep(seconds)
+        tornado.ioloop.PeriodicCallback(callback, period).start()
+    async def calculateMissingBattles():
+        await game.calculateMissingBattles()
+    loop = asyncio.get_event_loop()
+    # Schedule this out-of-phase with accumulateGold
+    scheduleCallbackTask = loop.create_task(
+        schedulePeriodicCallbackIn(30, calculateMissingBattles, 60_000))
+    logger.info("startup", -1, "Startup finished.")
+    loop.run_until_complete(scheduleCallbackTask)
+    loop.run_forever()
 
 if __name__ == "__main__":
     main()

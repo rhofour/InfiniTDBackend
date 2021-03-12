@@ -14,6 +14,7 @@ class RecordedBattleHandler(BaseHandler):
                     handler = self.__class__.__name__, requestId = self.requestId)
             self.logInfo(f"Found battle.")
             self.write(cattr.unstructure(battle))
+            await self.updateGoldPerMinuteOthersForUser(defenderName)
         except (BattleCalculationException) as e:
             self.logError(f"Battle calculation error: {e}")
             self.set_status(409) # Conflict

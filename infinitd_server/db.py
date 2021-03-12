@@ -3,7 +3,7 @@ from contextlib import contextmanager
 import math
 import sqlite3
 import json
-from typing import Optional, List, Callable, Awaitable, Tuple
+from typing import Optional, List, Callable, Awaitable, Tuple, Iterable
 
 from infinitd_server.battle import Battle, BattleResults
 from infinitd_server.battle_computer import BattleCalculationException
@@ -229,7 +229,7 @@ class Db:
             WHERE inBattle == 0;""")
 
         await self.__updateRivalsListeners(rivalsUpdated)
-        await self.__updateUserListeners(namesUpdated)
+        await self.updateUserListeners(namesUpdated)
 
     async def __updateBattlegroundListeners(self, name):
         if name in self.bgQueues:
@@ -247,7 +247,7 @@ class Db:
         if updateCalls:
             await asyncio.wait(updateCalls)
 
-    async def __updateUserListeners(self, names: List[str]):
+    async def updateUserListeners(self, names: Iterable[str]):
         updateCalls = []
         for name in names:
             if name in self.userQueues:
@@ -290,7 +290,7 @@ class Db:
         "Marks a user as no longer in a battle."
         with self.makeConnection() as conn:
             conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid;", { "uid": uid })
-        await self.__updateUserListeners([name])
+        await self.updateUserListeners([name])
 
     def getBattle(self, attackingUser: FrozenUserSummary, defendingUser: FrozenUserSummary, conn: sqlite3.Connection) -> Optional[Battle]:
         res = conn.execute(
@@ -424,7 +424,7 @@ class Db:
         # There's no need to commit here as the calling function will do that.
 
         if user.summaryModified:
-            addAwaitable(self.__updateUserListeners([user.name]))
+            addAwaitable(self.updateUserListeners([user.name]))
         if user.battlegroundModified:
             addAwaitable(self.__updateBattlegroundListeners(user.name))
 
@@ -535,20 +535,31 @@ class Db:
         return missingBattleUids
     
     def addTestBattle(self, attackingUid, defendingUid, goldPerMinute = 0.0):
+        testBattleResults = BattleResults(
+            monstersDefeated={},
+            bonuses=[],
+            reward=0.0,
+            timeSecs=0.0)
+        testBattle = Battle(
+            name="Test Battle",
+            attackerName="test attacker",
+            defenderName="test defender",
+            events=[],
+            results=testBattleResults)
         with self.makeConnection() as conn:
             conn.execute(
                 "INSERT INTO battles (attacking_uid, defending_uid, events, results, goldPerMinute) "
                 "VALUES (:attackingUid, :defendingUid, :events, :results, :goldPerMinute);",
                 {
                     "attackingUid": attackingUid, "defendingUid": defendingUid,
-                    "events": b"",
-                    "results": b"",
+                    "events": testBattle.encodeEventsFb(),
+                    "results": testBattle.encodeEventsFb(),
                     "goldPerMinute": goldPerMinute,
                 }
             )
 
     def updateGoldPerMinuteOthers(self):
-        "Update goldPerMinuteOthers for all users."
+        "Update goldPerMinuteOthers for all users, returning the usernames of impacted users."
         with self.makeConnection() as conn:
             conn.execute("""
                 WITH new_values AS (
@@ -559,12 +570,10 @@ class Db:
                             wave = "[]" as empty_wave
                         FROM
                             users
-                        WHERE
-                            inBattle = FALSE
                     )
                     SELECT
                         defending_uid,
-                        SUM(goldPerMinute) as newGoldPerMinuteOthers
+                        SUM(goldPerMinute) * :rivalMultiplier as newGoldPerMinuteOthers
                     FROM
                         (SELECT
                             u1.uid as attacking_uid, 
@@ -585,8 +594,10 @@ class Db:
                 SET goldPerMinuteOthers = new_values.newGoldPerMinuteOthers
                 FROM new_values
                 WHERE new_values.defending_uid = users.uid
-            ;""", { "rivalRadius": self.gameConfig.misc.rivalRadius })
-
+            ;""", {
+                "rivalRadius": self.gameConfig.misc.rivalRadius,
+                "rivalMultiplier": self.gameConfig.misc.rivalMultiplier,
+            })
 
 class MutableUserContext:
     db: Db

@@ -141,15 +141,16 @@ class TestDb(AsyncTestCase):
         # Self battles should be ignored.
         self.db.addTestBattle("sue_uid", "sue_uid", goldPerMinute=1.0)
         self.db.addTestBattle("joe_uid", "sue_uid", goldPerMinute=3.0)
-        # No battles involve joe so they shouldn't be updated.
 
         self.db.updateGoldPerMinuteOthers()
 
+        # Note these values are affected by the rival multiplier which is 0.5 here.
         bob = self.db.getUserSummaryByName("bob")
-        self.assertEqual(bob.goldPerMinuteOthers, 1.0)
+        self.assertEqual(bob.goldPerMinuteOthers, 0.5)
         sue = self.db.getUserSummaryByName("sue")
-        self.assertEqual(sue.goldPerMinuteOthers, 5.0)
+        self.assertEqual(sue.goldPerMinuteOthers, 2.5)
         joe = self.db.getUserSummaryByName("joe")
+        # No battles involve joe defending so they shouldn't be updated.
         self.assertEqual(joe.goldPerMinuteOthers, 9.0)
 
 if __name__ == "__main__":
