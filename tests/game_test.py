@@ -32,15 +32,13 @@ class TestGame(AsyncTestCase):
         self.game.register(uid="sue_uid", name="sue")
         self.game.register(uid="joe_uid", name="joe")
         # Make all the waves non-empty.
-        async def waitOnAwaitable(x):
-            await x
-        with self.game.getMutableUserContext("bob_uid", "bob", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("bob_uid", "bob") as user:
             user.wave = [0]
-        with self.game.getMutableUserContext("sue_uid", "sue", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("sue_uid", "sue") as user:
             user.wave = [0]
-        with self.game.getMutableUserContext("joe_uid", "joe", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("joe_uid", "joe") as user:
             user.wave = [1]
-        with self.game.getMutableUserContext("joe_uid", "joe", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("joe_uid", "joe") as user:
             user.goldPerMinuteOthers = 9.0 # To check if joe is updated or not.
         # Add fake battles.
         self.game._db.addTestBattle("sue_uid", "bob_uid", goldPerMinute=1.0)

@@ -81,13 +81,11 @@ class TestDb(AsyncTestCase):
         self.db.register(uid="foo", name="bob")
         self.db.register(uid="bar", name="sue")
         self.db.register(uid="baz", name="joe")
-        def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
-        with self.db.getMutableUserContext("foo", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("foo") as user:
             user.accumulatedGold = 5
-        with self.db.getMutableUserContext("bar", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("bar") as user:
             user.accumulatedGold = 3
-        with self.db.getMutableUserContext("baz", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("baz") as user:
             user.accumulatedGold = 1
         
         bob_rivals = self.db.getUserRivals("bob")
@@ -102,15 +100,13 @@ class TestDb(AsyncTestCase):
         self.db.register(uid="bob_uid", name="bob")
         self.db.register(uid="sue_uid", name="sue")
         self.db.register(uid="joe_uid", name="joe")
-        def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
-        with self.db.getMutableUserContext("bob_uid", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("bob_uid") as user:
             user.accumulatedGold = 5
             user.wave = [0]
-        with self.db.getMutableUserContext("sue_uid", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("sue_uid") as user:
             user.accumulatedGold = 3
             # No wave so there should be no battles where sue is attacking.
-        with self.db.getMutableUserContext("joe_uid", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("joe_uid") as user:
             user.accumulatedGold = 1
             user.wave = [1]
         # Add fake battles.
@@ -125,15 +121,13 @@ class TestDb(AsyncTestCase):
         self.db.register(uid="sue_uid", name="sue")
         self.db.register(uid="joe_uid", name="joe")
         # Make all the waves non-empty.
-        def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
-        with self.db.getMutableUserContext("bob_uid", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("bob_uid") as user:
             user.wave = [0]
-        with self.db.getMutableUserContext("sue_uid", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("sue_uid") as user:
             user.wave = [0]
-        with self.db.getMutableUserContext("joe_uid", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("joe_uid") as user:
             user.wave = [1]
-        with self.db.getMutableUserContext("joe_uid", waitOnAwaitable) as user:
+        with self.db.getMutableUserContext("joe_uid") as user:
             user.goldPerMinuteOthers = 9.0 # To check if joe is updated or not.
         # Add fake battles.
         self.db.addTestBattle("sue_uid", "bob_uid", goldPerMinute=1.0)

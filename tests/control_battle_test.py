@@ -21,9 +21,7 @@ class TestControlBattleHandler(tornado.testing.AsyncHTTPTestCase):
         self.game = Game(self.gameConfig, dbPath = self.dbPath)
 
         self.game.register(uid="test_uid", name="bob")
-        def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
-        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid", "bob") as user:
             user.wave = [ConfigId(0)]
 
         return tornado.web.Application([

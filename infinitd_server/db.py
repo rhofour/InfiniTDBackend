@@ -71,11 +71,58 @@ class Db:
                 results BLOB,
                 goldPerMinute REAL
                 );""")
+            # Add a trigger to update the user stream when user summary data is changed.
+            conn.execute("""
+                CREATE TRIGGER IF NOT EXISTS userSummaryUpdate
+                AFTER UPDATE ON users
+                WHEN FALSE
+                    OR new.name <> old.name
+                    OR new.gold <> old.gold
+                    OR new.accumulatedGold <> old.accumulatedGold
+                    OR new.goldPerMinuteSelf <> old.goldPerMinuteSelf
+                    OR new.goldPerMinuteOthers <> old.goldPerMinuteOthers
+                    OR new.inBattle <> old.inBattle
+                    OR new.wave <> old.wave
+                BEGIN
+                    SELECT 
+                        updateUserListeners( -- Keep in-sync with SELECT_USER_SUMMARY_STATEMENT
+                            new.name,
+                            new.uid,
+                            new.gold,
+                            new.accumulatedGold,
+                            new.goldPerMinuteSelf,
+                            new.goldPerMinuteOthers,
+                            new.inBattle,
+                            new.wave,
+                            new.admin
+                        );
+                END;""")
+            # TODO: Create a trigger for Battleground changes
+
     
+    def __addTriggerFunctions(self, conn: sqlite3.Connection):
+        def updateUserListeners(name, uid, gold, accumulatedGold, goldPerMinuteSelf,
+                goldPerMinuteOthers, inBattle, wave, admin):
+            newUserSummary = FrozenUserSummary(
+                name = name,
+                uid = uid,
+                gold = gold,
+                accumulatedGold = accumulatedGold,
+                goldPerMinuteSelf = goldPerMinuteSelf,
+                goldPerMinuteOthers = goldPerMinuteOthers,
+                inBattle = inBattle,
+                wave = wave,
+                admin = admin,
+            )
+            self.__updateUserListeners(newUserSummary)
+        conn.create_function(
+            "updateUserListeners", 9, updateUserListeners)
+
     def makeConnection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.dbPath, isolation_level=None)
         # Enable Write-Ahead Logging: https://www.sqlite.org/wal.html
         conn.execute("PRAGMA journal_mode=WAL;")
+        self.__addTriggerFunctions(conn)
         return conn
 
     @staticmethod
@@ -230,7 +277,6 @@ class Db:
 
         # TODO: See if we can use a trigger on a view to avoid having to call this manually.
         await self.__updateRivalsListeners(rivalsUpdated)
-        await self.updateUserListeners(namesUpdated)
 
     async def __updateBattlegroundListeners(self, name):
         if name in self.bgQueues:
@@ -248,14 +294,10 @@ class Db:
         if updateCalls:
             await asyncio.wait(updateCalls)
 
-    async def updateUserListeners(self, names: Iterable[str]):
-        updateCalls = []
-        for name in names:
-            if name in self.userQueues:
-                user = self.getUserSummaryByName(name)
-                updateCalls.append(self.userQueues.sendUpdate(name, user))
-        if updateCalls:
-            await asyncio.wait(updateCalls)
+    def __updateUserListeners(self, user: FrozenUserSummary):
+        if user.name in self.userQueues:
+            # Send the update asynchronously
+            asyncio.create_task(self.userQueues.sendUpdate(user.name, user))
 
     async def __updateRivalsListeners(self, usersAndRivals: List[Tuple[str, Rivals]]):
         updateCalls = []
@@ -287,11 +329,10 @@ class Db:
 
         await self.__updateBattlegroundListeners(name)
 
-    async def setUserNotInBattle(self, uid: str, name: str):
+    def setUserNotInBattle(self, uid: str, name: str):
         "Marks a user as no longer in a battle."
         with self.makeConnection() as conn:
             conn.execute("UPDATE users SET inBattle = FALSE where uid = :uid;", { "uid": uid })
-        await self.updateUserListeners([name])
 
     def getBattle(self, attackingUser: FrozenUserSummary, defendingUser: FrozenUserSummary, conn: sqlite3.Connection) -> Optional[Battle]:
         res = conn.execute(
@@ -373,7 +414,7 @@ class Db:
             conn.execute("UPDATE users SET inBattle = FALSE;")
             conn.commit()
 
-    def updateUser(self, user: MutableUser, addAwaitable: Callable[[Awaitable[None]], None]):
+    def updateUser(self, user: MutableUser):
         "Update a User."
         # This is always called from within a transaction in MutableUser.
         assert user.conn.in_transaction is True
@@ -424,11 +465,6 @@ class Db:
 
         # There's no need to commit here as the calling function will do that.
 
-        if user.summaryModified:
-            addAwaitable(self.updateUserListeners([user.name]))
-        if user.battlegroundModified:
-            addAwaitable(self.__updateBattlegroundListeners(user.name))
-
     def enterTransaction(self, conn: Optional[sqlite3.Connection] = None) -> sqlite3.Connection:
         if conn is None:
             conn = self.makeConnection()
@@ -439,11 +475,11 @@ class Db:
         assert conn.in_transaction is True
         conn.commit()
 
-    def getMutableUserContext(self, uid: str, addAwaitable) -> Optional['MutableUserContext']:
+    def getMutableUserContext(self, uid: str) -> Optional['MutableUserContext']:
         user = self.getUnfrozenUserByUid(uid)
         if user is None:
             return None
-        return MutableUserContext(user, self, addAwaitable)
+        return MutableUserContext(user, self)
 
     def resetBattles(self):
         with self.makeConnection() as conn:
@@ -603,12 +639,10 @@ class Db:
 class MutableUserContext:
     db: Db
     mutableUser: MutableUser
-    addAwaitable: Callable[[Awaitable[None]], None]
 
-    def __init__(self, user: User, db: Db, addAwaitable):
+    def __init__(self, user: User, db: Db):
         self.db = db
         self.mutableUser = MutableUser(user, self.db.makeConnection())
-        self.addAwaitable = addAwaitable
 
     def __enter__(self):
         self.db.enterTransaction(self.mutableUser.conn)
@@ -616,5 +650,5 @@ class MutableUserContext:
 
     def __exit__(self, type, value, traceback):
         if self.mutableUser.summaryModified or self.mutableUser.battlegroundModified:
-            self.db.updateUser(user = self.mutableUser, addAwaitable = self.addAwaitable)
+            self.db.updateUser(user = self.mutableUser)
         self.db.leaveTransaction(self.mutableUser.conn)

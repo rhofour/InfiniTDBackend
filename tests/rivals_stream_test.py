@@ -25,15 +25,13 @@ class TestRivalsStreamHandler(SseTestCase):
         self.game.register(uid="test_uid1", name="bob")
         self.game.register(uid="test_uid2", name="sam")
         self.game.register(uid="test_uid3", name="joe")
-        def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
-        with self.game.getMutableUserContext("test_uid1", "bob", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid1", "bob") as user:
             user.accumulatedGold = 5
             user.goldPerMinuteSelf = 2
-        with self.game.getMutableUserContext("test_uid2", "sam", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid2", "sam") as user:
             user.accumulatedGold = 3
             user.goldPerMinuteSelf = 1
-        with self.game.getMutableUserContext("test_uid3", "joe", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid3", "joe") as user:
             user.accumulatedGold = 2
             user.goldPerMinuteSelf = 3
 

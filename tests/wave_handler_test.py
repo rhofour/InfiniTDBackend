@@ -80,7 +80,7 @@ class TestWaveHandlerPost(tornado.testing.AsyncHTTPTestCase):
     def test_userInBattle(self):
         def waitOnAwaitable(x):
             asyncio.get_event_loop().run_until_complete(x)
-        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid", "bob") as user:
             user.inBattle = True
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
@@ -101,7 +101,7 @@ class TestWaveHandlerDelete(tornado.testing.AsyncHTTPTestCase):
         self.game.register(uid="test_uid", name="bob")
         def waitOnAwaitable(x):
             asyncio.get_event_loop().run_until_complete(x)
-        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid", "bob") as user:
             self.game.setWave(user, [1])
 
         return tornado.web.Application([(r"/wave/(.*)", WaveHandler, dict(game=self.game))])

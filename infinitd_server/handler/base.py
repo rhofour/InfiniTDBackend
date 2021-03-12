@@ -81,11 +81,7 @@ class BaseHandler(tornado.web.RequestHandler):
     def getMutableUser(self, expectedName: str) -> MutableUserContext:
         uid = self.verifyAuthentication()
         try:
-            def addAwaitable(a: Awaitable[None]):
-                async def awaitCallback():
-                    await a
-                IOLoop.current().add_callback(awaitCallback)
-            return self.game.getMutableUserContext(uid = uid, expectedName = expectedName, addAwaitable = addAwaitable)
+            return self.game.getMutableUserContext(uid = uid, expectedName = expectedName)
         except UserMatchingError as e:
             self.logWarn(str(e))
             self.set_status(403) # Forbidden

@@ -84,8 +84,8 @@ class Game:
     def getUserByUid(self, uid: str) -> Optional[User]:
         return self._db.getUserByUid(uid)
 
-    def getMutableUserContext(self, uid: str, expectedName: str, addAwaitable: Callable[[Awaitable[None]], None]) -> MutableUserContext:
-        mutableUserContext = self._db.getMutableUserContext(uid, addAwaitable)
+    def getMutableUserContext(self, uid: str, expectedName: str) -> MutableUserContext:
+        mutableUserContext = self._db.getMutableUserContext(uid)
         if mutableUserContext is None:
             raise ValueError(f"User with UID = {uid} not found.")
         # Compare against expected name
@@ -206,11 +206,7 @@ class Game:
         # Manually update the user and end the transaction while the battle is
         # calculated. Since the user is marked as in battle none of their data
         # can change even outside of the transaction.
-        awaitables: List[Awaitable[None]] = []
-        def addAwaitable(a: Awaitable[None]):
-            awaitables.append(a)
-        self._db.updateUser(user, addAwaitable=addAwaitable)
-        await asyncio.wait(awaitables)
+        self._db.updateUser(user)
         self._db.leaveTransaction(user.conn)
 
         try:
@@ -228,9 +224,8 @@ class Game:
         async def setUserNotInBattleCallback():
             await self._db.setUserNotInBattle(uid=user.uid, name=user.name)
 
-        async def updateWithBattleResults(results: BattleResults):
-            awaitables = []
-            userContext = self._db.getMutableUserContext(user.uid, lambda x: awaitables.append(x))
+        def updateWithBattleResults(results: BattleResults):
+            userContext = self._db.getMutableUserContext(user.uid)
             if userContext is None:
                 raise ValueError(f"UID {user.uid} doesn't correspond to a user.")
             with userContext as futureUser:
@@ -243,7 +238,6 @@ class Game:
                 futureUser.addGold(results.goldPerMinute)
                 futureUser.goldPerMinuteSelf = results.goldPerMinute
 
-            await asyncio.wait(awaitables)
         self.battleCoordinator.startBattle(user.name, battle,
                 resultsCallback = updateWithBattleResults,
                 endCallback = setUserNotInBattleCallback,

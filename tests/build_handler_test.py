@@ -121,9 +121,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(user.gold, 100)
 
     def test_insufficientGoldMultiple(self):
-        def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
-        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid", "bob") as user:
             user.gold = 2
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
@@ -179,9 +177,7 @@ class TestBuildHandler(tornado.testing.AsyncHTTPTestCase):
         self.assertEqual(user.gold, 100) # pytype: disable=attribute-error
 
     def test_blocksPath(self):
-        def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
-        with self.game.getMutableUserContext("test_uid", "bob", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid", "bob") as user:
             user.battleground.towers.towers[1][0] = BgTowerState(0)
             expectedBattleground = user.battleground
             expectedGold = user.gold

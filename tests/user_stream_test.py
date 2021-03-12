@@ -23,9 +23,7 @@ class TestUserStreamHandler(SseTestCase):
         self.game = Game(self.gameConfig, dbPath = self.dbPath)
 
         self.game.register(uid="test_uid1", name="bob")
-        def waitOnAwaitable(x):
-            asyncio.get_event_loop().run_until_complete(x)
-        with self.game.getMutableUserContext("test_uid1", "bob", waitOnAwaitable) as user:
+        with self.game.getMutableUserContext("test_uid1", "bob") as user:
             user.accumulatedGold = 5
             user.goldPerMinuteSelf = 2
 
@@ -57,7 +55,7 @@ class TestUserStreamHandler(SseTestCase):
             # Update the user here
             async def waitOnAwaitable(x):
                 await x
-            with self.game.getMutableUserContext("test_uid1", "bob", waitOnAwaitable) as user:
+            with self.game.getMutableUserContext("test_uid1", "bob") as user:
                 user.accumulatedGold = 7.0
 
         def updated_user(x):
@@ -66,5 +64,5 @@ class TestUserStreamHandler(SseTestCase):
 
         self.fetchSse(
             "/userStream/bob",
-            expectations=[initial_user])
+            expectations=[initial_user, updated_user])
         self.wait(timeout=1.0)
