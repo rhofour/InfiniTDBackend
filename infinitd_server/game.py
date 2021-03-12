@@ -303,11 +303,9 @@ class Game:
         self.logger.info("calculate_missing_battles", requestId, "Finding missing battles.")
         missingBattles = self._db.findMissingBattles()
         awaitables = []
-        updatedNames = set()
         for (attackerUid, defenderUid) in missingBattles:
             attacker = self._db.getUserSummaryByUid(attackerUid)
             defender = self._db.getUserByUid(defenderUid)
-            updatedNames.add(defender.name)
             awaitables.append(self._db.getOrMakeBattle(
                 attacker, defender,
                 requestId = requestId,
@@ -319,8 +317,6 @@ class Game:
         # battle that already exists before this function was called. As written we'll fail to
         # update that user's listeners below.
         self._db.updateGoldPerMinuteOthers()
-        if awaitables:
-            await self._db.updateUserListeners(updatedNames)
         # We intentionally don't update goldPerMinute self so players are
         # required to watch their battles themselves.
         self.logger.info("calculate_missing_battles", requestId, "Done.")

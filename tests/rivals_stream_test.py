@@ -11,9 +11,10 @@ from infinitd_server.game import Game
 from infinitd_server.logger import Logger, MockLogger
 from infinitd_server.rivals import Rivals
 from infinitd_server.handler.rivals_stream import RivalsStreamHandler
+from sse_test_case import SseTestCase
 import test_data
 
-class TestRivalsStreamHandler(tornado.testing.AsyncHTTPTestCase):
+class TestRivalsStreamHandler(SseTestCase):
     def get_app(self):
         Logger.setDefault(MockLogger())
         tmpFile, tmpPath = tempfile.mkstemp()
@@ -41,20 +42,6 @@ class TestRivalsStreamHandler(tornado.testing.AsyncHTTPTestCase):
     def tearDown(self):
         super().tearDown()
         os.remove(self.dbPath)
-    
-    def fetchSse(self, url, expectations):
-        callback_calls = 0
-        def callback(x):
-            nonlocal callback_calls
-            self.assertEqual(x[:6], b"data: ")
-            expectations[callback_calls](x[6:])
-            callback_calls += 1
-            if len(expectations) == callback_calls:
-                self.stop()
-
-        self.http_client.fetch(
-            self.get_url(url),
-            streaming_callback=callback)
     
     def test_initalState(self):
         def initial_rivals(x):

@@ -228,6 +228,7 @@ class Db:
                 gold = gold + goldPerMinuteSelf + goldPerMinuteOthers
             WHERE inBattle == 0;""")
 
+        # TODO: See if we can use a trigger on a view to avoid having to call this manually.
         await self.__updateRivalsListeners(rivalsUpdated)
         await self.updateUserListeners(namesUpdated)
 
