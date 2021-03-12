@@ -146,6 +146,7 @@
     "startingGold": 10,
     "minGoldPerMinute": 0.0,
     "rivalRadius": 2,
+    "rivalMultiplier": 0.25,
     "battleBonuses": [
       {
         "id": 0,

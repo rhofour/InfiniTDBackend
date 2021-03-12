@@ -97,6 +97,28 @@ class TestDb(AsyncTestCase):
         self.assertEqual(bob_rivals, Rivals([], ["sue"]))
         self.assertEqual(sue_rivals, Rivals(["bob"], ["joe"]))
         self.assertEqual(joe_rivals, Rivals(["sue"], []))
+    
+    def test_findMissingBattles(self):
+        self.db.register(uid="bob_uid", name="bob")
+        self.db.register(uid="sue_uid", name="sue")
+        self.db.register(uid="joe_uid", name="joe")
+        def waitOnAwaitable(x):
+            asyncio.get_event_loop().run_until_complete(x)
+        with self.db.getMutableUserContext("bob_uid", waitOnAwaitable) as user:
+            user.accumulatedGold = 5
+            user.wave = [0]
+        with self.db.getMutableUserContext("sue_uid", waitOnAwaitable) as user:
+            user.accumulatedGold = 3
+            # No wave so there should be no battles where sue is attacking.
+        with self.db.getMutableUserContext("joe_uid", waitOnAwaitable) as user:
+            user.accumulatedGold = 1
+            user.wave = [1]
+        # Add fake battles.
+        self.db.addTestBattle("bob_uid", "bob_uid")
+        self.db.addTestBattle("joe_uid", "sue_uid")
+
+        missingBattles = set(self.db.findMissingBattles())
+        self.assertEqual(missingBattles, set([("bob_uid", "sue_uid"), ("joe_uid", "joe_uid")]))
 
 if __name__ == "__main__":
     unittest.main()

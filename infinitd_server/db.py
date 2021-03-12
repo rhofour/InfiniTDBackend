@@ -500,6 +500,51 @@ class Db:
         for row in res:
             print(self.__extractUserSummaryFromRow(row))
 
+    def findMissingBattles(self) -> List[Tuple[str, str]]:
+        "Calculate all missing battles between rivals."
+        with self.makeConnection() as conn:
+            res = conn.execute("""
+                WITH users_and_ranks AS (
+                    SELECT
+                        uid,
+                        row_number() OVER (ORDER BY accumulatedGold DESC) as rank,
+                        wave = "[]" as empty_wave
+                    FROM
+                        users
+                    WHERE
+                        inBattle = FALSE
+                )
+                SELECT
+                    attacking_uid, defending_uid
+                FROM
+                    (SELECT
+                        u1.uid as attacking_uid, 
+                        u2.uid as defending_uid
+                    FROM
+                        users_and_ranks as u1, users_and_ranks as u2
+                    WHERE
+                        abs(u1.rank - u2.rank) <= :rivalRadius
+                        AND u1.empty_wave = FALSE
+                    ) LEFT JOIN
+                    battles USING (attacking_uid, defending_uid)
+                WHERE
+                    events IS NULL
+            ;""", { "rivalRadius": self.gameConfig.misc.rivalRadius })
+        missingBattleUids = [(row[0], row[1]) for row in res]
+        return missingBattleUids
+    
+    def addTestBattle(self, attackingUid, defendingUid):
+        with self.makeConnection() as conn:
+            conn.execute(
+                "INSERT into battles (attacking_uid, defending_uid, events, results) "
+                "VALUES (:attackingUid, :defendingUid, :events, :results);",
+                {
+                    "attackingUid": attackingUid, "defendingUid": defendingUid,
+                    "events": b"",
+                    "results": b"",
+                }
+            )
+
 
 class MutableUserContext:
     db: Db

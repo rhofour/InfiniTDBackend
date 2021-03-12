@@ -140,6 +140,7 @@ class MiscConfigData:
     startingGold: int
     minGoldPerMinute: float
     rivalRadius: int
+    rivalMultiplier: float
     battleBonuses: List[BattleBonus]
 
 @dataclass(frozen=True)
@@ -148,6 +149,7 @@ class MiscConfig:
     startingGold: int
     minGoldPerMinute: float
     rivalRadius: int
+    rivalMultiplier: float
     battleBonuses: Dict[ConfigId, BattleBonus]
 
     @staticmethod
@@ -159,6 +161,7 @@ class MiscConfig:
             startingGold = miscConfigData.startingGold,
             minGoldPerMinute = miscConfigData.minGoldPerMinute,
             rivalRadius = miscConfigData.rivalRadius,
+            rivalMultiplier = miscConfigData.rivalMultiplier,
             battleBonuses = idedListToDict(miscConfigData.battleBonuses)
         )
 
