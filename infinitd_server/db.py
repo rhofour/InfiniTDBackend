@@ -97,7 +97,18 @@ class Db:
                             new.admin
                         );
                 END;""")
-            # TODO: Create a trigger for Battleground changes
+            # Add a trigger to update the battleground stream when user battleground data is changed.
+            conn.execute("""
+                CREATE TRIGGER IF NOT EXISTS battlegroundUpdate
+                AFTER UPDATE ON users
+                WHEN new.battleground <> old.battleground
+                BEGIN
+                    SELECT 
+                        updateBattlegroundListeners(
+                            new.name,
+                            new.battleground
+                        );
+                END;""")
 
     
     def __addTriggerFunctions(self, conn: sqlite3.Connection):
@@ -117,6 +128,11 @@ class Db:
             self.__updateUserListeners(newUserSummary)
         conn.create_function(
             "updateUserListeners", 9, updateUserListeners)
+        def updateBattlegroundListeners(name, battlegroundData):
+            battleground = BattlegroundState.from_json(battlegroundData)
+            self.__updateBattlegroundListeners(name, battleground)
+        conn.create_function(
+            "updateBattlegroundListeners", 2, updateBattlegroundListeners)
 
     def makeConnection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.dbPath, isolation_level=None)
@@ -278,10 +294,10 @@ class Db:
         # TODO: See if we can use a trigger on a view to avoid having to call this manually.
         await self.__updateRivalsListeners(rivalsUpdated)
 
-    async def __updateBattlegroundListeners(self, name):
+    def __updateBattlegroundListeners(self, name: str, battleground: BattlegroundState):
         if name in self.bgQueues:
-            battleground = self.getBattleground(name)
-            await self.bgQueues.sendUpdate(name, battleground)
+            # Send the update asynchronously
+            asyncio.create_task(self.bgQueues.sendUpdate(name, battleground))
 
     async def __updateAllListeners(self):
         updateCalls = []
@@ -307,17 +323,14 @@ class Db:
         if updateCalls:
             await asyncio.wait(updateCalls)
 
-    async def setInBattle(self, name: str, inBattle: bool):
+    def setInBattle(self, name: str, inBattle: bool):
         with self.makeConnection() as conn:
             conn.execute(
                 "UPDATE users SET inBattle = :inBattle WHERE name == :name;",
                 {"inBattle": inBattle, "name": name})
+            conn.commit()
 
-        if name in self.userQueues:
-            user = self.getUserSummaryByName(name)
-            await self.userQueues.sendUpdate(name, user)
-
-    async def setBattleground(self, name: str, battleground: BattlegroundState):
+    def setBattleground(self, name: str, battleground: BattlegroundState):
         """Directly sets the Battleground for a given user. For test purposes only."""
         with self.makeConnection() as conn:
             conn.execute(
@@ -326,8 +339,7 @@ class Db:
                     "battleground": battleground.to_json(),
                     "name": name,
                 })
-
-        await self.__updateBattlegroundListeners(name)
+            conn.commit()
 
     def setUserNotInBattle(self, uid: str, name: str):
         "Marks a user as no longer in a battle."

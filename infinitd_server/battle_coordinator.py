@@ -53,7 +53,7 @@ class StreamingBattle:
         await self.updateFn(update)
         self.sentUpdates += 1
 
-    async def start(self, battle: Battle, resultsCallback: Callable[[BattleResults], Awaitable[None]], requestId: int = -1):
+    async def start(self, battle: Battle, resultsCallback: Callable[[BattleResults], None], requestId: int = -1):
         if not battle.events:
             return # Do nothing if events is empty
         self.logger.info("BattleCoordinator", requestId, f"Starting battle {battle.name} with {len(battle.events)} events")
@@ -113,7 +113,7 @@ class StreamingBattle:
                     f"Battle had {len(battle.events)} events, but sent {self.sentUpdates} updates.")
         elif (self.sentUpdates == expectedBattleUpdates):
             # This means the battle ran all the way out.
-            await resultsCallback(battle.results)
+            resultsCallback(battle.results)
             await self.updateFn(battle.results)
         else:
             # Stop the battle without sending results.
@@ -154,15 +154,15 @@ class BattleCoordinator:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         return self.battles[name]
 
-    def startBattle(self, name: str, battle: Battle, resultsCallback: Callable[[BattleResults], Awaitable[None]],
-            endCallback: Callable[[], Awaitable[None]], handler: str = "BattleCoordinator", requestId = -1):
+    def startBattle(self, name: str, battle: Battle, resultsCallback: Callable[[BattleResults], None],
+            endCallback: Callable[[], None], handler: str = "BattleCoordinator", requestId = -1):
         """startBattle triggers the start of a live-streamed battle.
 
         Arguments:
         name: str -- The name of the battle.
         battle: Battle -- The battle to stream.
-        resultsCallback: Callable[[BattleResults], Awaitable[None]] -- A callback to handle the results of a completed battle.
-        endCallback: Callable[[], Awaitable[None]] -- A callback called whenever a battle ends whether it's completed or not.
+        resultsCallback: Callable[[BattleResults], None] -- A callback to handle the results of a completed battle.
+        endCallback: Callable[[], None] -- A callback called whenever a battle ends whether it's completed or not.
         """
         if name not in self.battles:
             self.logger.info(handler, requestId, f"Coordinator is making a new StreamingBattle for {name}")
@@ -170,7 +170,7 @@ class BattleCoordinator:
         self.logger.info(handler, requestId, f"Coordinator is starting a StreamingBattle for {name}")
         async def startBattleThenCallCallback():
             await self.battles[name].start(battle, resultsCallback = resultsCallback, requestId = requestId)
-            await endCallback()
+            endCallback()
         loop = asyncio.get_running_loop()
         loop.create_task(startBattleThenCallCallback())
 

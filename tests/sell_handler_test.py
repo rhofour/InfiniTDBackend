@@ -26,7 +26,8 @@ class TestSellHandler(tornado.testing.AsyncHTTPTestCase):
         self.initialBattleground = BattlegroundState.empty(self.gameConfig)
         self.initialBattleground.towers.towers[0][1] = BgTowerState(2)
         self.initialBattleground.towers.towers[1][2] = BgTowerState(1)
-        asyncio.get_event_loop().run_until_complete(self.game.setBattleground("bob", self.initialBattleground))
+        self.game.setBattleground("bob", self.initialBattleground)
+        battleground = self.game.getBattleground("bob")
 
         return tornado.web.Application([(r"/sell/(.*)", SellHandler, dict(game=self.game))])
 

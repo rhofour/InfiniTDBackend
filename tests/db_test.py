@@ -65,8 +65,8 @@ class TestDb(AsyncTestCase):
         self.db.register(uid="foo", name="bob")
         self.db.register(uid="bar", name="sue")
         # Sue shouldn't accumulate anything since she's in a battle.
-        await self.db.setInBattle("sue", True)
-        await self.db.setInBattle("bob", False)
+        self.db.setInBattle("sue", True)
+        self.db.setInBattle("bob", False)
 
         await self.db.accumulateGold()
 

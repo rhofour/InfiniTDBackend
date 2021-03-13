@@ -221,8 +221,8 @@ class Game:
         # transaction at the end.
         self._db.enterTransaction(user.conn)
 
-        async def setUserNotInBattleCallback():
-            await self._db.setUserNotInBattle(uid=user.uid, name=user.name)
+        def setUserNotInBattleCallback():
+            self._db.setUserNotInBattle(uid=user.uid, name=user.name)
 
         def updateWithBattleResults(results: BattleResults):
             userContext = self._db.getMutableUserContext(user.uid)
@@ -273,9 +273,9 @@ class Game:
         await self._db.accumulateGold()
         self.logger.info("accumulate_gold", -1, "Done accumulating gold")
 
-    async def setBattleground(self, name: str, newBattleground: BattlegroundState):
+    def setBattleground(self, name: str, newBattleground: BattlegroundState):
         """Directly sets the Battleground for a given user. For test purposes only."""
-        await self._db.setBattleground(name, newBattleground)
+        self._db.setBattleground(name, newBattleground)
 
     def resetBattles(self):
         self._db.resetBattles()
