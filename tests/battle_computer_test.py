@@ -47,7 +47,8 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
         rows = st.integers(0, self.gameConfig.playfield.numRows - 1)
         cols = st.integers(0, self.gameConfig.playfield.numCols - 1)
         cellPos = st.tuples(rows, cols)
-        towerPositions: List[Tuple[int, int]] = list(data.draw(st.sets(cellPos)))
+        towerPositions: List[Tuple[int, int]] = list(
+            data.draw(st.sets(cellPos), label="Tower Positions"))
         # Ensure this won't result in a blocked path.
         battleground = BattlegroundState.empty(self.gameConfig)
         for pos in towerPositions:
@@ -58,21 +59,47 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                 self.gameConfig.playfield.monsterExit))
         # Generate an equal-sized list of valid tower IDs.
         possibleTowerIds = list(self.gameConfig.towers.keys())
-        towerIndices = data.draw(st.lists(
-            st.integers(0, len(possibleTowerIds)-1),
-            min_size = len(towerPositions),
-            max_size = len(towerPositions)))
+        towerIndices = data.draw(
+            st.lists(
+                st.integers(0, len(possibleTowerIds)-1),
+                min_size = len(towerPositions),
+                max_size = len(towerPositions),
+            ),
+            label="Tower Indices")
+
+        # Build the wave
+        possibleMonsterIds = list(self.gameConfig.monsters.keys())
+        monsterIndices = data.draw(
+            st.lists(
+                st.integers(0, len(possibleMonsterIds)-1),
+                min_size=1,
+            ),
+            label="Monster Indices")
+        wave: List[ConfigId] = [possibleMonsterIds[i] for i in monsterIndices]
+
+        # Run the actual test
+        self.randomBattleInternal(
+            towerPositions = towerPositions,
+            towerIndices = towerIndices,
+            wave = wave)
+
+    def test_knownBadBattle(self):
+        towerPositions = [(0, 1), (0, 3), (2, 0), (4, 2), (3, 0), (2, 3), (0, 2), (9, 1)]
+        towerIndices = [0, 0, 0, 0, 0, 0, 0, 4]
+        wave = [0, 2, 1, 1]
+        self.randomBattleInternal(towerPositions, towerIndices, wave)
+
+    def randomBattleInternal(self, towerPositions, towerIndices, wave):
+        # Assert inputs are compatible.
+        self.assertEqual(len(towerPositions), len(towerIndices))
+
+        # Build the battleground from the inputs.
+        battleground = BattlegroundState.empty(self.gameConfig)
+        possibleTowerIds = list(self.gameConfig.towers.keys())
         for (i, towerIdx) in enumerate(towerIndices):
             pos = towerPositions[i]
             battleground.towers.towers[pos[0]][pos[1]] = BgTowerState(
                 TowerId(possibleTowerIds[towerIdx]))
-
-        # Build the wave
-        possibleMonsterIds = list(self.gameConfig.monsters.keys())
-        monsterIndices = data.draw(st.lists(
-            st.integers(0, len(possibleMonsterIds)-1),
-            min_size=1))
-        wave: List[ConfigId] = [possibleMonsterIds[i] for i in monsterIndices]
 
         battleComputer = BattleComputer(gameConfig = self.gameConfig)
 
