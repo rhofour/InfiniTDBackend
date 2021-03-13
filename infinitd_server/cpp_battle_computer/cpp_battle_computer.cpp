@@ -14,6 +14,7 @@ using std::endl;
 using std::stringstream;
 using std::pair;
 using std::for_each;
+using std::set;
 using rapidjson::Document;
 using InfiniTDFb::ObjectTypeFb;
 using InfiniTDFb::BattleEventFb;
@@ -97,7 +98,7 @@ template<class T> void AddEvent(T &event, vector<BattleEventFbT> &events) {
 }
 
 void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEventFbT> &events,
-    vector<size_t> &removedEnemyIdx) {
+    set<size_t> &removedEnemyIdx) {
   size_t enemyIdx = -1; // Intentional overflow so the first real value is 0.
   for (EnemyState &enemy : enemies) {
     enemyIdx++;
@@ -114,8 +115,9 @@ void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEvent
         deleteEvent.id = enemy.id;
         deleteEvent.start_time = enemy.nextPathTime;
         AddEvent(deleteEvent, events);
+        cout << "Enemy " << enemy.id << " reached the end before " << gameTime << endl;
 
-        removedEnemyIdx.push_back(enemyIdx);
+        removedEnemyIdx.insert(enemyIdx);
         // Mark the enemy as having no health so no towers try and fire on it.
         enemy.health = 0.0;
         continue;
@@ -160,7 +162,7 @@ void UpdateTowers(float gameTime, vector<TowerState> &towers) {
 // Note: These shots land at gameTime and were essentially fired in the past. This allows every
 // shot to land exactly where the enemy will be.
 void FireTowers(float gameTime, vector<TowerState> &towers, vector<EnemyState> &enemies,
-    vector<BattleEventFbT> &events, vector<size_t> &removedEnemyIdx, uint16_t &nextId,
+    vector<BattleEventFbT> &events, set<size_t> &removedEnemyIdx, uint16_t &nextId,
     unordered_map<uint16_t, MonsterStats> &monstersDefeated) {
   for (TowerState &tower : towers) {
     if (tower.firingRadiusSq == 0) continue;
@@ -219,7 +221,7 @@ void FireTowers(float gameTime, vector<TowerState> &towers, vector<EnemyState> &
         deleteEnemyEvent.start_time = gameTime;
         AddEvent(deleteEnemyEvent, events);
 
-        removedEnemyIdx.push_back(farthestEnemyIdx);
+        removedEnemyIdx.insert(farthestEnemyIdx);
         monstersDefeated[enemy.config.get().id].numDefeated++;
       }
     }
@@ -265,7 +267,7 @@ string CppBattleComputer::ComputeBattle(
       gameTime = ticks * this->gameTickSecs;
 
       // Per loop state
-      vector<size_t> removedEnemyIdx;
+      set<size_t> removedEnemyIdx;
       bool spawnOpen = true;
       if (!unspawnedEnemies.empty()) {
         for (const EnemyState &enemy : spawnedEnemies) {
@@ -309,11 +311,13 @@ string CppBattleComputer::ComputeBattle(
       for (auto enemyIdx = removedEnemyIdx.rbegin(); enemyIdx != removedEnemyIdx.rend(); enemyIdx++) {
         // Replace enemy at enemyIdx with the last element, then pop it.
         // This removes the enemy in constant time.
+        // Enemies indices must be removed from largest to smallest, otherwise they may no longer point
+        // to the correct enemy.
         assert(*enemyIdx >= 0);
+        assert(*enemyIdx < spawnedEnemies.size());
         if (*enemyIdx != spawnedEnemies.size() - 1) {
           spawnedEnemies[*enemyIdx] = spawnedEnemies.back();
         }
-        assert(!spawnedEnemies.empty());
         spawnedEnemies.pop_back();
       }
     }

@@ -175,7 +175,7 @@ class TestRandomBattlesRealConfig(unittest.TestCase):
                         places=4)
             if event.eventType == EventType.DELETE:
                 self.assertTrue(objDataById[event.id].moves, msg="Object is deleted before it exists.")
-                self.assertIsNone(objDataById[event.id].delete, msg="Object was deleted more than once.")
+                self.assertIsNone(objDataById[event.id].delete, msg=f"Object was deleted more than once. Second deletion: {event}")
                 objDataById[event.id].delete = event
             if event.eventType == EventType.DAMAGE:
                 objDataById[event.id].damages.append(event)
