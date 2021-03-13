@@ -279,19 +279,12 @@ class Db:
 
             rivalsUpdated = [(row[rivalRadius], makeRivals(row)) for row in res]
 
-            res = conn.execute("""
-                SELECT name
-                FROM users
-                WHERE inBattle == 0 AND (goldPerMinuteSelf > 0 OR goldPerMinuteOthers > 0)
-                ;""")
-            namesUpdated = [row[0] for row in res]
             conn.execute("""
             UPDATE users SET
                 accumulatedGold = accumulatedGold + goldPerMinuteSelf + goldPerMinuteOthers,
                 gold = gold + goldPerMinuteSelf + goldPerMinuteOthers
             WHERE inBattle == 0;""")
 
-        # TODO: See if we can use a trigger on a view to avoid having to call this manually.
         await self.__updateRivalsListeners(rivalsUpdated)
 
     def __updateBattlegroundListeners(self, name: str, battleground: BattlegroundState):
