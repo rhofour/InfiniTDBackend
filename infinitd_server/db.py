@@ -114,18 +114,8 @@ class Db:
     def __addTriggerFunctions(self, conn: sqlite3.Connection):
         def updateUserListeners(name, uid, gold, accumulatedGold, goldPerMinuteSelf,
                 goldPerMinuteOthers, inBattle, wave, admin):
-            newUserSummary = FrozenUserSummary(
-                name = name,
-                uid = uid,
-                gold = gold,
-                accumulatedGold = accumulatedGold,
-                goldPerMinuteSelf = goldPerMinuteSelf,
-                goldPerMinuteOthers = goldPerMinuteOthers,
-                inBattle = inBattle,
-                wave = wave,
-                admin = admin,
-            )
-            self.__updateUserListeners(newUserSummary)
+            row = [name, uid, gold, accumulatedGold, goldPerMinuteSelf, goldPerMinuteOthers, inBattle, wave, admin]
+            self.__updateUserListeners(self.__extractUserSummaryFromRow(row))
         conn.create_function(
             "updateUserListeners", 9, updateUserListeners)
         def updateBattlegroundListeners(name, battlegroundData):
@@ -284,6 +274,7 @@ class Db:
                 accumulatedGold = accumulatedGold + goldPerMinuteSelf + goldPerMinuteOthers,
                 gold = gold + goldPerMinuteSelf + goldPerMinuteOthers
             WHERE inBattle == 0;""")
+            conn.commit()
 
         await self.__updateRivalsListeners(rivalsUpdated)
 

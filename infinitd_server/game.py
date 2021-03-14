@@ -1,6 +1,6 @@
 import asyncio
 import copy
-from typing import List, Optional, Awaitable, Callable
+from typing import List, Optional, Awaitable, Callable, Dict
 import math
 
 import firebase_admin.auth
@@ -42,10 +42,7 @@ GOLD_EPSILON = 0.09 # Handle floating point errors by being slightly lenient on 
 class Game:
 
     gameConfig: GameConfig
-    battleQueues: SseQueues
-    battlegroundQueues: SseQueues
-    userQueues: SseQueues
-    rivalsQueues: SseQueues
+    queues: Dict[str, SseQueues]
     _battleCoordinator: BattleCoordinator
     _db: Db
 
@@ -54,17 +51,16 @@ class Game:
         self.logger = Logger.getDefault()
 
         # Make queues for streams
-        self.battleQueues = SseQueues()
-        self.battlegroundQueues = SseQueues()
-        self.userQueues = SseQueues()
-        self.rivalsQueues = SseQueues()
+        self.queues = {}
+        for datatype in ["battle", "battleground", "user", "rivals"]:
+            self.queues[datatype] = SseQueues()
 
-        self.battleCoordinator = BattleCoordinator(self.battleQueues)
+        self.battleCoordinator = BattleCoordinator(self.queues["battle"])
         self._db = Db(
                 gameConfig = self.gameConfig,
-                userQueues = self.userQueues,
-                bgQueues = self.battlegroundQueues,
-                rivalsQueues = self.rivalsQueues,
+                userQueues = self.queues["user"],
+                bgQueues = self.queues["battleground"],
+                rivalsQueues = self.queues["rivals"],
                 battleCoordinator = self.battleCoordinator,
                 debug=debug,
                 dbPath = dbPath)

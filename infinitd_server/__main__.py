@@ -35,6 +35,7 @@ from infinitd_server.handler.debug_logs import DebugLogsHandler
 from infinitd_server.handler.debug_battle_input import DebugBattleInputHandler
 from infinitd_server.handler.admin.reset_game import ResetGameHandler
 from infinitd_server.handler.rivals_stream import RivalsStreamHandler
+from infinitd_server.handler.stream import StreamHandler
 
 def make_app(game, debug):
     cred = credentials.Certificate("./data/privateFirebaseKey.json")
@@ -60,6 +61,7 @@ def make_app(game, debug):
         (r"/battle/(.*)/(.*)", RecordedBattleHandler, dict(game=game)),
         (r"/deleteAccount/(.*)", DeleteAccountHandler, dict(game=game)),
         (r"/rivalsStream/(.*)", RivalsStreamHandler, dict(game=game)),
+        (r"/stream/(.*)", StreamHandler, dict(game=game)),
         # Admin actions
         (r"/admin/resetGame", ResetGameHandler, dict(game=game)),
     ]

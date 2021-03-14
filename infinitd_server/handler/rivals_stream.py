@@ -7,7 +7,7 @@ class RivalsStreamHandler(SseStreamHandler):
 
     def initialize(self, game: Game):
         self.game = game
-        self.queues = game.rivalsQueues
+        self.queues = game.queues["rivals"]
 
     async def initialState(self, name):
         return self.game.getUserRivals(name)

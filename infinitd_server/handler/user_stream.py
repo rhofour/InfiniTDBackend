@@ -7,7 +7,7 @@ class UserStreamHandler(SseStreamHandler):
 
     def initialize(self, game: Game):
         self.game = game
-        self.queues = game.userQueues
+        self.queues = game.queues["user"]
 
     async def initialState(self, name):
         return self.game.getUserSummaryByName(name)

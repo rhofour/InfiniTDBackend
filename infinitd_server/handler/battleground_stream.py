@@ -6,7 +6,7 @@ class BattlegroundStreamHandler(SseStreamHandler):
 
     def initialize(self, game: Game):
         super(BattlegroundStreamHandler, self).initialize(game)
-        self.queues = game.battlegroundQueues
+        self.queues = game.queues["battleground"]
 
     async def initialState(self, name):
         return self.game.getBattleground(name)
