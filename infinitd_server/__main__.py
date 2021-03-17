@@ -61,7 +61,7 @@ def make_app(game, debug):
         (r"/battle/(.*)/(.*)", RecordedBattleHandler, dict(game=game)),
         (r"/deleteAccount/(.*)", DeleteAccountHandler, dict(game=game)),
         (r"/rivalsStream/(.*)", RivalsStreamHandler, dict(game=game)),
-        (r"/stream/(.*)", StreamHandler, dict(game=game)),
+        (r"/stream", StreamHandler, dict(game=game)),
         # Admin actions
         (r"/admin/resetGame", ResetGameHandler, dict(game=game)),
     ]

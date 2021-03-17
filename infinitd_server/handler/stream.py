@@ -15,6 +15,10 @@ class StreamHandler(BaseHandler, WebSocketHandler):
     game: Game
     readTasks: Dict[str, asyncio.Task]
 
+    # Allow cross-origin requests.
+    def check_origin(self, origin):
+        return True
+
     def prepare(self):
         super().prepare()
         self.readTasks = {}
@@ -66,7 +70,6 @@ class StreamHandler(BaseHandler, WebSocketHandler):
             self.logWarn(f"Attempted to unsubscribe from not subscribed queue: {id}")
             return
         self.readTasks[id].cancel()
-        print(f"Cancelled task {id}")
         del self.readTasks[id]
 
     def open(self):
