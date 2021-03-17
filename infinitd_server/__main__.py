@@ -22,19 +22,15 @@ from infinitd_server.handler.users import UsersHandler
 from infinitd_server.handler.this_user import ThisUserHandler
 from infinitd_server.handler.register import RegisterHandler
 from infinitd_server.handler.game_config import GameConfigHandler
-from infinitd_server.handler.battleground_stream import BattlegroundStreamHandler
-from infinitd_server.handler.user_stream import UserStreamHandler
 from infinitd_server.handler.build import BuildHandler
 from infinitd_server.handler.sell import SellHandler
 from infinitd_server.handler.wave import WaveHandler
 from infinitd_server.handler.control_battle import ControlBattleHandler
-from infinitd_server.handler.battle_stream import BattleStreamHandler
 from infinitd_server.handler.recorded_battle import RecordedBattleHandler
 from infinitd_server.handler.delete_account import DeleteAccountHandler
 from infinitd_server.handler.debug_logs import DebugLogsHandler
 from infinitd_server.handler.debug_battle_input import DebugBattleInputHandler
 from infinitd_server.handler.admin.reset_game import ResetGameHandler
-from infinitd_server.handler.rivals_stream import RivalsStreamHandler
 from infinitd_server.handler.stream import StreamHandler
 
 def make_app(game, debug):
@@ -48,19 +44,15 @@ def make_app(game, debug):
     prod_handlers = [
         (r"/users", UsersHandler, dict(game=game)),
         (r"/user/(.*)", UserHandler, dict(game=game)),
-        (r"/userStream/(.*)", UserStreamHandler, dict(game=game)),
         (r"/thisUser", ThisUserHandler, dict(game=game)),
         (r"/register/(.*)", RegisterHandler, dict(game=game)),
         (r"/gameConfig", GameConfigHandler, dict(game=game)),
-        (r"/battlegroundStream/(.*)", BattlegroundStreamHandler, dict(game=game)),
         (r"/build/(.*)", BuildHandler, dict(game=game)),
         (r"/sell/(.*)", SellHandler, dict(game=game)),
         (r"/wave/(.*)", WaveHandler, dict(game=game)),
-        (r"/battleStream/(.*)", BattleStreamHandler, dict(game=game)),
         (r"/controlBattle/(.*)", ControlBattleHandler, dict(game=game)),
         (r"/battle/(.*)/(.*)", RecordedBattleHandler, dict(game=game)),
         (r"/deleteAccount/(.*)", DeleteAccountHandler, dict(game=game)),
-        (r"/rivalsStream/(.*)", RivalsStreamHandler, dict(game=game)),
         (r"/stream", StreamHandler, dict(game=game)),
         # Admin actions
         (r"/admin/resetGame", ResetGameHandler, dict(game=game)),

@@ -35,7 +35,7 @@ class StreamHandler(BaseHandler, WebSocketHandler):
     def on_close(self):
         self.logInfo("Stream connection closed.")
         # Remove self from any queues
-        for id in self.readTasks.keys():
+        for id in list(self.readTasks.keys()):
             self.unsubscribe(id)
     
     def subscribe(self, id: str):
@@ -78,9 +78,22 @@ class StreamHandler(BaseHandler, WebSocketHandler):
     def getInitialState(self, datatype: str, dataId: str):
         if datatype == "user":
             return self.game.getUserSummaryByName(dataId)
+        if datatype == "battleground":
+            return self.game.getBattleground(dataId)
+        if datatype == "battle":
+            return self.game.joinBattle(dataId)
+        if datatype == "rivals":
+            return self.game.getUserRivals(dataId)
         raise ValueError(f"Cannot get initial state for datatype: {datatype}")
     
     def sendData(self, id: str, data):
+        if isinstance(data, list):
+            for x in data:
+                self.sendDataElement(id, x)
+        else:
+            self.sendDataElement(id, data)
+
+    def sendDataElement(self, id: str, data):
         if isinstance(data, DataClassJsonMixin):
             self.write_message(f"{id}/{data.to_json()}")
         else:
