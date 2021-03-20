@@ -27,7 +27,7 @@ class Db:
     gameConfig: GameConfig
     userQueues: SseQueues
     bgQueues: SseQueues
-    rivalsQuees: SseQueues
+    rivalsQueues: SseQueues
     battleComputerPool: BattleComputerPool
     battleCoordinator: BattleCoordinator
     debug: bool
