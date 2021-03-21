@@ -194,47 +194,54 @@ class Game:
     def joinBattle(self, name: str):
         return self.battleCoordinator.getBattle(name).join()
 
-    async def startBattle(self, user: MutableUser, handler: str, requestId: int):
-        if user.inBattle:
+    async def startBattle(self, defender: MutableUser, attacker: FrozenUserSummary,
+            handler: str, requestId: int):
+        if defender.inBattle:
             raise UserInBattleException()
 
-        user.inBattle = True
+        defender.inBattle = True
         # Manually update the user and end the transaction while the battle is
         # calculated. Since the user is marked as in battle none of their data
         # can change even outside of the transaction.
-        self._db.updateUser(user)
-        self._db.leaveTransaction(user.conn)
+        self._db.updateUser(defender)
+        self._db.leaveTransaction(defender.conn)
 
         try:
-            battle = await self._db.getOrMakeBattle(user.user, user.user, handler=handler, requestId=requestId)
+            battle = await self._db.getOrMakeBattle(
+                attacker = attacker, defender = defender.user, handler=handler, requestId=requestId)
         except BattleCalculationException as e:
-            self._db.enterTransaction(user.conn)
+            self._db.enterTransaction(defender.conn)
             # Prevent a user from getting stuck in a battle
-            user.inBattle = False
+            defender.inBattle = False
             raise e
 
         # We need this because the user context is expecting to be in a
         # transaction at the end.
-        self._db.enterTransaction(user.conn)
+        self._db.enterTransaction(defender.conn)
 
         def setUserNotInBattleCallback():
-            self._db.setUserNotInBattle(uid=user.uid, name=user.name)
+            self._db.setUserNotInBattle(uid=defender.uid, name=defender.name)
 
         def updateWithBattleResults(results: BattleResults):
-            userContext = self._db.getMutableUserContext(user.uid)
+            userContext = self._db.getMutableUserContext(defender.uid)
             if userContext is None:
-                raise ValueError(f"UID {user.uid} doesn't correspond to a user.")
+                raise ValueError(f"UID {defender.uid} doesn't correspond to a user.")
             with userContext as futureUser:
                 # Ensure user is in a battle when this is called.
                 if not futureUser.inBattle:
-                    raise ValueError(f"User {user.name} isn't in a battle.")
+                    raise ValueError(f"User {defender.name} isn't in a battle.")
                 if results.timeSecs <= 0:
                     raise ValueError(f"Battle results has non-positive time: {results.timeSecs}.")
 
-                futureUser.addGold(results.goldPerMinute)
-                futureUser.goldPerMinuteSelf = results.goldPerMinute
+                if defender.uid == attacker.uid:
+                    futureUser.addGold(results.reward)
+                    futureUser.goldPerMinuteSelf = results.goldPerMinute
+                else:
+                    futureUser.addGold(results.reward * self.gameConfig.misc.rivalMultiplier)
 
-        self.battleCoordinator.startBattle(user.name, battle,
+        self.battleCoordinator.startBattle(
+                battleId = defender.name,
+                battle= battle,
                 resultsCallback = updateWithBattleResults,
                 endCallback = setUserNotInBattleCallback,
                 handler = handler, requestId = requestId)
@@ -303,9 +310,6 @@ class Game:
         self.logger.info("calculate_missing_battles", requestId, "Calculating missing battles.")
         if awaitables:
             await asyncio.wait(awaitables)
-        # TODO: Fix this to handle the case where updateGoldPerMinute changes a user based on a
-        # battle that already exists before this function was called. As written we'll fail to
-        # update that user's listeners below.
         self._db.updateGoldPerMinuteOthers()
         # We intentionally don't update goldPerMinute self so players are
         # required to watch their battles themselves.

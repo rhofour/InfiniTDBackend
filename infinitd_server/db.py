@@ -592,7 +592,7 @@ class Db:
             )
 
     def updateGoldPerMinuteOthers(self):
-        "Update goldPerMinuteOthers for all users, returning the usernames of impacted users."
+        "Update goldPerMinuteOthers for all users."
         with self.makeConnection() as conn:
             conn.execute("""
                 WITH new_values AS (
@@ -631,6 +631,7 @@ class Db:
                 "rivalRadius": self.gameConfig.misc.rivalRadius,
                 "rivalMultiplier": self.gameConfig.misc.rivalMultiplier,
             })
+
 
 class MutableUserContext:
     db: Db

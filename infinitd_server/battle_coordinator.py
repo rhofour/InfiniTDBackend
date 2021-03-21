@@ -154,26 +154,26 @@ class BattleCoordinator:
             self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
         return self.battles[name]
 
-    def startBattle(self, name: str, battle: Battle, resultsCallback: Callable[[BattleResults], None],
+    def startBattle(self, battleId: str, battle: Battle, resultsCallback: Callable[[BattleResults], None],
             endCallback: Callable[[], None], handler: str = "BattleCoordinator", requestId = -1):
         """startBattle triggers the start of a live-streamed battle.
 
         Arguments:
-        name: str -- The name of the battle.
+        battleId: str -- A unique identifier for this battle.
         battle: Battle -- The battle to stream.
         resultsCallback: Callable[[BattleResults], None] -- A callback to handle the results of a completed battle.
         endCallback: Callable[[], None] -- A callback called whenever a battle ends whether it's completed or not.
         """
-        if name not in self.battles:
-            self.logger.info(handler, requestId, f"Coordinator is making a new StreamingBattle for {name}")
-            self.battles[name] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(name, x))
-        self.logger.info(handler, requestId, f"Coordinator is starting a StreamingBattle for {name}")
+        if battleId not in self.battles:
+            self.logger.info(handler, requestId, f"Coordinator is making a new StreamingBattle for {battleId}")
+            self.battles[battleId] = StreamingBattle(lambda x: self.battleQueues.sendUpdate(battleId, x))
+        self.logger.info(handler, requestId, f"Coordinator is starting a StreamingBattle for {battleId}")
         async def startBattleThenCallCallback():
-            await self.battles[name].start(battle, resultsCallback = resultsCallback, requestId = requestId)
+            await self.battles[battleId].start(battle, resultsCallback = resultsCallback, requestId = requestId)
             endCallback()
         loop = asyncio.get_running_loop()
         loop.create_task(startBattleThenCallCallback())
 
-    async def stopBattle(self, name: str):
-        if name in self.battles:
-            await self.battles[name].stop()
+    async def stopBattle(self, battleId: str):
+        if battleId in self.battles:
+            await self.battles[battleId].stop()

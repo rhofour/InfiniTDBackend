@@ -25,7 +25,7 @@ class TestControlBattleHandler(tornado.testing.AsyncHTTPTestCase):
             user.wave = [ConfigId(0)]
 
         return tornado.web.Application([
-            (r"/controlBattle/(.*)", ControlBattleHandler, dict(game=self.game)) ])
+            (r"/controlBattle/(.*)/(.*)", ControlBattleHandler, dict(game=self.game)) ])
 
     def tearDown(self):
         super().tearDown()
@@ -34,33 +34,33 @@ class TestControlBattleHandler(tornado.testing.AsyncHTTPTestCase):
     def test_successfulStart(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/controlBattle/bob", method="POST", allow_nonstandard_methods=True)
+            resp = self.fetch("/controlBattle/bob/bob", method="POST", allow_nonstandard_methods=True)
 
         self.assertEqual(resp.code, 201)
 
     def test_successfulStop(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/controlBattle/bob", method="POST", allow_nonstandard_methods=True)
+            resp = self.fetch("/controlBattle/bob/bob", method="POST", allow_nonstandard_methods=True)
         self.assertEqual(resp.code, 201)
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/controlBattle/bob", method="DELETE")
+            resp = self.fetch("/controlBattle/bob/bob", method="DELETE")
         self.assertEqual(resp.code, 204)
 
     def test_successfulRestart(self):
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/controlBattle/bob", method="POST", allow_nonstandard_methods=True)
+            resp = self.fetch("/controlBattle/bob/bob", method="POST", allow_nonstandard_methods=True)
         self.assertEqual(resp.code, 201)
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/controlBattle/bob", method="DELETE")
+            resp = self.fetch("/controlBattle/bob/bob", method="DELETE")
         self.assertEqual(resp.code, 204)
 
         with unittest.mock.patch('infinitd_server.handler.base.BaseHandler.verifyAuthentication') as mock_verify:
             mock_verify.return_value = "test_uid"
-            resp = self.fetch("/controlBattle/bob", method="POST", allow_nonstandard_methods=True)
+            resp = self.fetch("/controlBattle/bob/bob", method="POST", allow_nonstandard_methods=True)
         self.assertEqual(resp.code, 201)

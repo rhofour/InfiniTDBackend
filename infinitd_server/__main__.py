@@ -50,7 +50,7 @@ def make_app(game, debug):
         (r"/build/(.*)", BuildHandler, dict(game=game)),
         (r"/sell/(.*)", SellHandler, dict(game=game)),
         (r"/wave/(.*)", WaveHandler, dict(game=game)),
-        (r"/controlBattle/(.*)", ControlBattleHandler, dict(game=game)),
+        (r"/controlBattle/(.*)/(.*)", ControlBattleHandler, dict(game=game)),
         (r"/battle/(.*)/(.*)", RecordedBattleHandler, dict(game=game)),
         (r"/deleteAccount/(.*)", DeleteAccountHandler, dict(game=game)),
         (r"/stream", StreamHandler, dict(game=game)),
