@@ -115,7 +115,6 @@ void MoveEnemies(float gameTime, vector<EnemyState> &enemies, vector<BattleEvent
         deleteEvent.id = enemy.id;
         deleteEvent.start_time = enemy.nextPathTime;
         AddEvent(deleteEvent, events);
-        cout << "Enemy " << enemy.id << " reached the end before " << gameTime << endl;
 
         removedEnemyIdx.insert(enemyIdx);
         // Mark the enemy as having no health so no towers try and fire on it.

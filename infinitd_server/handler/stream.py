@@ -54,7 +54,9 @@ class StreamHandler(BaseHandler, WebSocketHandler):
             return
 
         # Get the initial state for this new subscription.
-        self.sendData(id, self.getInitialState(datatype, dataId))
+        initialData = self.getInitialState(datatype, dataId)
+        if initialData is not None:
+            self.sendData(id, initialData)
 
         # Start a queue and a task to ready from that queue.
         qContext = queueCollection.queue_context(dataId)
@@ -84,6 +86,14 @@ class StreamHandler(BaseHandler, WebSocketHandler):
             return self.game.joinBattle(dataId)
         if datatype == "rivals":
             return self.game.getUserRivals(dataId)
+        if datatype == "battleGpm":
+            defenderName, attackerName = dataId.split('/', maxsplit=1)
+            defender = self.game.getUserSummaryByName(defenderName)
+            attacker = self.game.getUserSummaryByName(attackerName)
+            maybeBattle = self.game.getBattle(attacker = attacker, defender = defender)
+            if maybeBattle:
+                return maybeBattle.results.goldPerMinute
+            return -1.0
         raise ValueError(f"Cannot get initial state for datatype: {datatype}")
     
     def sendData(self, id: str, data):

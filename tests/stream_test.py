@@ -103,3 +103,31 @@ class TestWebSockets(tornado.testing.AsyncHTTPTestCase):
         bob = self.game.getUserSummaryByName("bob")
         bobEncoded = json.dumps(cattr.unstructure(bob))
         self.assertEqual(response, f"user/bob/{bobEncoded}")
+
+    @tornado.testing.gen_test
+    def test_receiveBattleGpm(self):
+        ws_client = yield tornado.websocket.websocket_connect(self.ws_url)
+
+        with self.game.getMutableUserContext("test_uid1", "bob") as user:
+            user.wave = [0] 
+
+        # Subscribe to updates about the battle where bob attacks sue.
+        ws_client.write_message("+battleGpm/sue/bob")
+
+        yield self.game.getOrMakeRecordedBattle("bob", "sue", "test", -1)
+        response = yield ws_client.read_message()
+        # Default value when battle doesn't exist.
+        self.assertEqual(response, f"battleGpm/sue/bob/-1.0")
+
+        # Cause the sue vs. bob battle to be calculated.
+        yield self.game.getOrMakeRecordedBattle("bob", "sue", "test", -1)
+        response = yield ws_client.read_message()
+        # From the participation bonus.
+        self.assertEqual(response, f"battleGpm/sue/bob/1.0")
+
+        # Change bob to cause the battle to become invalid.
+        with self.game.getMutableUserContext("test_uid1", "bob") as user:
+            user.wave = [0, 0] 
+        response = yield ws_client.read_message()
+        # Default value when battle doesn't exist.
+        self.assertEqual(response, f"battleGpm/sue/bob/-1.0")

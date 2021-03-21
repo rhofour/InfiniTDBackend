@@ -28,14 +28,15 @@ class Db:
     userQueues: SseQueues
     bgQueues: SseQueues
     rivalsQueues: SseQueues
+    battleGpmQueues: SseQueues
     battleComputerPool: BattleComputerPool
     battleCoordinator: BattleCoordinator
     debug: bool
     dbPath: str
 
     def __init__(self, gameConfig: GameConfig, userQueues: SseQueues, bgQueues: SseQueues,
-            rivalsQueues: SseQueues, battleCoordinator: BattleCoordinator,
-            dbPath=None, debug=False):
+            rivalsQueues: SseQueues, battleGpmQueues: SseQueues,
+            battleCoordinator: BattleCoordinator, dbPath=None, debug=False):
         self.debug = debug
         self.dbPath = self.DEFAULT_DB_PATH if dbPath is None else dbPath
         sqlite3.enable_callback_tracebacks(debug)
@@ -44,6 +45,7 @@ class Db:
         self.userQueues = userQueues
         self.bgQueues = bgQueues
         self.rivalsQueues = rivalsQueues
+        self.battleGpmQueues = battleGpmQueues
         self.battleComputerPool = BattleComputerPool(gameConfig = gameConfig, debug = debug)
         self.battleCoordinator = battleCoordinator
         self.logger = Logger.getDefault()
@@ -65,8 +67,8 @@ class Db:
                 );""")
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS battles(
-                attacking_uid TEXT KEY,
-                defending_uid TEXT KEY,
+                attackerUid TEXT KEY,
+                defenderUid TEXT KEY,
                 events BLOB,
                 results BLOB,
                 goldPerMinute REAL
@@ -109,6 +111,29 @@ class Db:
                             new.battleground
                         );
                 END;""")
+            # Add triggers to update the battle gold per minute stream.
+            conn.execute("""
+                CREATE TRIGGER IF NOT EXISTS battleUpdateInsert
+                AFTER INSERT ON battles
+                BEGIN
+                    SELECT 
+                        updateBattleGpmListeners(
+                            new.attackerUid,
+                            new.defenderUid,
+                            new.goldPerMinute
+                        );
+                END;""")
+            conn.execute("""
+                CREATE TRIGGER IF NOT EXISTS battleUpdateDelete
+                AFTER DELETE ON battles
+                BEGIN
+                    SELECT 
+                        updateBattleGpmListeners(
+                            old.attackerUid,
+                            old.defenderUid,
+                            -1.0
+                        );
+                END;""")
 
     
     def __addTriggerFunctions(self, conn: sqlite3.Connection):
@@ -116,13 +141,16 @@ class Db:
                 goldPerMinuteOthers, inBattle, wave, admin):
             row = [name, uid, gold, accumulatedGold, goldPerMinuteSelf, goldPerMinuteOthers, inBattle, wave, admin]
             self.__updateUserListeners(self.__extractUserSummaryFromRow(row))
-        conn.create_function(
-            "updateUserListeners", 9, updateUserListeners)
+        conn.create_function("updateUserListeners", 9, updateUserListeners)
+
         def updateBattlegroundListeners(name, battlegroundData):
             battleground = BattlegroundState.from_json(battlegroundData)
             self.__updateBattlegroundListeners(name, battleground)
-        conn.create_function(
-            "updateBattlegroundListeners", 2, updateBattlegroundListeners)
+        conn.create_function("updateBattlegroundListeners", 2, updateBattlegroundListeners)
+
+        def updateBattleGpmListeners(attackerUid, defenderUid, goldPerMinute):
+            self.__updateBattleGpmListeners(attackerUid, defenderUid, goldPerMinute)
+        conn.create_function("updateBattleGpmListeners", 3, updateBattleGpmListeners)
 
     def makeConnection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.dbPath, isolation_level=None)
@@ -282,6 +310,14 @@ class Db:
         if name in self.bgQueues:
             # Send the update asynchronously
             asyncio.create_task(self.bgQueues.sendUpdate(name, battleground))
+    
+    def __updateBattleGpmListeners(self, attackerUid: str, defenderUid: str, gpm: float):
+        attacker = self.getUserSummaryByUid(attackerUid)
+        defender = self.getUserSummaryByUid(defenderUid)
+        battleId = f"{defender.name}/{attacker.name}"
+        if battleId in self.battleGpmQueues:
+            # Send the update asynchronously
+            asyncio.create_task(self.battleGpmQueues.sendUpdate(battleId, gpm))
 
     async def __updateAllListeners(self):
         updateCalls = []
@@ -333,7 +369,7 @@ class Db:
     def getBattle(self, attackingUser: FrozenUserSummary, defendingUser: FrozenUserSummary, conn: sqlite3.Connection) -> Optional[Battle]:
         res = conn.execute(
             "SELECT events, results FROM battles "
-            "WHERE attacking_uid = :attackingUid AND defending_uid = :defendingUid;",
+            "WHERE attackerUid = :attackingUid AND defenderUid = :defendingUid;",
             { "attackingUid": attackingUser.uid, "defendingUid": defendingUser.uid }
         ).fetchone()
 
@@ -389,7 +425,7 @@ class Db:
             if safeToWrite:
                 # We can safely write the battle.
                 conn.execute(
-                    "INSERT INTO battles (attacking_uid, defending_uid, events, results, goldPerMinute) "
+                    "INSERT INTO battles (attackerUid, defenderUid, events, results, goldPerMinute) "
                     "VALUES (:attackingUid, :defendingUid, :events, :results, :goldPerMinute);",
                     {
                         "attackingUid": attacker.uid, "defendingUid": defender.uid,
@@ -398,6 +434,8 @@ class Db:
                         "goldPerMinute": battleCalcResults.results.goldPerMinute,
                     }
                 )
+                conn.commit()
+                self.logger.info(handler, requestId, f"Saved battle.")
                 return battle
 
         # If we've gotten here it means either the attacking wave or defending battleground changed.
@@ -437,7 +475,7 @@ class Db:
                 })
 
             # Clear any battles where this user was defending now that they have a new battleground.
-            user.conn.execute("DELETE from battles WHERE defending_uid = :uid", { "uid": user.uid })
+            user.conn.execute("DELETE from battles WHERE defenderUid = :uid", { "uid": user.uid })
         else: # Skip updating the battleground
             user.conn.execute("""
                 UPDATE users SET
@@ -457,7 +495,7 @@ class Db:
                 })
         if user.waveModified:
             # Clear any battles where this user was attacking now that they have a different wave.
-            user.conn.execute("DELETE from battles WHERE attacking_uid = :uid", { "uid": user.uid })
+            user.conn.execute("DELETE from battles WHERE attackerUid = :uid", { "uid": user.uid })
 
         # There's no need to commit here as the calling function will do that.
 
@@ -507,7 +545,7 @@ class Db:
                 "DELETE FROM users WHERE uid = :uid",
                 { "uid": uid })
             conn.execute(
-                "DELETE FROM battles WHERE attacking_uid = :uid OR defending_uid = :uid",
+                "DELETE FROM battles WHERE attackerUid = :uid OR defenderUid = :uid",
                 { "uid": uid })
     
     def getUserRivals(self, username: str) -> Rivals:
@@ -549,18 +587,18 @@ class Db:
                         inBattle = FALSE
                 )
                 SELECT
-                    attacking_uid, defending_uid
+                    attackerUid, defenderUid
                 FROM
                     (SELECT
-                        u1.uid as attacking_uid, 
-                        u2.uid as defending_uid
+                        u1.uid as attackerUid, 
+                        u2.uid as defenderUid
                     FROM
                         users_and_ranks as u1, users_and_ranks as u2
                     WHERE
                         abs(u1.rank - u2.rank) <= :rivalRadius
                         AND u1.empty_wave = FALSE
                     ) LEFT JOIN
-                    battles USING (attacking_uid, defending_uid)
+                    battles USING (attackerUid, defenderUid)
                 WHERE
                     events IS NULL
             ;""", { "rivalRadius": self.gameConfig.misc.rivalRadius })
@@ -581,7 +619,7 @@ class Db:
             results=testBattleResults)
         with self.makeConnection() as conn:
             conn.execute(
-                "INSERT INTO battles (attacking_uid, defending_uid, events, results, goldPerMinute) "
+                "INSERT INTO battles (attackerUid, defenderUid, events, results, goldPerMinute) "
                 "VALUES (:attackingUid, :defendingUid, :events, :results, :goldPerMinute);",
                 {
                     "attackingUid": attackingUid, "defendingUid": defendingUid,
@@ -605,12 +643,12 @@ class Db:
                             users
                     )
                     SELECT
-                        defending_uid,
+                        defenderUid,
                         SUM(goldPerMinute) * :rivalMultiplier as newGoldPerMinuteOthers
                     FROM
                         (SELECT
-                            u1.uid as attacking_uid, 
-                            u2.uid as defending_uid
+                            u1.uid as attackerUid, 
+                            u2.uid as defenderUid
                         FROM
                             users_and_ranks as u1, users_and_ranks as u2
                         WHERE TRUE
@@ -618,15 +656,15 @@ class Db:
                             AND abs(u1.rank - u2.rank) <= :rivalRadius
                             AND u1.empty_wave = FALSE
                         ) LEFT JOIN
-                        battles USING (attacking_uid, defending_uid)
+                        battles USING (attackerUid, defenderUid)
                     WHERE
                         goldPerMinute > 0
-                    GROUP BY defending_uid
+                    GROUP BY defenderUid
                 )
                 UPDATE users
                 SET goldPerMinuteOthers = new_values.newGoldPerMinuteOthers
                 FROM new_values
-                WHERE new_values.defending_uid = users.uid
+                WHERE new_values.defenderUid = users.uid
             ;""", {
                 "rivalRadius": self.gameConfig.misc.rivalRadius,
                 "rivalMultiplier": self.gameConfig.misc.rivalMultiplier,

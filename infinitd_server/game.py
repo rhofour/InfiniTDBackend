@@ -52,7 +52,7 @@ class Game:
 
         # Make queues for streams
         self.queues = {}
-        for datatype in ["battle", "battleground", "user", "rivals"]:
+        for datatype in ["battle", "battleground", "user", "rivals", "battleGpm"]:
             self.queues[datatype] = SseQueues()
 
         self.battleCoordinator = BattleCoordinator(self.queues["battle"])
@@ -61,6 +61,7 @@ class Game:
                 userQueues = self.queues["user"],
                 bgQueues = self.queues["battleground"],
                 rivalsQueues = self.queues["rivals"],
+                battleGpmQueues = self.queues["battleGpm"],
                 battleCoordinator = self.battleCoordinator,
                 debug=debug,
                 dbPath = dbPath)

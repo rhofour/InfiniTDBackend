@@ -22,9 +22,11 @@ class TestDb(AsyncTestCase):
         userQueues = SseQueues()
         bgQueues = SseQueues()
         rivalsQueues = SseQueues()
+        battleGpmQueues = SseQueues()
         battleCoordinator = BattleCoordinator(SseQueues())
         self.db = Db(gameConfig = self.gameConfig, userQueues = userQueues, bgQueues = bgQueues,
-                battleCoordinator = battleCoordinator, rivalsQueues = rivalsQueues,
+                battleGpmQueues = battleGpmQueues, rivalsQueues = rivalsQueues,
+                battleCoordinator = battleCoordinator,
                 dbPath=self.dbPath)
 
     def tearDown(self):
