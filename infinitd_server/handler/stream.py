@@ -105,7 +105,7 @@ class StreamHandler(BaseHandler, WebSocketHandler):
 
     def sendDataElement(self, id: str, data):
         if isinstance(data, DataClassJsonMixin):
-            self.write_message(f"{id}/{data.to_json()}")
+            self.write_message(f"{id}:{data.to_json()}")
         else:
             encoded = json.dumps(cattr.unstructure(data))
-            self.write_message(f"{id}/{encoded}")
+            self.write_message(f"{id}:{encoded}")

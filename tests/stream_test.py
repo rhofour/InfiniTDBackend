@@ -43,7 +43,7 @@ class TestWebSockets(tornado.testing.AsyncHTTPTestCase):
         initialBob = self.game.getUserSummaryByName("bob")
         response = yield ws_client.read_message()
         initialBobEncoded = json.dumps(cattr.unstructure(initialBob))
-        self.assertEqual(response, f"user/bob/{initialBobEncoded}")
+        self.assertEqual(response, f"user/bob:{initialBobEncoded}")
 
         # Modify bob to trigger an update
         with self.game.getMutableUserContext("test_uid1", "bob") as user:
@@ -53,7 +53,7 @@ class TestWebSockets(tornado.testing.AsyncHTTPTestCase):
 
         bob = self.game.getUserSummaryByName("bob")
         bobEncoded = json.dumps(cattr.unstructure(bob))
-        self.assertEqual(response, f"user/bob/{bobEncoded}")
+        self.assertEqual(response, f"user/bob:{bobEncoded}")
 
     @tornado.testing.gen_test
     def test_receiveMixedUpdates(self):
@@ -66,7 +66,7 @@ class TestWebSockets(tornado.testing.AsyncHTTPTestCase):
         initialBob = self.game.getUserSummaryByName("bob")
         response = yield ws_client.read_message()
         initialBobEncoded = json.dumps(cattr.unstructure(initialBob))
-        self.assertEqual(response, f"user/bob/{initialBobEncoded}")
+        self.assertEqual(response, f"user/bob:{initialBobEncoded}")
 
         # Subscribe to updates about sue
         ws_client.write_message("+user/sue")
@@ -75,7 +75,7 @@ class TestWebSockets(tornado.testing.AsyncHTTPTestCase):
         initialSue = self.game.getUserSummaryByName("sue")
         response = yield ws_client.read_message()
         initialSueEncoded = json.dumps(cattr.unstructure(initialSue))
-        self.assertEqual(response, f"user/sue/{initialSueEncoded}")
+        self.assertEqual(response, f"user/sue:{initialSueEncoded}")
 
         # Modify bob to trigger an update
         with self.game.getMutableUserContext("test_uid1", "bob") as user:
@@ -84,7 +84,7 @@ class TestWebSockets(tornado.testing.AsyncHTTPTestCase):
         response = yield ws_client.read_message()
         bob = self.game.getUserSummaryByName("bob")
         bobEncoded = json.dumps(cattr.unstructure(bob))
-        self.assertEqual(response, f"user/bob/{bobEncoded}")
+        self.assertEqual(response, f"user/bob:{bobEncoded}")
 
         # Unsubscribe from sue
         ws_client.write_message("-user/sue")
@@ -102,7 +102,7 @@ class TestWebSockets(tornado.testing.AsyncHTTPTestCase):
         response = yield ws_client.read_message()
         bob = self.game.getUserSummaryByName("bob")
         bobEncoded = json.dumps(cattr.unstructure(bob))
-        self.assertEqual(response, f"user/bob/{bobEncoded}")
+        self.assertEqual(response, f"user/bob:{bobEncoded}")
 
     @tornado.testing.gen_test
     def test_receiveBattleGpm(self):
@@ -117,17 +117,17 @@ class TestWebSockets(tornado.testing.AsyncHTTPTestCase):
         yield self.game.getOrMakeRecordedBattle("bob", "sue", "test", -1)
         response = yield ws_client.read_message()
         # Default value when battle doesn't exist.
-        self.assertEqual(response, f"battleGpm/sue/bob/-1.0")
+        self.assertEqual(response, f"battleGpm/sue/bob:-1.0")
 
         # Cause the sue vs. bob battle to be calculated.
         yield self.game.getOrMakeRecordedBattle("bob", "sue", "test", -1)
         response = yield ws_client.read_message()
         # From the participation bonus.
-        self.assertEqual(response, f"battleGpm/sue/bob/1.0")
+        self.assertEqual(response, f"battleGpm/sue/bob:1.0")
 
         # Change bob to cause the battle to become invalid.
         with self.game.getMutableUserContext("test_uid1", "bob") as user:
             user.wave = [0, 0] 
         response = yield ws_client.read_message()
         # Default value when battle doesn't exist.
-        self.assertEqual(response, f"battleGpm/sue/bob/-1.0")
+        self.assertEqual(response, f"battleGpm/sue/bob:-1.0")
