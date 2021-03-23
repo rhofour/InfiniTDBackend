@@ -9,6 +9,8 @@ WORKDIR ${PROJECT_DIR}
 
 COPY flatbuffers ${PROJECT_DIR}/flatbuffers
 COPY Makefile ${PROJECT_DIR}
+# Prevent us from accidentally picking up binaries.
+RUN make clean
 # Build flatc here so we don't need to rebuild it when other things change.
 RUN make flatbuffers/flatc
 
