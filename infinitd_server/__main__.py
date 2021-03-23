@@ -118,7 +118,10 @@ def main():
         await asyncio.sleep(seconds)
         tornado.ioloop.PeriodicCallback(callback, period).start()
     async def calculateMissingBattles():
-        await game.calculateMissingBattles()
+        try:
+            await game.calculateMissingBattles()
+        except Exception as e:
+            logger.error("calculate_missing_battles", -1, f"Exception: {e}")
     loop = asyncio.get_event_loop()
     # Schedule this out-of-phase with accumulateGold
     scheduleCallbackTask = loop.create_task(
