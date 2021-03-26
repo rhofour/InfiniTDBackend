@@ -1,9 +1,16 @@
-FROM python:3.8-buster
+FROM fedora:33
 
+# Install DNF dependencies
+RUN dnf groupinstall -y "Development Tools" "Development Libraries"
+RUN dnf install -y cmake sqlite-devel
+# Install pyenv
+RUN curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
+ENV PATH="/root/.pyenv/bin:${PATH}"
+# Use pyenv to install Python 3.8.8
+RUN pyenv install 3.8.8
+RUN pyenv global 3.8.8
+RUN pyenv rehash
 RUN pip install pipenv
-# CMake is needed to build flatbuffers.
-RUN apt-get update
-RUN apt-get -y install cmake
 ENV PROJECT_DIR /InfiniTDServer/
 WORKDIR ${PROJECT_DIR}
 

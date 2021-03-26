@@ -14,7 +14,7 @@ Environment=PODMAN_SYSTEMD_UNIT=%n
 Restart=on-failure
 ExecStartPre=/bin/rm -f %t/%n-pid %t/%n-cid
 ExecStartPre=/usr/bin/podman rm --ignore infinitd-server.git
-ExecStart=/usr/bin/podman run --conmon-pidfile /%t/%n-pid --cidfile /%t/%n-cid --cgroups=no-conmon --detach --interactive --tty --name infinitd-server.git --mount type=volume,source=backend-data,target=/InfiniTDServer/data -p 8794:8794 --network host -v letsencrypt:/etc/letsencrypt infinitd-server.git:latest
+ExecStart=/usr/bin/podman run --conmon-pidfile /%t/%n-pid --cidfile /%t/%n-cid --cgroups=no-conmon --detach --interactive --tty --name infinitd-server.git --mount type=volume,source=backend-data,target=/InfiniTDServer/data --mount type=volume,source=letsencrypt,target=/etc/letsencrypt -p 8794:8794 --network host infinitd-server.git:latest
 ExecStop=/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 10
 PIDFile=%t/%n-pid
 KillMode=none

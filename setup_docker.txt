@@ -6,6 +6,7 @@ and everything will work as expected.
 podman build -t infinitd-backend .
 
 # Volume Setup
+## Game Data Volume
 In order to run correctly the server needs a privateFirebaseKey.json
 file.
 
@@ -17,8 +18,22 @@ podman container create --name temp --mount type=volume,source=backend-data,targ
 podman cp ./privateFirebaseKey.json temp:/InfiniTDServer/data/
 podman rm temp
 
+## Lets Encrypt keys volume
+I use [https://letsencrypt.org/](Let's Encrypt) for my SSL certificate, but other providers should work.
+
+Similar to the Firebase private key we'll create a new named volume and copy the necessary files.
+However, this time the files need to be in a specific directory structure which matches the name
+of your domain (either localhost or infinitd.rofer.me in my case).
+mkdir live
+mkdir live/<YOUR DOMAIN>
+cp privkey.pem fullchain.pem live/<YOUR DOMAIN>
+podman volume create letsencrypt
+podman container create --name temp --mount type=volume,source=letsencrypt,target=/etc/letsencrypt hello-world
+podman cp ./live temp:/etc/letsencrypt/
+podman rm temp
+
 # Run
-podman run --mount type=volume,source=backend-data,target=/InfiniTDServer/data -p 8794:8794 -d infinitd-backend
+podman run --mount type=volume,source=backend-data,target=/InfiniTDServer/data --mount type=volume,source=letsencrypt,target=/etc/letsencrypt -p 8794:8794 --env DOMAIN=<YOUR DOMAIN> -d infinitd-backend
 
 # Inspect DB / Logs
 This will drop you in an SQLite terminal:
