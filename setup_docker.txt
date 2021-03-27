@@ -2,6 +2,11 @@
 I personally use podman, but I believe you can simply replace podman with docker
 and everything will work as expected.
 
+# Important Notes
+On my production server I have the frontend run on port 8085 which is exposed as port 80
+externally while the backend runs on port 8794 which is exposed unchanged. If you use different
+ports you may need to adjust these instructions slightly.
+
 # Build
 podman build -t infinitd-backend .
 
@@ -21,6 +26,7 @@ podman rm temp
 ## Lets Encrypt keys volume
 I use [https://letsencrypt.org/](Let's Encrypt) for my SSL certificate, but other providers should work.
 
+### Manually adding keys
 Similar to the Firebase private key we'll create a new named volume and copy the necessary files.
 However, this time the files need to be in a specific directory structure which matches the name
 of your domain (either localhost or infinitd.rofer.me in my case).
@@ -31,6 +37,18 @@ podman volume create letsencrypt
 podman container create --name temp --mount type=volume,source=letsencrypt,target=/etc/letsencrypt hello-world
 podman cp ./live temp:/etc/letsencrypt/
 podman rm temp
+
+### Using certbot to request a Let's Encrypt certificate
+If you're using Let's Encrypt you can create a new certificate with certbot using these commands.
+Note: You'll need to stop the frontend so certbot can run a webserver on port 80.
+podman volume create letsencrypt
+podman run -it --rm --name certbot -v letsencrypt:/etc/letsencrypt -p 8085:80 certbot/certbot certonly
+
+### Using certbot to renew certificates
+If you're using Let's Encrypt you can renew certificates with certbot.
+Note: You'll need to stop the frontend so certbot can run a webserver on port 80.
+podman volume create letsencrypt
+podman run -it --rm --name certbot -v letsencrypt:/etc/letsencrypt -p 8085:80 certbot/certbot renew
 
 # Run
 podman run --mount type=volume,source=backend-data,target=/InfiniTDServer/data --mount type=volume,source=letsencrypt,target=/etc/letsencrypt -p 8794:8794 --env DOMAIN=<YOUR DOMAIN> -d infinitd-backend
